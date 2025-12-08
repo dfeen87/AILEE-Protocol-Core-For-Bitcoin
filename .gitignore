@@ -1,0 +1,28 @@
+# Prerequisites
+*.d
+*.obj
+*.o
+*.a
+*.lib
+*.so
+*.dll
+*.dylib
+*.exe
+*.out
+*.app
+
+# Build folder
+build/
+bin/
+out/
+
+# IDE settings (VS Code, Mac, etc)
+.vscode/
+.idea/
+.DS_Store
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
