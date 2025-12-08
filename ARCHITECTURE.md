@@ -595,16 +595,6 @@ AILEE represents a **paradigm shift** in blockchain scalability:
 
 ---
 
-## Additional Resources
-
-- 📖 [White Paper](whitepaper.md)
-- 💻 [GitHub Repository](https://github.com/yourusername/ailee-protocol)
-- 🗣️ [Community Forum](https://forum.ailee.network)
-- 📊 [Live Testnet Explorer](https://testnet.ailee.network)
-- 🔬 [Research Papers](https://research.ailee.network)
-
----
-
 *Last Updated: December 2024*  
 *Version: 1.0*  
 *License: MIT*
