@@ -5,91 +5,174 @@
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Status](https://img.shields.io/badge/status-prototype-orange)
 
-**A C++ Framework for AI-Optimized Transaction Scaling, Asset Recovery, and Thermodynamic Efficiency.**
+A C++ Framework for AI-Optimized Scaling, Asset Recovery, and Thermodynamic Verification.
 
-> **"We build not to replace Bitcoin, but to evolve it."**
+“We build not to replace Bitcoin — but to evolve it.”
 
+AILEE-Core is a modular, post-consensus “Soft Layer” designed to operate alongside Bitcoin nodes.
+It integrates Reinforcement Learning for throughput optimization, Zero-Knowledge Proofs for recovering deep-dormancy Bitcoin, and Proof-of-Burn techniques that bridge digital scarcity with
+physical value.
 
-AILEE‑Core is a modular “Soft Layer” architecture designed to run alongside Bitcoin nodes. It leverages Reinforcement Learning to optimize throughput and latency, Zero‑Knowledge Proofs to
-reclaim dormant assets, and Proof‑of‑Burn mechanics to bridge digital scarcity with physical sovereignty. The result is a trustless, institutional‑scale Layer‑2 framework that transforms Bitcoin
-into a high‑performance financial network.
+The result is a trustless, high-performance Layer-2 infrastructure capable of institutional-scale operations.
 
 ⚡ Quick Start
+
 Run the engine in minutes:
 
-bash
 1. Install Dependencies
-Requires: CMake 3.10+, OpenSSL 1.1+
+Requires: CMake ≥3.10, OpenSSL ≥1.1
 
 2. Build the Project
+
 mkdir build && cd build
 cmake ..
 make
 
+
 3. Run the Simulation
+
 ./ailee_node
-This executes main.cpp, launching the TPS optimization loop, the Bitcoin‑to‑Gold bridge logic, and the Energy Telemetry verification system.
+
+
+This triggers the full engine: TPS optimization loop, Gold-Bridge verification, and Energy Telemetry analysis.
 
 🛠 Core C++ Modules
-AILEE‑Core functions as a modular framework interacting with the Bitcoin network via RPC/ZMQ.
 
-AI‑Driven TPS Engine (ailee_tps_engine.h) The engine lifts Bitcoin’s throughput from ≈7 TPS to simulated levels of 46,000+ TPS (Visa‑scale) without altering Layer‑1 consensus. It uses
-closed‑loop feedback (PID + gradient descent) to dynamically adjust block size based on latency and propagation. The governing equation is: TPSₑₙₕₐₙcₑd = (ηₐᵢ × P꜀ₒₘₚ × Rₜₓ × Eₑff × Bₒₚₜ) ÷ Nₙₒdₑₛ −
-ε(n, b, l)
+AILEE-Core is structured as a set of high-security, high-performance modules that interact with Bitcoin via RPC/ZMQ interfaces.
 
-ηₐᵢ = AI optimization factor (dynamic)
+AI-Driven TPS Engine
 
-P꜀ₒₘₚ = normalized computational power
+File: ailee_tps_engine.h
+
+Bitcoin processes ≈7 transactions per second.
+The TPS Engine simulates 46,000+ TPS using adaptive control, without altering L1 consensus.
+
+It uses:
+
+PID feedback loops
+
+Gradient-descent tuning
+
+Propagation-time prediction
+
+Dynamic block-size modeling
+
+Optimization Equation:
+TPSₑₙₕₐₙcₑd = (ηₐᵢ × P꜀ₒₘₚ × Rₜₓ × Eₑff × Bₒₚₜ) ÷ Nₙₒdₑₛ − ε(n, b, l)
+
+Where:
+
+ηₐᵢ = AI optimization factor
+
+P꜀ₒₘₚ = normalized computation
 
 Rₜₓ = transaction rate
 
-Eₑff = energy efficiency
+Eₑff = thermodynamic efficiency
 
-Bₒₚₜ = optimal block size (targeting <1s propagation)
+Bₒₚₜ = optimal block size (<1s propagation target)
 
-ε(n, b, l) = empirical error term (machine learning feedback)
+ε(n, b, l) = learned entropy/error term
 
-Loss Bitcoin Recovery Protocol (ailee_recovery_protocol.h) Addresses the estimated 3–4 million BTC lost to forgotten keys.
+Loss Bitcoin Recovery Protocol
 
-Zero‑Knowledge Proofs validate ownership without exposing private keys.
+File: ailee_recovery_protocol.h
 
-Verifiable Delay Functions enforce sequential “challenge periods” to prevent theft.
+Designed for the recovery of 3–4 million dormant BTC lost for decades.
 
-Validator governance ensures decentralized voting on recovery claims.
+Features:
 
-Bitcoin‑to‑Gold Bridge (ailee_gold_bridge.h) Anchors digital scarcity to physical assets while creating deflationary pressure on Bitcoin supply.
+Zero-Knowledge Proofs → prove ownership without exposing keys
 
-Proof‑of‑Burn cryptographically destroys BTC on L1.
+Verifiable Delay Functions → enforce mandatory waiting windows
 
-Tokenization mints wGOLD or triggers physical redemption logic.
+Validator Consensus → community-driven approval of claims
 
-Inventory tracking manages serial numbers and storage locations.
+Challenge Mode → if the original owner moves the coins, the claim self-cancels
 
-Auxiliary Systems
+This module is the first trustless path toward ethically reclaiming deep-dormancy Bitcoin.
 
-Energy Telemetry (ailee_energy_telemetry.h) introduces “Green Hashing” by cryptographically verifying thermodynamic efficiency scores based on waste‑heat recovery.
+Bitcoin-to-Gold Bridge
 
-Circuit Breaker (ailee_circuit_breaker.h) acts as an autonomous watchdog. If unsafe parameters are proposed (e.g., block size >4 MB or latency >2s), the system reverts to Bitcoin Standard
-consensus.
+File: ailee_gold_bridge.h
 
-DAO Governance (ailee_dao_governance.h) implements quadratic voting: Power = √Stake × Reputation, preventing plutocracy and balancing influence.
+A cryptographically enforced bridge between Bitcoin and physical gold.
+
+Mechanisms:
+
+Proof-of-Burn → destroy BTC on L1 to mint wGOLD
+
+Tokenization Logic → serial-numbered physical inventory
+
+Redemption → burn wGOLD to withdraw physical assets
+
+Deflationary Pressure → burned BTC permanently reduce supply
+
+🔧 Auxiliary Systems
+Energy Telemetry
+
+File: ailee_energy_telemetry.h
+Implements “Green Hashing” using thermodynamic efficiency scoring.
+Nodes prove their waste-heat recovery and energy-use integrity with signed telemetry packets.
+
+AI Circuit Breaker
+
+File: ailee_circuit_breaker.h
+Autonomous watchdog that prevents unsafe AI decisions.
+
+Triggers revert system to Bitcoin Standard if:
+
+Block size > 4 MB
+
+Propagation > 2 seconds
+
+Network entropy spikes
+
+Latency exceeds safety thresholds
+
+DAO Governance Engine
+
+File: ailee_dao_governance.h
+Implements quadratic voting:
+
+Power = √Stake × Reputation
+
+This prevents plutocracy and ensures balanced decision-making in L2 governance.
 
 📊 Performance Simulation
-Running main.cpp performs a 200‑cycle optimization test:
 
-Code
-======== AILEE AI‑Driven TPS Optimization Simulation ============
+Running main.cpp executes a 200-cycle AI-driven optimization test:
+
+======== AILEE AI-Driven TPS Optimization Simulation ============
 Baseline TPS: 7.0
 Final TPS: 46,775.0
 Improvement: 6682x
 Cycles Run: 200
 
 
+This demonstrates the theoretical upper bound of AILEE-assisted Bitcoin propagation under idealized conditions.
+
 🤝 Contributing
-We welcome skeptics, cryptographers, and engineers. Innovation thrives when shared. Please read CONTRIBUTING.md for details on our code of conduct and pull request process.
+
+We welcome:
+
+cryptographers
+
+C++ engineers
+
+systems architects
+
+researchers
+
+skeptics
+
+Innovation grows through open challenge and shared insight.
+See CONTRIBUTING.md for contribution guidelines.
 
 📄 License
-This project is licensed under the MIT License. 
-See LICENSE for details. 
-Author: Don Michael Feeney Jr. 
+
+MIT License — see LICENSE for details.
+
+Author: Don Michael Feeney Jr.
 Role: System Architect & Believer
+
