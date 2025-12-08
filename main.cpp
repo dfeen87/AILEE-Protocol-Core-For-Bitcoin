@@ -1,9 +1,9 @@
 #include <iostream>
 #include <iomanip>
 #include <vector>
-#include "ailee/tps_engine.h"
-#include "ailee/gold_bridge.h"
-#include "ailee/recovery_protocol.h"
+#include "tps_engine.h"
+#include "gold_bridge.h"
+#include "recovery_protocol.h"
 
 void runTPSSimulation() {
     std::cout << "==================================================\n";
