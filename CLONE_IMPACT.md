@@ -115,7 +115,8 @@ Asset‑bridged
 
 Thermodynamically optimized
 
-By cloning this repo, you are not forcing Bitcoin to change. You are opting in to a parallel operating system that extends Bitcoin’s capabilities
-while leaving its base layer untouched.
+By cloning this repo, you are not forcing Bitcoin to change.
+You are opting in to a parallel operating system that extends
+Bitcoin’s capabilities while leaving its base layer untouched.
 
 Welcome to the upgrade.
