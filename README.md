@@ -144,9 +144,13 @@ This prevents plutocracy and ensures balanced decision-making in L2 governance.
 Running main.cpp executes a 200-cycle AI-driven optimization test:
 
 ======== AILEE AI-Driven TPS Optimization Simulation ============
+
 Baseline TPS: 7.0
+
 Final TPS: 46,775.0
+
 Improvement: 6682x
+
 Cycles Run: 200
 
 
@@ -174,5 +178,6 @@ See CONTRIBUTING.md for contribution guidelines.
 MIT License — see LICENSE for details.
 
 Author: Don Michael Feeney Jr.
+
 Role: System Architect & Believer
 
