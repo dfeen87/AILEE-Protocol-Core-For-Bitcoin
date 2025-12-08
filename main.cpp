@@ -12,6 +12,10 @@
 #include "ailee_energy_telemetry.h"
 #include "ailee_circuit_breaker.h"
 
+// Newest Additions (Integrations)
+#include "ailee_sidechain_bridge.h"
+#include "ailee_dao_governance.h"
+
 void runTPSSimulation() {
     std::cout << "==================================================\n";
     std::cout << "   AILEE AI-Driven TPS Optimization Simulation    \n";
