@@ -30,75 +30,16 @@ make
 
 This will execute main.cpp, running the TPS simulation loop, the Gold Bridge logic check, and the Energy Telemetry verification.
 
-📚 Documentation & Research
 
-This repository is backed by extensive research and ethical frameworks.
+🛠 Core C++ Modules
 
-Document	Description
+AILEE‑Core is a modular C++ framework designed as a “soft layer” evolution of Bitcoin, running alongside existing nodes without altering Layer‑1 consensus. At its heart lies the AI‑Driven TPS Engine (ailee_tps_engine.h), which applies reinforcement learning and closed‑loop feedback control to dynamically optimize block size and network propagation. By tuning latency, queueing, and geographic distribution factors, the engine lifts Bitcoin’s throughput from its native ≈7 transactions per second to simulated levels of 46,775 TPS—Visa‑scale performance—while maintaining decentralization. The optimization is governed by the AILEE equation: TPSₑₙₕₐₙcₑd = (ηₐᵢ · P꜀ₒₘₚ · Rₜₓ · Eₑff · Bₒₚₜ) ÷ Nₙₒdₑₛ − ε(n, b, l), where ηₐᵢ is the AI optimization factor, P꜀ₒₘₚ the computational power influence, Rₜₓ the transaction rate, Eₑff the energy efficiency, Bₒₚₜ the optimal block size, Nₙₒdₑₛ the active node count, and ε(n, b, l) the learned empirical error term.
 
-📄 The White Paper	The comprehensive Executive Summary, mathematical derivations, and full vision. Start here.
+Complementing throughput is the Loss Bitcoin Recovery Protocol (ailee_recovery_protocol.h), which addresses the 3–4 million BTC lost to forgotten keys. It introduces a trustless mechanism using Zero‑Knowledge Proofs to validate ownership without exposing private keys, combined with Verifiable Delay Functions that enforce time‑locks to prevent theft. Validator governance ensures that recovery decisions remain decentralized and auditable. Alongside this, the Bitcoin‑to‑Gold Bridge (ailee_gold_bridge.h) provides a novel economic alignment: users burn BTC to mint tokenized gold (wGOLD) or redeem physical inventory, creating deflationary pressure on Bitcoin supply while anchoring digital scarcity to physical sovereignty.
 
-🌍 Clone Impact	What actually happens to your Bitcoin when you run this code? The economic upgrade explained.
+The framework also integrates Auxiliary Innovations. The Energy Telemetry Protocol (ailee_energy_telemetry.h) transforms mining from raw consumption into optimization, requiring nodes to sign cryptographic proofs of thermodynamic efficiency based on waste‑heat recovery. This embeds sustainability into consensus. The AI Circuit Breaker (ailee_circuit_breaker.h) acts as a watchdog, monitoring optimization proposals. If the AI suggests unsafe parameters—such as oversized blocks or excessive latency—the breaker trips, reverting the node to Bitcoin Standard consensus and preserving security. Finally, the Sidechain Bridge (ailee_sidechain_bridge.h) implements the two‑way peg between Bitcoin Layer‑1 and AILEE Layer‑2. It uses federated multi‑signature governance (15 members, 10‑of‑15 threshold), SPV proof verification, and atomic swap support to guarantee trustless transfers. Emergency recovery mechanisms ensure resilience under extreme conditions. Governance logic is extended further in ailee_dao_governance.h, which encodes decentralized decision‑making for institutional adoption.
 
-🔓 Recovery Guide	A step-by-step user guide on how to use ZK-Proofs to recover "Lost" Bitcoin.
-
-🛡️ Security & Power	A transparency report on the immense power of this software and the safeguards we built.
-
-🌱 Safety & Sustainability	Details on the "Circuit Breaker" AI watchdog and "Energy Telemetry" for green mining.
-
-🏛️ Letter to Strategy	An open letter to institutional leaders regarding the thermodynamic evolution of Bitcoin.
-
-
-🛠 Core Modules
-
-
-1. AI-Driven TPS Engine
-File: ailee_tps_engine.h
-The Problem: Bitcoin is limited to ~7 Transactions Per Second (TPS).
-The Solution: A closed-loop feedback controller that uses the AILEE Formula to dynamically tune block size (B_opt) and minimize latency penalties.
-Performance: Simulates 46,775 TPS (Visa-Level) without altering Layer-1 security.
-
-
-2. Loss Bitcoin Recovery Protocol
-File: ailee_recovery_protocol.h
-The Problem: 3-4 Million BTC are lost forever due to lost keys.
-The Solution: A Trustless Recovery mechanism.
-Zero-Knowledge Proofs: Prove ownership without revealing keys.
-Verifiable Delay Functions (VDFs): Enforce a mandatory time-lock to prevent theft.
-Validator Governance: Decentralized consensus required to unlock deep-dormancy funds.
-
-
-3. Bitcoin-to-Gold Bridge
-File: ailee_gold_bridge.h
-The Problem: Bitcoin is purely digital; Gold is purely physical.
-The Solution: An autonomous bridge utilizing Proof-of-Burn.
-Users burn BTC to mint tokenized gold (wGOLD) or redeem for physical inventory.
-Creates a deflationary pressure on Bitcoin supply while offering a stable store of value.
-
-
-🛡️ Auxiliary Innovations
-Energy Telemetry (Proof of Useful Work)
-File: ailee_energy_telemetry.h
-Transforms mining from "energy consumption" to "energy optimization." Nodes sign cryptographic proofs of their Thermodynamic Efficiency (TE) based on waste-heat recovery.
-AI Circuit Breaker (Safety Watchdog)
-File: ailee_circuit_breaker.h
-
-
-An autonomous supervisor that monitors the AI. If the AI proposes unsafe parameters (e.g., >4MB blocks or high latency), the Circuit Breaker kills the AI process and reverts the node to Bitcoin Standard consensus.
-
-🧬 The Mathematical Foundation
-
-The engine drives optimization based on the AILEE Equation:
-
-TPS_enhanced = (η_AI · P_comp · R_tx · E_eff · B_opt) / N_nodes - ε(n, b, l)
-η_AI: AI Optimization Factor (0.0 - 1.0)
-P_comp: Computational Power Influence
-R_tx: Transaction Rate Management
-E_eff: Energy Efficiency
-B_opt: Optimal Block Size (Dynamic)
-N_nodes: Number of Active Nodes
-ε(n, b, l): Empirical Error Term (Learned Entropy)
-
+Together, these modules form a coherent architecture: throughput acceleration, asset recovery, scarcity bridging, sustainability, safety, and governance. Each file contributes to a layered system that transforms Bitcoin into a high‑performance, resilient, and trustless financial network. AILEE‑Core is not a replacement for Bitcoin, but its evolution—an infrastructure designed for institutions, scientists, and communities who demand speed, programmability, and security at scale.
 
 🤝 Contributing
 We welcome skeptics, cryptographers, and engineers. Innovation thrives when shared.
