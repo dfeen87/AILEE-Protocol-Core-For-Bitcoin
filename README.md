@@ -18,15 +18,15 @@ into a high‑performance financial network.
 Run the engine in minutes:
 
 bash
-# 1. Install Dependencies
-# Requires: CMake 3.10+, OpenSSL 1.1+
+1. Install Dependencies
+Requires: CMake 3.10+, OpenSSL 1.1+
 
-# 2. Build the Project
+2. Build the Project
 mkdir build && cd build
 cmake ..
 make
 
-# 3. Run the Simulation
+3. Run the Simulation
 ./ailee_node
 This executes main.cpp, launching the TPS optimization loop, the Bitcoin‑to‑Gold bridge logic, and the Energy Telemetry verification system.
 
