@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // AmbientAI.h — Ambient energy/compute interfaces for AILEE-Core
-// Maps core white paper concepts into practical C++ surfaces.
+// Maps core white paper concepts into practical C++ surfaces with ZK-proof integration.
 
 #pragma once
 
@@ -13,35 +13,36 @@
 #include <functional>
 #include <mutex>
 
+#include "zk_proofs.h" // <-- new ZK proof module
+
 namespace ambient {
 
 // --------- Core data models ---------
-
 struct NodeId {
-    std::string pubkey;         // Verifiable identity (placeholder)
-    std::string region;         // Geo/cluster tag
-    std::string deviceClass;    // e.g., "smartphone", "gateway", "miner"
+    std::string pubkey;
+    std::string region;
+    std::string deviceClass;
 };
 
 struct EnergyProfile {
-    double inputPowerW = 0.0;           // Instantaneous input power
-    double wasteHeatRecoveredW = 0.0;   // Recovered thermal energy
-    double temperatureC = 0.0;          // Device temperature
-    double ambientTempC = 0.0;          // Environment temperature
-    double carbonIntensity_gCO2_kWh = 0.0; // Optional: grid intensity
+    double inputPowerW = 0.0;
+    double wasteHeatRecoveredW = 0.0;
+    double temperatureC = 0.0;
+    double ambientTempC = 0.0;
+    double carbonIntensity_gCO2_kWh = 0.0;
 };
 
 struct ComputeProfile {
-    double cpuUtilization = 0.0;   // %
-    double npuUtilization = 0.0;   // %
-    double gpuUtilization = 0.0;   // %
+    double cpuUtilization = 0.0;
+    double npuUtilization = 0.0;
+    double gpuUtilization = 0.0;
     double availableMemMB = 0.0;
     double bandwidthMbps = 0.0;
     double latencyMs = 0.0;
 };
 
 struct PrivacyBudget {
-    double epsilon = 1.0; // Differential privacy budget (placeholder)
+    double epsilon = 1.0;
     double delta  = 1e-5;
 };
 
@@ -53,23 +54,22 @@ struct TelemetrySample {
     PrivacyBudget privacy;
 };
 
-// --------- Federated learning & verifiability stubs ---------
-
+// --------- Federated learning ---------
 struct FederatedUpdate {
     std::string modelId;
-    std::vector<float> gradient;     // Quantized/aggregated gradients (placeholder)
+    std::vector<float> gradient;
     PrivacyBudget privacy;
-    // Optional: encrypted payloads via HE in future
 };
 
+// --------- ZK Proof ---------
 struct ZKProofStub {
-    std::string proofHash;           // Placeholder for zk-SNARK/STARK proof artifact
-    std::string circuitId;           // Which circuit validated the computation
+    std::string proofHash;
+    std::string circuitId;
     bool verified = false;
+    uint64_t timestampMs = 0;
 };
 
 // --------- Token incentives & reputation ---------
-
 struct IncentiveRecord {
     std::string taskId;
     NodeId node;
@@ -79,13 +79,12 @@ struct IncentiveRecord {
 
 struct Reputation {
     NodeId node;
-    double score = 0.0;           // Composite score: reliability, timeliness, correctness
+    double score = 0.0;
     uint64_t completedTasks = 0;
     uint64_t disputes = 0;
 };
 
 // --------- Safety/circuit-breaker policy ---------
-
 struct SafetyPolicy {
     double maxTemperatureC = 80.0;
     double maxLatencyMs    = 300.0;
@@ -93,18 +92,15 @@ struct SafetyPolicy {
     int    maxErrorCount   = 25;
 };
 
-// --------- Ambient energy/compute node ---------
-
+// --------- AmbientNode ---------
 class AmbientNode {
 public:
     explicit AmbientNode(NodeId id, SafetyPolicy policy)
         : id_(std::move(id)), policy_(policy) {}
 
-    // Ingest telemetry (local, privacy-preserving)
     void ingestTelemetry(const TelemetrySample& sample) {
         std::lock_guard<std::mutex> lock(mu_);
         lastSample_ = sample;
-        // Simple safety checks; advanced logic can call AILEE CircuitBreaker
         if (sample.energy.temperatureC > policy_.maxTemperatureC ||
             sample.compute.latencyMs > policy_.maxLatencyMs) {
             safeMode_.store(true);
@@ -113,32 +109,33 @@ public:
         }
     }
 
-    // Local federated step (placeholder)
     FederatedUpdate runLocalTraining(const std::string& modelId,
                                      const std::vector<float>& miniBatch) {
         std::lock_guard<std::mutex> lock(mu_);
         FederatedUpdate up;
         up.modelId = modelId;
         up.privacy = lastSample_.privacy;
-        // Toy transform: sum minibatch for gradient magnitude
         float sum = 0.0f;
         for (auto v : miniBatch) sum += v;
-        up.gradient = {sum}; // Replace with real local train step
+        up.gradient = {sum};
         return up;
     }
 
-    // Verifiable compute stub
+    // ---------- ZK Proof integration ----------
     ZKProofStub verifyComputation(const std::string& taskId,
                                   const std::string& circuitId,
                                   const std::string& resultHash) {
+        ailee::zk::ZKEngine zkEngine;
+        auto proof = zkEngine.generateProof(taskId, resultHash);
+
         ZKProofStub p;
         p.circuitId = circuitId;
-        p.proofHash = "zk_" + taskId + "_" + resultHash.substr(0, 16);
-        p.verified  = true; // Replace with real ZK verifier integration
+        p.proofHash = proof.proofData;
+        p.verified  = zkEngine.verifyProof(proof);
+        p.timestampMs = proof.timestampMs;
         return p;
     }
 
-    // Incentive accounting
     IncentiveRecord accrueReward(const std::string& taskId, double tokens) const {
         IncentiveRecord rec;
         rec.taskId = taskId;
@@ -148,7 +145,6 @@ public:
         return rec;
     }
 
-    // Reputation updates
     void updateReputation(bool success, double deltaScore) {
         std::lock_guard<std::mutex> lock(mu_);
         if (success) {
@@ -161,10 +157,8 @@ public:
         if (rep_.score < 0.0) rep_.score = 0.0;
     }
 
-    // Safe-mode toggle
     bool isSafeMode() const { return safeMode_.load(); }
 
-    // Accessors
     NodeId id() const { return id_; }
     Reputation reputation() const {
         std::lock_guard<std::mutex> lock(mu_);
@@ -184,11 +178,10 @@ private:
     std::atomic<bool> safeMode_{false};
 };
 
-// --------- Mesh coordination (cluster-level orchestration) ---------
-
+// --------- MeshCoordinator ---------
 class MeshCoordinator {
 public:
-    using TaskFn = std::function<double(const AmbientNode&)>; // returns reward
+    using TaskFn = std::function<double(const AmbientNode&)>;
 
     explicit MeshCoordinator(std::string clusterId)
         : clusterId_(std::move(clusterId)) {}
@@ -198,7 +191,6 @@ public:
         nodes_.push_back(node);
     }
 
-    // Simple selection: prefer low latency, high bandwidth, not in safe mode
     AmbientNode* selectNodeForTask() {
         std::lock_guard<std::mutex> lock(mu_);
         AmbientNode* best = nullptr;
@@ -213,13 +205,12 @@ public:
         return best;
     }
 
-    // Execute a task on selected node and accrue reward
     IncentiveRecord dispatchAndReward(const std::string& taskId, TaskFn fn, double baseRewardTokens) {
         AmbientNode* n = selectNodeForTask();
         if (!n) {
             return IncentiveRecord{taskId, NodeId{"", "", ""}, 0.0, false};
         }
-        double multiplier = fn(*n); // e.g., performance-based multiplier
+        double multiplier = fn(*n);
         double reward = baseRewardTokens * multiplier;
         return n->accrueReward(taskId, reward);
     }
