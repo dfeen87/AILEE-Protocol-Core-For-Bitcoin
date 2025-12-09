@@ -26,6 +26,7 @@
 #include <cstdint>
 #include <map>
 #include <set>
+#include <optional>
 #include <cmath>
 #include <chrono>
 #include <algorithm>
