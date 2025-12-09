@@ -1,10 +1,10 @@
-// AmbientAI.cpp
-// Production-grade implementation for Decentralized Ambient AI Infrastructure
-// Implements cryptographic verification, privacy guarantees, and Byzantine fault tolerance
-// as specified in the Ambient AI white paper
+// SPDX-License-Identifier: MIT
+// AmbientAI.cpp — Production-grade implementation for Decentralized Ambient AI Infrastructure
+// Fully integrated with AILEE-Core AmbientNode, ZK proofs, federated learning, token incentives,
+// Byzantine fault detection, and system health metrics.
 
 #include "AmbientAI.h"
-#include "zk_proofs.h" // <-- real ZK Engine integration
+#include "zk_proofs.h"
 #include <sstream>
 #include <iomanip>
 #include <cmath>
@@ -12,6 +12,7 @@
 #include <chrono>
 #include <stdexcept>
 #include <random>
+#include <iostream>
 
 namespace ambient {
 
@@ -21,44 +22,42 @@ namespace ambient {
 
 std::string to_string(const NodeId& n) {
     std::ostringstream ss;
-    ss << "NodeId("
-       << "pubkey=" << n.pubkey.substr(0, 16) << "..."
+    ss << "NodeId(pubkey=" << n.pubkey.substr(0,16) << "..."
        << ", region=" << n.region
-       << ", deviceClass=" << n.deviceClass 
-       << ")";
+       << ", deviceClass=" << n.deviceClass << ")";
     return ss.str();
 }
 
 std::string to_string(const EnergyProfile& e) {
     std::ostringstream ss;
-    ss << "Energy("
-       << "input=" << std::fixed << std::setprecision(2) << e.inputPowerW << "W"
+    ss << "Energy(input=" << std::fixed << std::setprecision(2) << e.inputPowerW << "W"
        << ", recovered=" << e.wasteHeatRecoveredW << "W"
        << ", temp=" << e.temperatureC << "°C"
        << ", ambient=" << e.ambientTempC << "°C"
        << ", carbon=" << e.carbonIntensity_gCO2_kWh << "gCO2/kWh"
-       << ")";
+       << ", efficiency=" << e.computeEfficiency_GFLOPS_W << " GFLOPS/W)";
     return ss.str();
 }
 
 std::string to_string(const ComputeProfile& c) {
     std::ostringstream ss;
-    ss << "Compute("
-       << "cpu=" << std::fixed << std::setprecision(1) << c.cpuUtilization << "%"
+    ss << "Compute(cpu=" << std::fixed << std::setprecision(1) << c.cpuUtilization << "%"
        << ", npu=" << c.npuUtilization << "%"
        << ", gpu=" << c.gpuUtilization << "%"
        << ", mem=" << c.availableMemMB << "MB"
        << ", bw=" << c.bandwidthMbps << "Mbps"
        << ", lat=" << std::setprecision(2) << c.latencyMs << "ms"
-       << ")";
+       << ", power=" << c.instantaneousPower_GFLOPS << " GFLOPS)";
     return ss.str();
 }
 
 std::string to_string(const PrivacyBudget& p) {
     std::ostringstream ss;
-    ss << "Privacy("
-       << "ε=" << std::scientific << std::setprecision(2) << p.epsilon
+    ss << "Privacy(ε=" << std::scientific << std::setprecision(2) << p.epsilon
        << ", δ=" << p.delta
+       << ", remaining=" << p.privacyBudgetRemaining
+       << ", HE=" << p.homomorphicEncryptionEnabled
+       << ", ZKP=" << p.zeroKnowledgeProofEnabled
        << ")";
     return ss.str();
 }
@@ -70,8 +69,7 @@ std::string to_string(const TelemetrySample& s) {
        << "  " << to_string(s.node) << "\n"
        << "  " << to_string(s.energy) << "\n"
        << "  " << to_string(s.compute) << "\n"
-       << "  " << to_string(s.privacy) << "\n"
-       << "  verificationHash=" << s.cryptographicVerificationHash.substr(0, 16) << "...\n}";
+       << "  " << to_string(s.privacy) << "\n";
     return ss.str();
 }
 
@@ -81,22 +79,19 @@ std::string to_string(const TelemetrySample& s) {
 
 std::string computeVerificationHash(const TelemetrySample& sample) {
     ailee::zk::ZKEngine zkEngine;
-    auto proof = zkEngine.generateProof(
-        sample.node.pubkey, 
-        std::to_string(sample.timestamp.time_since_epoch().count()) + std::to_string(sample.energy.inputPowerW)
-    );
+    auto proof = zkEngine.generateProof(sample.node.pubkey,
+                                        std::to_string(sample.timestamp.time_since_epoch().count()) +
+                                        std::to_string(sample.energy.inputPowerW));
     return proof.proofData;
 }
 
 bool verifyComputationProof(const TelemetrySample& sample) {
+    if (sample.privacy.zeroKnowledgeProofEnabled == false) return true;
     ailee::zk::ZKEngine zkEngine;
     if (sample.cryptographicVerificationHash.empty()) return false;
-    
-    auto proof = ailee::zk::ZKProof{
-        sample.cryptographicVerificationHash,
-        std::chrono::duration_cast<std::chrono::milliseconds>(sample.timestamp.time_since_epoch()).count()
-    };
-    
+    ailee::zk::ZKProof proof{sample.cryptographicVerificationHash, 
+                              std::chrono::duration_cast<std::chrono::milliseconds>(
+                                  sample.timestamp.time_since_epoch()).count()};
     return zkEngine.verifyProof(proof);
 }
 
@@ -104,57 +99,54 @@ bool verifyComputationProof(const TelemetrySample& sample) {
 // NASH EQUILIBRIUM & GAME THEORY CALCULATIONS
 // ============================================================================
 
-double calculateNodeUtility(const TelemetrySample& sample, double tokenRewardRate) {
-    double computeContribution = sample.compute.instantaneousPower_GFLOPS;
-    double energyCost = sample.energy.inputPowerW * 0.001;
-    double latencyPenalty = sample.compute.latencyMs * 0.01;
-    double baseReward = computeContribution * tokenRewardRate; // reputation multiplier can be added
+double calculateNodeUtility(const AmbientNode& node, double tokenRewardRate) {
+    auto sampleOpt = node.last();
+    if (!sampleOpt.has_value()) return 0.0;
+    const auto& s = sampleOpt.value();
+    double computeContribution = s.compute.instantaneousPower_GFLOPS;
+    double energyCost = s.energy.inputPowerW * 0.001;
+    double latencyPenalty = s.compute.latencyMs * 0.01;
+    double baseReward = computeContribution * tokenRewardRate;
     return std::max(0.0, baseReward - energyCost - latencyPenalty);
 }
 
-double calculateNashEquilibriumThreshold(const std::vector<TelemetrySample>& networkState) {
-    if (networkState.empty()) return 0.0;
-    double totalComputePower = 0.0;
-    double totalEnergyCost = 0.0;
-    for (const auto& s : networkState) {
-        totalComputePower += s.compute.instantaneousPower_GFLOPS;
-        totalEnergyCost += s.energy.inputPowerW;
+double calculateNashEquilibriumThreshold(const std::vector<AmbientNode*>& network) {
+    if (network.empty()) return 0.0;
+    double totalCompute = 0.0, totalEnergy = 0.0;
+    for (auto* n : network) {
+        auto sampleOpt = n->last();
+        if (!sampleOpt.has_value()) continue;
+        const auto& s = sampleOpt.value();
+        totalCompute += s.compute.instantaneousPower_GFLOPS;
+        totalEnergy += s.energy.inputPowerW;
     }
-    return totalEnergyCost > 0 ? totalComputePower / totalEnergyCost : 0.0;
+    return totalEnergy > 0 ? totalCompute / totalEnergy : 0.0;
 }
 
 // ============================================================================
 // FEDERATED LEARNING
 // ============================================================================
 
-ModelUpdate computeLocalGradient(const TelemetrySample& sample, const std::vector<double>& localData) {
-    ModelUpdate update;
-    update.timestampMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-        sample.timestamp.time_since_epoch()).count();
-    update.learningRate = 0.01;
-    update.nodeSignature = sample.cryptographicVerificationHash;
-    
-    std::default_random_engine rng(update.timestampMs);
-    std::uniform_real_distribution<double> noiseDist(-1.0, 1.0);
-    
-    for (double val : localData) {
-        double noise = noiseDist(rng) / sample.privacy.epsilon;
-        update.gradients.push_back(val * 0.1 + noise);
+std::vector<float> computeLocalGradient(const AmbientNode& node, const std::vector<float>& localData) {
+    auto sampleOpt = node.last();
+    if (!sampleOpt.has_value()) return {};
+    const auto& s = sampleOpt.value();
+    std::vector<float> grad;
+    std::default_random_engine rng(std::chrono::system_clock::now().time_since_epoch().count());
+    std::uniform_real_distribution<float> noise(-0.01f, 0.01f);
+    for (auto v : localData) {
+        grad.push_back(v * 0.1f + noise(rng)/static_cast<float>(s.privacy.epsilon));
     }
-    
-    return update;
+    return grad;
 }
 
-std::vector<double> aggregateModelUpdates(const std::vector<ModelUpdate>& updates) {
+std::vector<float> aggregateModelUpdates(const std::vector<std::vector<float>>& updates) {
     if (updates.empty()) return {};
-    size_t size = updates[0].gradients.size();
-    std::vector<double> agg(size, 0.0);
-    for (const auto& upd : updates) {
-        for (size_t i = 0; i < size && i < upd.gradients.size(); ++i) {
-            agg[i] += upd.gradients[i];
-        }
-    }
-    for (auto& v : agg) v /= updates.size();
+    size_t size = updates[0].size();
+    std::vector<float> agg(size,0.0f);
+    for (const auto& u : updates)
+        for (size_t i=0;i<size;++i) agg[i]+=u[i];
+    for (auto& v : agg) v/=updates.size();
     return agg;
 }
 
@@ -162,74 +154,94 @@ std::vector<double> aggregateModelUpdates(const std::vector<ModelUpdate>& update
 // BYZANTINE FAULT DETECTION
 // ============================================================================
 
-bool detectByzantineNode(const TelemetrySample& sample, const std::vector<TelemetrySample>& peers, double threshold) {
-    if (peers.size() < 3) return false;
-    std::vector<double> computeVals;
-    for (auto& p : peers) computeVals.push_back(p.compute.instantaneousPower_GFLOPS);
-    std::sort(computeVals.begin(), computeVals.end());
-    double median = computeVals[computeVals.size() / 2];
-    std::vector<double> deviations;
-    for (double v : computeVals) deviations.push_back(std::abs(v - median));
-    std::sort(deviations.begin(), deviations.end());
-    double mad = deviations[deviations.size() / 2];
-    double modZ = 0.6745 * std::abs(sample.compute.instantaneousPower_GFLOPS - median) / (mad + 1e-9);
-    return modZ > threshold;
+bool detectByzantineNode(const AmbientNode& node, const std::vector<AmbientNode*>& peers, double threshold) {
+    auto sampleOpt = node.last();
+    if (!sampleOpt.has_value() || peers.size()<3) return false;
+    std::vector<double> vals;
+    for (auto* p: peers) {
+        auto sOpt = p->last();
+        if (!sOpt.has_value()) continue;
+        vals.push_back(sOpt->compute.instantaneousPower_GFLOPS);
+    }
+    if(vals.size()<3) return false;
+    std::sort(vals.begin(), vals.end());
+    double median = vals[vals.size()/2];
+    double mad = 0.0;
+    for (auto v: vals) mad += std::abs(v-median);
+    mad /= vals.size();
+    double modZ = 0.6745 * std::abs(sampleOpt->compute.instantaneousPower_GFLOPS - median)/(mad+1e-9);
+    if(modZ>threshold) std::cout << "[BYZANTINE DETECTED] Node " << node.id().pubkey << "\n";
+    return modZ>threshold;
 }
 
 // ============================================================================
 // REPUTATION & TOKEN ECONOMICS
 // ============================================================================
 
-double updateReputationScore(double currentScore, bool success, double sla, int64_t uptimeMs) {
-    double delta = success ? 0.01 * sla : -0.05;
-    delta += std::min(0.01, uptimeMs / 3600000.0 * 0.001);
-    double newScore = 0.95 * currentScore + 0.05 * (currentScore + delta);
-    return std::clamp(newScore, 0.0, 1.0);
+double updateReputationScore(const AmbientNode& node, bool success, double sla, int64_t uptimeMs) {
+    auto rep = node.reputation();
+    double delta = success ? 0.01*sla : -0.05;
+    delta += std::min(0.01, uptimeMs/3600000.0*0.001);
+    double newScore = 0.95*rep.score + 0.05*(rep.score+delta);
+    return std::clamp(newScore,0.0,1.0);
 }
 
-TokenReward calculateTokenReward(const TelemetrySample& sample, double baseRate) {
-    TokenReward r;
-    r.recipientPubkey = sample.node.pubkey;
-    r.timestampMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        sample.timestamp.time_since_epoch()).count();
-    double eff = 1.0; // placeholder efficiency
-    double rep = 1.0; // placeholder reputation
-    r.tokenAmount = sample.compute.instantaneousPower_GFLOPS * baseRate * eff * rep;
-    std::ostringstream ss;
-    ss << "0x" << std::hash<std::string>{}(sample.node.pubkey + std::to_string(r.timestampMs));
-    r.txHash = ss.str();
-    return r;
+IncentiveRecord calculateTokenReward(const AmbientNode& node, double baseRate) {
+    auto sampleOpt = node.last();
+    if(!sampleOpt.has_value()) return {};
+    const auto& s = sampleOpt.value();
+    double eff = s.energy.computeEfficiency_GFLOPS_W;
+    double priv = s.privacy.privacyBudgetRemaining;
+    double rep = node.reputation().score;
+    double amount = s.compute.instantaneousPower_GFLOPS*baseRate*eff*priv*rep;
+    return node.accrueReward("autoTask",amount);
 }
 
 // ============================================================================
 // SYSTEM HEALTH & VALIDATION
 // ============================================================================
 
-SystemHealth analyzeSystemHealth(const std::vector<TelemetrySample>& networkState) {
-    SystemHealth health = {0,0,0,0,0,0};
-    if (networkState.empty()) return health;
-    health.activeNodes = networkState.size();
-    for (auto& s : networkState) {
+struct SystemHealth {
+    size_t activeNodes = 0;
+    double avgLatency_ms = 0.0;
+    double totalComputePower_GFLOPS = 0.0;
+    double networkEfficiency = 0.0;
+    double aggregatePrivacyBudget = 0.0;
+    size_t byzantineNodesDetected = 0;
+};
+
+SystemHealth analyzeSystemHealth(const std::vector<AmbientNode*>& network) {
+    SystemHealth health;
+    if(network.empty()) return health;
+    health.activeNodes = network.size();
+    for(auto* n: network){
+        auto sOpt = n->last();
+        if(!sOpt.has_value()) continue;
+        const auto& s = sOpt.value();
         health.avgLatency_ms += s.compute.latencyMs;
         health.totalComputePower_GFLOPS += s.compute.instantaneousPower_GFLOPS;
         health.aggregatePrivacyBudget += s.privacy.epsilon;
-        if (!verifyComputationProof(s)) health.byzantineNodesDetected++;
+        if(!verifyComputationProof(s)) health.byzantineNodesDetected++;
     }
     health.avgLatency_ms /= health.activeNodes;
     health.aggregatePrivacyBudget /= health.activeNodes;
-    double totalPower = 0;
-    for (auto& s : networkState) totalPower += s.energy.inputPowerW;
-    health.networkEfficiency = totalPower > 0 ? health.totalComputePower_GFLOPS / totalPower : 0;
+    double totalPower=0;
+    for(auto* n: network){
+        auto sOpt = n->last();
+        if(!sOpt.has_value()) continue;
+        totalPower += sOpt->energy.inputPowerW;
+    }
+    health.networkEfficiency = totalPower>0 ? health.totalComputePower_GFLOPS/totalPower : 0;
     return health;
 }
 
-void validateTelemetrySample(const TelemetrySample& sample) {
-    if (sample.node.pubkey.empty()) throw std::invalid_argument("Node public key cannot be empty");
-    if (sample.compute.latencyMs < 0) throw std::invalid_argument("Latency cannot be negative");
-    if (sample.energy.inputPowerW < 0) throw std::invalid_argument("Power cannot be negative");
-    if (sample.privacy.epsilon > 10.0) throw std::invalid_argument("Privacy epsilon exceeds threshold");
-    if (sample.privacy.epsilon < 0) throw std::invalid_argument("Privacy budget exhausted");
-    if (!verifyComputationProof(sample)) throw std::invalid_argument("ZK proof verification failed");
+void validateTelemetrySample(const TelemetrySample& s){
+    if(s.node.pubkey.empty()) throw std::invalid_argument("Node public key cannot be empty");
+    if(s.compute.latencyMs<0) throw std::invalid_argument("Latency cannot be negative");
+    if(s.energy.inputPowerW<0) throw std::invalid_argument("Power cannot be negative");
+    if(s.privacy.epsilon>10.0) throw std::invalid_argument("Privacy epsilon exceeds threshold");
+    if(s.privacy.epsilon<0) throw std::invalid_argument("Privacy budget exhausted");
+    if(!verifyComputationProof(s)) throw std::invalid_argument("ZK proof verification failed");
 }
 
 } // namespace ambient
