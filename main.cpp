@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
-// AILEE-Core Node [v1.0.0-Production-Trusted]
+// AILEE-Core Node [v1.0.0-Production-Ready]
 // Main entry point with hardened orchestration, structured logging, and graceful lifecycle management.
 
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 #include <vector>
 #include <string>
 #include <thread>
@@ -26,18 +27,15 @@
 // Ambient Mesh Intelligence System
 #include "AmbientAI.h"
 
-// Network Infrastructure Headers
-#include "ailee_bitcoin_zmq_listener.h"
-#include "ailee_bitcoin_rpc_client.h"
-
-// Optional: Global Seven Orchestrator
-#include "global_seven/SettlementOrchestrator.h"
-
+// NOTE: These are optional - only include if you have these files
+// #include "ailee_bitcoin_zmq_listener.h"
+// #include "ailee_bitcoin_rpc_client.h"
+// #include "Global_Seven.h"
 
 // ---------------------------------------------------------
-// Structured logging
+// Structured logging with thread-safety
 // ---------------------------------------------------------
-enum class LogLevel { INFO, WARN, ERROR };
+enum class LogLevel { DEBUG, INFO, WARN, ERROR, FATAL };
 static std::mutex g_logMutex;
 
 static std::string nowIso8601() {
@@ -54,19 +52,25 @@ static std::string nowIso8601() {
 #endif
     char buf[64];
     std::strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S", &tm);
-    return std::string(buf) + "." + std::to_string(ms);
+    
+    std::ostringstream oss;
+    oss << buf << "." << std::setfill('0') << std::setw(3) << ms;
+    return oss.str();
 }
 
 static void log(LogLevel level, const std::string& msg) {
-    const char* sev =
-        (level == LogLevel::INFO ? "INFO" :
-         level == LogLevel::WARN ? "WARN" : "ERROR");
+    const char* sev = nullptr;
+    switch(level) {
+        case LogLevel::DEBUG: sev = "DEBUG"; break;
+        case LogLevel::INFO:  sev = "INFO "; break;
+        case LogLevel::WARN:  sev = "WARN "; break;
+        case LogLevel::ERROR: sev = "ERROR"; break;
+        case LogLevel::FATAL: sev = "FATAL"; break;
+    }
 
     std::lock_guard<std::mutex> lock(g_logMutex);
-    std::cout << "[" << nowIso8601() << "] [" << sev << "] "
-              << msg << std::endl;
+    std::cout << "[" << nowIso8601() << "] [" << sev << "] " << msg << std::endl;
 }
-
 
 // ---------------------------------------------------------
 // Shutdown flag + signal handling
@@ -74,8 +78,8 @@ static void log(LogLevel level, const std::string& msg) {
 static std::atomic<bool> g_shutdown{false};
 
 static void handleSignal(int signum) {
-    log(LogLevel::WARN, "Signal received: " + std::to_string(signum)
-        + " — initiating graceful shutdown.");
+    log(LogLevel::WARN, "Signal " + std::to_string(signum) + 
+        " received — initiating graceful shutdown");
     g_shutdown.store(true);
 }
 
@@ -87,18 +91,35 @@ static void installSignalHandlers() {
 #endif
 }
 
-
 // ---------------------------------------------------------
-// Config
+// Configuration with validation
 // ---------------------------------------------------------
 struct Config {
-    std::string zmqEndpoint       = "tcp://127.0.0.1:28332";
-    std::string rpcUser           = "rpcuser";
-    std::string rpcPass           = "rpcpassword";
-    std::string rpcUrl            = "http://127.0.0.1:8332";
+    // TPS Engine parameters
     int         tpsSimNodes       = 100;
     double      tpsInitialBlockMB = 1.0;
     int         tpsSimCycles      = 200;
+    
+    // Circuit breaker thresholds
+    double      maxBlockMB        = 4.0;
+    double      maxLatencyMs      = 2000.0;
+    int         minPeerCount      = 8;
+    
+    bool validate() const {
+        if (tpsSimNodes < 10 || tpsSimNodes > 10000) {
+            log(LogLevel::ERROR, "Invalid tpsSimNodes: " + std::to_string(tpsSimNodes));
+            return false;
+        }
+        if (tpsInitialBlockMB < 0.1 || tpsInitialBlockMB > 8.0) {
+            log(LogLevel::ERROR, "Invalid tpsInitialBlockMB: " + std::to_string(tpsInitialBlockMB));
+            return false;
+        }
+        if (tpsSimCycles < 10 || tpsSimCycles > 10000) {
+            log(LogLevel::ERROR, "Invalid tpsSimCycles: " + std::to_string(tpsSimCycles));
+            return false;
+        }
+        return true;
+    }
 };
 
 static std::string envOrDefault(const char* key, const std::string& def) {
@@ -108,325 +129,308 @@ static std::string envOrDefault(const char* key, const std::string& def) {
 
 static Config loadConfigFromEnv() {
     Config c;
-    c.zmqEndpoint = envOrDefault("AILEE_ZMQ_ENDPOINT", c.zmqEndpoint);
-    c.rpcUser     = envOrDefault("AILEE_RPC_USER",     c.rpcUser);
-    c.rpcPass     = envOrDefault("AILEE_RPC_PASS",     c.rpcPass);
-    c.rpcUrl      = envOrDefault("AILEE_RPC_URL",      c.rpcUrl);
-
-    if (const char* n = std::getenv("AILEE_TPS_NODES"))      c.tpsSimNodes = std::atoi(n);
-    if (const char* b = std::getenv("AILEE_TPS_INITIAL_MB")) c.tpsInitialBlockMB = std::atof(b);
-    if (const char* c2= std::getenv("AILEE_TPS_CYCLES"))     c.tpsSimCycles = std::atoi(c2);
+    
+    if (const char* n = std::getenv("AILEE_TPS_NODES")) {
+        c.tpsSimNodes = std::atoi(n);
+    }
+    if (const char* b = std::getenv("AILEE_TPS_INITIAL_MB")) {
+        c.tpsInitialBlockMB = std::atof(b);
+    }
+    if (const char* cycles = std::getenv("AILEE_TPS_CYCLES")) {
+        c.tpsSimCycles = std::atoi(cycles);
+    }
 
     return c;
 }
 
-
 // ---------------------------------------------------------
-// Engine
+// Engine with proper error handling
 // ---------------------------------------------------------
-struct Engine {
-    ailee::global_seven::SettlementOrchestrator orchestrator;
-
-    ailee::AILEEEngine tpsEngine;
-    ailee::EnergyTelemetry energyMonitor;
-
-    ailee::BitcoinZMQListener zmqListener;
-    ailee::BitcoinRPCClient   rpcClient;
-
-    std::thread zmqThread;
-    std::atomic<bool> zmqRunning{false};
-
-    double maxBlockMBForSafeMode = 8.0;
-    double maxLatencyMsForSafe   = 250.0;
-    int    maxErrCountForSafe    = 25;
-
-    Config cfg;
-
-    explicit Engine(const Config& cfg_)
-        : zmqListener(cfg_.zmqEndpoint),
-          rpcClient(cfg_.rpcUser, cfg_.rpcPass, cfg_.rpcUrl),
-          cfg(cfg_) {}
-
-
-    // TPS Simulation
-    void runTPSSimulation() {
-        log(LogLevel::INFO,
-            "TPS Simulation starting… nodes=" + std::to_string(cfg.tpsSimNodes) +
-            " initialMB=" + std::to_string(cfg.tpsInitialBlockMB) +
-            " cycles=" + std::to_string(cfg.tpsSimCycles));
-
-        auto result = ailee::PerformanceSimulator::runSimulation(
-            cfg.tpsSimNodes, cfg.tpsInitialBlockMB, cfg.tpsSimCycles);
-
-        log(LogLevel::INFO, "Baseline TPS: " + std::to_string(result.initialTPS));
-        log(LogLevel::INFO, "Final TPS: "    + std::to_string(result.finalTPS));
-        log(LogLevel::INFO, "Improvement: "  + std::to_string(result.improvementFactor) + "x");
-        log(LogLevel::INFO, "Cycles Run: "   + std::to_string(result.cycles));
-
-        std::ostringstream hist;
-        hist << "Optimization snapshots:";
-        for (size_t i = 0; i < result.aiFactorHistory.size(); i += 20) {
-            hist << "\n  cycle=" << i
-                 << " aiFactor=" << std::fixed << std::setprecision(4) << result.aiFactorHistory[i]
-                 << " tps="      << std::setprecision(1)               << result.tpsHistory[i]
-                 << " error="    << std::setprecision(4)               << result.errorHistory[i];
-        }
-        log(LogLevel::INFO, hist.str());
+class Engine {
+public:
+    explicit Engine(const Config& cfg) : cfg_(cfg) {
+        log(LogLevel::INFO, "Engine initialized with " + 
+            std::to_string(cfg_.tpsSimNodes) + " nodes");
     }
 
+    ~Engine() {
+        log(LogLevel::INFO, "Engine shutting down");
+    }
 
-    // Gold Bridge
-    void testGoldBridge() {
-        log(LogLevel::INFO, "Testing Bitcoin-to-Gold Bridge protocol…");
-
-        ailee::GoldBridge bridge;
-        std::string user = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa";
-        uint64_t btcAmount = 500000000;
+    // TPS Simulation with error handling
+    bool runTPSSimulation() {
+        log(LogLevel::INFO, "TPS Simulation starting: nodes=" + 
+            std::to_string(cfg_.tpsSimNodes) +
+            " initialMB=" + std::to_string(cfg_.tpsInitialBlockMB) +
+            " cycles=" + std::to_string(cfg_.tpsSimCycles));
 
         try {
-            std::string conversionId =
-                bridge.initiateConversion(user, btcAmount, true);
+            auto result = ailee::PerformanceSimulator::runSimulation(
+                cfg_.tpsSimNodes, cfg_.tpsInitialBlockMB, cfg_.tpsSimCycles);
 
-            log(LogLevel::INFO, "Conversion ID: " + conversionId);
-            log(LogLevel::INFO, "Status: PENDING_PAYMENT; Oracle: ACTIVE; Inventory: SECURE");
+            log(LogLevel::INFO, "Baseline TPS: " + std::to_string(result.initialTPS));
+            log(LogLevel::INFO, "Final TPS: " + std::to_string(result.finalTPS));
+            log(LogLevel::INFO, "Improvement: " + std::to_string(result.improvementFactor) + "x");
+            log(LogLevel::INFO, "Cycles completed: " + std::to_string(result.cycles));
+
+            // Log optimization snapshots
+            std::ostringstream hist;
+            hist << "Optimization history (every 20 cycles):";
+            for (size_t i = 0; i < result.aiFactorHistory.size(); i += 20) {
+                hist << "\n  cycle=" << std::setw(4) << i
+                     << " aiFactor=" << std::fixed << std::setprecision(4) 
+                     << result.aiFactorHistory[i]
+                     << " tps=" << std::setprecision(1) << result.tpsHistory[i]
+                     << " error=" << std::setprecision(4) << result.errorHistory[i];
+            }
+            log(LogLevel::INFO, hist.str());
+            
+            return true;
         } catch (const std::exception& e) {
-            log(LogLevel::ERROR, std::string("GoldBridge error: ") + e.what());
-            ailee::RecoveryProtocol::recordIncident("GoldBridgeInitiateFailure", e.what());
+            log(LogLevel::ERROR, "TPS Simulation failed: " + std::string(e.what()));
+            ailee::RecoveryProtocol::recordIncident("TPSSimulationFailure", e.what());
+            return false;
         }
     }
 
+    // Gold Bridge with proper error handling
+    bool testGoldBridge() {
+        log(LogLevel::INFO, "Testing Bitcoin-to-Gold Bridge protocol");
 
-    // Safety + Energy
-    void testSafetyAndEnergy() {
-        log(LogLevel::INFO, "Evaluating Auxiliary Systems (Safety & Energy)…");
+        try {
+            ailee::GoldBridge bridge;
+            std::string user = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa";
+            uint64_t btcAmount = 500000000; // 5 BTC
 
-        ailee::ThermalMetric minerStats =
-            {3000.0, 1500.0, 25.0, 60.0, 1735660000};
+            std::string conversionId = bridge.initiateConversion(user, btcAmount, true);
 
-        double efficiency =
-            ailee::EnergyTelemetry::calculateEfficiencyScore(minerStats);
-
-        std::string proof =
-            ailee::EnergyTelemetry::generateTelemetryProof(minerStats, "Node-001");
-
-        log(LogLevel::INFO,
-            "Energy: input=" + std::to_string(minerStats.inputPowerWatts) +
-            "W wasteRecovery=" + std::to_string(minerStats.wasteHeatRecoveredW) +
-            "W effScore=" + std::to_string(efficiency * 100.0) + "%");
-
-        log(LogLevel::INFO, "Green Hash: " + proof);
-
-        auto state =
-            ailee::CircuitBreaker::monitor(
-                maxBlockMBForSafeMode,
-                maxLatencyMsForSafe,
-                maxErrCountForSafe);
-
-        if (state == ailee::SystemState::SAFE_MODE) {
-            log(LogLevel::WARN,
-                "Circuit Breaker: SAFE_MODE engaged — throttling modules.");
-            throttleSystems();
-        } else {
-            log(LogLevel::INFO,
-                "Circuit Breaker: OPTIMIZED — running within safe parameters.");
+            log(LogLevel::INFO, "Conversion initiated: ID=" + conversionId);
+            log(LogLevel::INFO, "Status: PENDING_PAYMENT | Oracle: ACTIVE | Inventory: SECURE");
+            
+            return true;
+        } catch (const std::exception& e) {
+            log(LogLevel::ERROR, "Gold Bridge failed: " + std::string(e.what()));
+            ailee::RecoveryProtocol::recordIncident("GoldBridgeFailure", e.what());
+            return false;
         }
     }
 
+    // Safety & Energy with enhanced Circuit Breaker v1.4
+    bool testSafetyAndEnergy() {
+        log(LogLevel::INFO, "Evaluating Safety & Energy systems");
 
-    // ---------------------------------------------------------
-    // AmbientAI Mesh Integration
-    // ---------------------------------------------------------
-    void demoAmbientMesh() {
-        log(LogLevel::INFO, "[AmbientAI] Running Ambient Mesh intelligence demo…");
+        try {
+            // Sample thermal metrics
+            ailee::ThermalMetric minerStats{
+                3000.0,      // inputPowerWatts
+                1500.0,      // wasteHeatRecoveredW
+                25.0,        // ambientTempC
+                60.0,        // exhaustTempC
+                1735660000   // timestamp
+            };
 
-        ambient::SafetyPolicy policy{80.0, 250.0, 8.0, 25};
+            // Calculate Energy Integrity Score
+            auto analysis = ailee::EnergyTelemetry::analyze(minerStats);
+            
+            std::string proof = ailee::EnergyTelemetry::generateTelemetryProof(
+                minerStats, "Node-001");
 
-        ambient::AmbientNode nodeA(
-            { "pubA", "us-east", "gateway" }, policy);
+            log(LogLevel::INFO, 
+                "Energy Analysis: input=" + std::to_string(minerStats.inputPowerWatts) + "W " +
+                "recovery=" + std::to_string(minerStats.wasteHeatRecoveredW) + "W " +
+                "EIS=" + std::to_string(analysis.energyIntegrityScore * 100.0) + "%");
+            
+            log(LogLevel::DEBUG, "GreenHash: " + proof.substr(0, 32) + "...");
 
-        ambient::AmbientNode nodeB(
-            { "pubB", "us-east", "smartphone" }, policy);
+            // Enhanced Circuit Breaker v1.4 with EIS
+            auto breaker = ailee::CircuitBreaker::monitor(
+                1.5,                              // proposedBlockSize
+                100.0,                            // currentLatency
+                100,                              // peerCount
+                1.0,                              // targetBlockSize
+                analysis,                         // energy analysis with EIS
+                0.5                               // previousEIS
+            );
 
-        ambient::TelemetrySample sA{
-            { "pubA", "us-east", "gateway" },
-            { 1200.0, 300.0, 55.0, 22.0, 350.0 },
-            { 35.0, 10.0, 5.0, 2048.0, 150.0, 40.0 },
-            std::chrono::system_clock::now(),
-            { 1.0, 1e-5 }
-        };
+            switch(breaker.state) {
+                case ailee::SystemState::OPTIMIZED:
+                    log(LogLevel::INFO, "Circuit Breaker: OPTIMIZED — " + breaker.reason);
+                    break;
+                case ailee::SystemState::SOFT_TRIP:
+                    log(LogLevel::WARN, "Circuit Breaker: SOFT_TRIP — " + breaker.reason);
+                    break;
+                case ailee::SystemState::SAFE_MODE:
+                    log(LogLevel::WARN, "Circuit Breaker: SAFE_MODE — " + breaker.reason);
+                    throttleSystems();
+                    break;
+                case ailee::SystemState::CRITICAL:
+                    log(LogLevel::FATAL, "Circuit Breaker: CRITICAL — " + breaker.reason);
+                    return false;
+            }
+            
+            return true;
+        } catch (const std::exception& e) {
+            log(LogLevel::ERROR, "Safety/Energy test failed: " + std::string(e.what()));
+            ailee::RecoveryProtocol::recordIncident("SafetyEnergyFailure", e.what());
+            return false;
+        }
+    }
 
-        ambient::TelemetrySample sB{
-            { "pubB", "us-east", "smartphone" },
-            { 8.5, 1.2, 42.0, 22.0, 200.0 },
-            { 25.0, 20.0, 0.0, 512.0, 25.0, 30.0 },
-            std::chrono::system_clock::now(),
-            { 1.0, 1e-5 }
-        };
+    // AmbientAI Mesh with corrected field names
+    bool demoAmbientMesh() {
+        log(LogLevel::INFO, "[AmbientAI] Running Ambient Mesh intelligence demo");
 
-        nodeA.ingestTelemetry(sA);
-        nodeB.ingestTelemetry(sB);
+        try {
+            ambient::SafetyPolicy policy{80.0, 250.0, 8.0, 25};
 
-        ambient::MeshCoordinator mesh("cluster-us-east");
-        mesh.registerNode(&nodeA);
-        mesh.registerNode(&nodeB);
+            ambient::AmbientNode nodeA({"pubA", "us-east", "gateway"}, policy);
+            ambient::AmbientNode nodeB({"pubB", "us-east", "smartphone"}, policy);
 
-        ambient::MeshCoordinator::TaskFn perfFn =
-            [](const ambient::AmbientNode& n) {
+            // Sample telemetry for gateway node
+            ambient::TelemetrySample sampleA{
+                {"pubA", "us-east", "gateway"},
+                {1200.0, 300.0, 55.0, 22.0, 350.0},          // energy
+                {35.0, 10.0, 5.0, 2048.0, 150.0, 40.0},      // compute
+                std::chrono::system_clock::now(),
+                {1.0, 1e-5}                                   // privacy
+            };
+
+            // Sample telemetry for smartphone node
+            ambient::TelemetrySample sampleB{
+                {"pubB", "us-east", "smartphone"},
+                {8.5, 1.2, 42.0, 22.0, 200.0},               // energy
+                {25.0, 20.0, 0.0, 512.0, 25.0, 30.0},        // compute
+                std::chrono::system_clock::now(),
+                {1.0, 1e-5}                                   // privacy
+            };
+
+            nodeA.ingestTelemetry(sampleA);
+            nodeB.ingestTelemetry(sampleB);
+
+            ambient::MeshCoordinator mesh("cluster-us-east");
+            mesh.registerNode(&nodeA);
+            mesh.registerNode(&nodeB);
+
+            // Performance-based reward calculation
+            auto perfFn = [](const ambient::AmbientNode& n) -> double {
                 auto last = n.last();
                 if (!last.has_value()) return 0.0;
 
-                double score =
-                    (last->compute.bandwidthMbps / 50.0) -
-                    (last->compute.latencyMs / 500.0);
-
-                score = std::clamp(score, 0.1, 2.0);
-                return score;
+                double score = (last->compute.bandwidthMbps / 50.0) - 
+                              (last->compute.latencyMs / 500.0);
+                return std::clamp(score, 0.1, 2.0);
             };
 
-        auto rewardRec =
-            mesh.dispatchAndReward("task-entropy-infer", perfFn, 10.0);
+            auto rewardRec = mesh.dispatchAndReward("task-entropy-infer", perfFn, 10.0);
 
-        log(LogLevel::INFO,
-            "[AmbientAI] Reward → node=" + rewardRec.nodeId +
-            " value=" + std::to_string(rewardRec.rewardValue));
+            // FIXED: Use correct field names from IncentiveRecord
+            log(LogLevel::INFO, 
+                "[AmbientAI] Reward dispatched: node=" + rewardRec.node.pubkey +
+                " tokens=" + std::to_string(rewardRec.rewardTokens));
 
-        ailee::RecoveryProtocol::recordIncident(
-            "AmbientMeshReward",
-            "Reward=" + std::to_string(rewardRec.rewardValue));
-    }
-
-
-    // ---------------------------------------------------------
-    // ZMQ lifecycle
-    // ---------------------------------------------------------
-    void startZmq() {
-        zmqListener.init();
-        zmqRunning.store(true);
-
-        zmqThread = std::thread([this]() {
-            try {
-                zmqListener.start();
-            } catch (const std::exception& e) {
-                log(LogLevel::ERROR,
-                    std::string("ZMQ listener exception: ") + e.what());
-            }
-            zmqRunning.store(false);
-        });
-    }
-
-    void stopZmq() {
-        try { zmqListener.stop(); }
-        catch (const std::exception& e) {
-            log(LogLevel::ERROR,
-                std::string("ZMQ stop error: ") + e.what());
-        }
-        if (zmqThread.joinable()) zmqThread.join();
-    }
-
-
-    // Network initialization
-    void testNetworkInfrastructure() {
-        log(LogLevel::INFO, "Initializing Network Bridge (ZMQ + RPC)…");
-
-        try {
-            startZmq();
-
-            int attempts = 0;
-            const int maxAttempts = 3;
-            long count = -1;
-
-            while (attempts < maxAttempts && !g_shutdown.load()) {
-                count = rpcClient.getBlockCount();
-                if (count >= 0) break;
-
-                attempts++;
-                log(LogLevel::WARN,
-                    "RPC probe failed — retry " +
-                    std::to_string(attempts) + "/" +
-                    std::to_string(maxAttempts));
-
-                std::this_thread::sleep_for(
-                    std::chrono::milliseconds(250 * attempts));
-            }
-
-            if (count >= 0) {
-                log(LogLevel::INFO,
-                    "Bitcoin RPC connected. Block Height: " +
-                    std::to_string(count));
-            } else {
-                log(LogLevel::WARN,
-                    "Simulation Mode: No active Bitcoin node detected.");
-            }
-
-            std::this_thread::sleep_for(
-                std::chrono::milliseconds(500));
+            ailee::RecoveryProtocol::recordIncident(
+                "AmbientMeshReward",
+                "Node=" + rewardRec.node.pubkey + 
+                " Tokens=" + std::to_string(rewardRec.rewardTokens));
+            
+            return true;
         } catch (const std::exception& e) {
-            log(LogLevel::ERROR,
-                std::string("Network initialization error: ") + e.what());
+            log(LogLevel::ERROR, "AmbientAI demo failed: " + std::string(e.what()));
+            ailee::RecoveryProtocol::recordIncident("AmbientAIFailure", e.what());
+            return false;
         }
-
-        stopZmq();
-        log(LogLevel::INFO, "Network Bridge shutdown complete.");
     }
 
-
-    // Throttling under safe-mode
+    // Adaptive throttling
     void throttleSystems() {
-        cfg.tpsSimCycles =
-            std::max(50, cfg.tpsSimCycles / 2);
-
-        log(LogLevel::WARN,
-            "Adaptive throttling applied — TPS cycles reduced to " +
-            std::to_string(cfg.tpsSimCycles));
+        int oldCycles = cfg_.tpsSimCycles;
+        cfg_.tpsSimCycles = std::max(50, cfg_.tpsSimCycles / 2);
+        
+        log(LogLevel::WARN, 
+            "Adaptive throttling: TPS cycles " + std::to_string(oldCycles) + 
+            " → " + std::to_string(cfg_.tpsSimCycles));
     }
+
+private:
+    Config cfg_;
 };
 
-
 // ---------------------------------------------------------
-// Main
+// Main entry point
 // ---------------------------------------------------------
 int main(int argc, char* argv[]) {
+    // Install signal handlers first
     installSignalHandlers();
-    log(LogLevel::INFO,
-        "Starting AILEE-Core Node [v1.0.0-Production-Trusted]…");
+    
+    log(LogLevel::INFO, "╔═══════════════════════════════════════════════════╗");
+    log(LogLevel::INFO, "║   AILEE-Core Node [v1.0.0-Production-Ready]      ║");
+    log(LogLevel::INFO, "╚═══════════════════════════════════════════════════╝");
 
+    // Load and validate configuration
     Config cfg = loadConfigFromEnv();
-    log(LogLevel::INFO,
-        "Config: ZMQ=" + cfg.zmqEndpoint + " RPC=" + cfg.rpcUrl);
-
-    Engine engine(cfg);
-
-    try {
-        engine.runTPSSimulation();
-        if (g_shutdown.load())
-            throw std::runtime_error("Shutdown requested during TPS.");
-
-        engine.testGoldBridge();
-        if (g_shutdown.load())
-            throw std::runtime_error("Shutdown requested during Bridge.");
-
-        engine.testSafetyAndEnergy();
-        if (g_shutdown.load())
-            throw std::runtime_error("Shutdown requested during Safety/Energy.");
-
-        engine.demoAmbientMesh();     // <<< NEW MODULE
-        if (g_shutdown.load())
-            throw std::runtime_error("Shutdown requested during AmbientAI.");
-
-        engine.testNetworkInfrastructure();
-        if (g_shutdown.load())
-            throw std::runtime_error("Shutdown requested during Network.");
-
-    } catch (const std::exception& e) {
-        log(LogLevel::ERROR,
-            std::string("Fatal error: ") + e.what());
-
-        ailee::RecoveryProtocol::recordIncident(
-            "FatalMainException", e.what());
+    if (!cfg.validate()) {
+        log(LogLevel::FATAL, "Configuration validation failed");
+        return 1;
     }
 
-    log(LogLevel::INFO,
-        "[AILEE-CORE] All modules completed. Exiting cleanly.");
-    return 0;
+    log(LogLevel::INFO, "Configuration loaded successfully");
+    
+    // Initialize engine
+    Engine engine(cfg);
+    
+    int exitCode = 0;
+    
+    try {
+        // Run TPS simulation
+        if (!g_shutdown.load()) {
+            if (!engine.runTPSSimulation()) {
+                log(LogLevel::ERROR, "TPS Simulation failed");
+                exitCode = 1;
+            }
+        }
+        
+        // Test Gold Bridge
+        if (!g_shutdown.load()) {
+            if (!engine.testGoldBridge()) {
+                log(LogLevel::ERROR, "Gold Bridge test failed");
+                exitCode = 1;
+            }
+        }
+        
+        // Test Safety & Energy
+        if (!g_shutdown.load()) {
+            if (!engine.testSafetyAndEnergy()) {
+                log(LogLevel::ERROR, "Safety/Energy test failed");
+                exitCode = 1;
+            }
+        }
+        
+        // Demo AmbientAI
+        if (!g_shutdown.load()) {
+            if (!engine.demoAmbientMesh()) {
+                log(LogLevel::ERROR, "AmbientAI demo failed");
+                exitCode = 1;
+            }
+        }
+
+        if (g_shutdown.load()) {
+            log(LogLevel::WARN, "Shutdown requested by signal");
+        }
+        
+    } catch (const std::exception& e) {
+        log(LogLevel::FATAL, "Unhandled exception: " + std::string(e.what()));
+        ailee::RecoveryProtocol::recordIncident("FatalMainException", e.what());
+        exitCode = 2;
+    } catch (...) {
+        log(LogLevel::FATAL, "Unknown exception caught");
+        ailee::RecoveryProtocol::recordIncident("FatalUnknownException", "Unknown error");
+        exitCode = 3;
+    }
+
+    log(LogLevel::INFO, "╔═══════════════════════════════════════════════════╗");
+    log(LogLevel::INFO, "║   AILEE-Core shutdown complete                   ║");
+    log(LogLevel::INFO, "╚═══════════════════════════════════════════════════╝");
+    
+    return exitCode;
 }
 
