@@ -280,13 +280,6 @@ Skeptics (security audits, attack vectors)
 
 See: CONTRIBUTING.md
 
-🔐 Security
-
-Audits: Security audit reports in audits/
-Bug Bounty: Up to $50,000 for critical vulnerabilities
-Disclosure: security@ailee.network
-
-
 📖 Documentation
 
 Architecture Overview - System design
