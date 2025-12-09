@@ -1,30 +1,32 @@
 // SPDX-License-Identifier: MIT
 // AmbientAI.h — Ambient energy/compute interfaces for AILEE-Core
-// Fully integrates telemetry history, ZK proofs, federated learning, safety policies, token incentives, and cluster orchestration.
+// Fully integrated: ZK proofs, telemetry, safety policies, federated learning, token incentives,
+// Byzantine detection, cluster safety, and health scoring.
 
 #pragma once
 
 #include <string>
 #include <vector>
-#include <deque>
 #include <chrono>
 #include <optional>
 #include <cstdint>
 #include <atomic>
 #include <functional>
 #include <mutex>
+#include <cmath>
+#include <algorithm>
 #include <numeric>
 
-#include "zk_proofs.h"
+#include "zk_proofs.h" // ZK proof module
 
 namespace ambient {
 
 // ================= Core Data Models =================
 
 struct NodeId {
-    std::string pubkey;
-    std::string region;
-    std::string deviceClass;
+    std::string pubkey;       // Public key for verifiable identity
+    std::string region;       // Geo/cluster tag
+    std::string deviceClass;  // e.g., "smartphone", "gateway", "miner"
 };
 
 struct EnergyProfile {
@@ -33,7 +35,7 @@ struct EnergyProfile {
     double temperatureC = 0.0;
     double ambientTempC = 0.0;
     double carbonIntensity_gCO2_kWh = 0.0;
-    double computeEfficiency_GFLOPS_W = 0.0;
+    double computeEfficiency_GFLOPS_W = 0.0; // Efficiency metric
 };
 
 struct ComputeProfile {
@@ -62,53 +64,11 @@ struct TelemetrySample {
     PrivacyBudget privacy;
 };
 
-// ================= Telemetry History =================
-
-struct NodeTelemetryHistory {
-    std::deque<TelemetrySample> history;
-    size_t maxSamples = 100;
-
-    void addSample(const TelemetrySample& sample) {
-        if (history.size() >= maxSamples) history.pop_front();
-        history.push_back(sample);
-    }
-
-    double avgLatency() const {
-        if (history.empty()) return 0.0;
-        double sum = 0.0;
-        for (const auto& s : history) sum += s.compute.latencyMs;
-        return sum / history.size();
-    }
-
-    double avgCompute() const {
-        if (history.empty()) return 0.0;
-        double sum = 0.0;
-        for (const auto& s : history)
-            sum += s.compute.cpuUtilization + s.compute.npuUtilization + s.compute.gpuUtilization;
-        return sum / history.size();
-    }
-
-    double avgEnergyEfficiency() const {
-        if (history.empty()) return 0.0;
-        double sum = 0.0;
-        for (const auto& s : history)
-            sum += s.energy.inputPowerW > 0 ? s.compute.cpuUtilization / s.energy.inputPowerW : 0.0;
-        return sum / history.size();
-    }
-
-    double avgPrivacyBudget() const {
-        if (history.empty()) return 0.0;
-        double sum = 0.0;
-        for (const auto& s : history) sum += s.privacy.epsilon;
-        return sum / history.size();
-    }
-};
-
 // ================= Federated Learning =================
 
 struct FederatedUpdate {
     std::string modelId;
-    std::vector<float> gradient;
+    std::vector<float> gradient;  // Quantized gradients
     PrivacyBudget privacy;
 };
 
@@ -146,6 +106,15 @@ struct SafetyPolicy {
     int    maxErrorCount   = 25;
 };
 
+// ================= Byzantine Node Types =================
+
+enum class NodeBehavior {
+    HONEST,
+    BYZANTINE_SILENT,
+    BYZANTINE_CORRUPT,
+    BYZANTINE_SYBIL
+};
+
 // ================= AmbientNode Class =================
 
 class AmbientNode {
@@ -156,18 +125,19 @@ public:
     void ingestTelemetry(const TelemetrySample& sample) {
         std::lock_guard<std::mutex> lock(mu_);
         lastSample_ = sample;
-        history_.addSample(sample);
 
+        // Safe-mode toggle
         safeMode_.store(sample.energy.temperatureC > policy_.maxTemperatureC ||
                         sample.compute.latencyMs > policy_.maxLatencyMs);
 
+        // Auto-generate ZK proof for telemetry
         ailee::zk::ZKEngine zkEngine;
-        auto proof = zkEngine.generateProof(id_.pubkey + std::to_string(timestampMs()),
-                                            std::to_string(sample.compute.cpuUtilization));
+        auto proof = zkEngine.generateProof(id_.pubkey, std::to_string(sample.compute.cpuUtilization));
         lastProof_ = { "telemetry_circuit", proof.proofData, zkEngine.verifyProof(proof), proof.timestampMs };
     }
 
-    FederatedUpdate runLocalTraining(const std::string& modelId, const std::vector<float>& miniBatch) {
+    FederatedUpdate runLocalTraining(const std::string& modelId,
+                                     const std::vector<float>& miniBatch) {
         std::lock_guard<std::mutex> lock(mu_);
         FederatedUpdate up;
         up.modelId = modelId;
@@ -188,12 +158,17 @@ public:
         p.proofHash = proof.proofData;
         p.verified  = zkEngine.verifyProof(proof);
         p.timestampMs = proof.timestampMs;
+
         lastProof_ = p;
         return p;
     }
 
     IncentiveRecord accrueReward(const std::string& taskId, double tokens) const {
-        IncentiveRecord rec{taskId, id_, tokens, false};
+        IncentiveRecord rec;
+        rec.taskId = taskId;
+        rec.node = id_;
+        rec.rewardTokens = tokens;
+        rec.distributed = false;
         return rec;
     }
 
@@ -206,24 +181,26 @@ public:
             rep_.disputes++;
             rep_.score -= deltaScore;
         }
-        if (rep_.score < 0.0) rep_.score = 0.0;
+        rep_.score = std::max(0.0, rep_.score);
     }
 
     bool isSafeMode() const { return safeMode_.load(); }
     NodeId id() const { return id_; }
+
     Reputation reputation() const {
         std::lock_guard<std::mutex> lock(mu_);
         return rep_;
     }
+
     std::optional<TelemetrySample> last() const {
         std::lock_guard<std::mutex> lock(mu_);
         return lastSample_;
     }
+
     std::optional<ZKProofStub> lastProof() const {
         std::lock_guard<std::mutex> lock(mu_);
         return lastProof_;
     }
-    NodeTelemetryHistory getHistory() const { return history_; }
 
 private:
     NodeId id_;
@@ -231,15 +208,8 @@ private:
     mutable std::mutex mu_;
     std::optional<TelemetrySample> lastSample_;
     ZKProofStub lastProof_;
-    NodeTelemetryHistory history_;
     Reputation rep_{id_, 0.0, 0, 0};
     std::atomic<bool> safeMode_{false};
-
-    static inline uint64_t timestampMs() {
-        return std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::system_clock::now().time_since_epoch()
-        ).count();
-    }
 };
 
 // ================= MeshCoordinator Class =================
@@ -263,8 +233,7 @@ public:
 
         for (auto* n : nodes_) {
             auto last = n->last();
-            if (!last.has_value()) continue;
-            if (n->isSafeMode()) continue;
+            if (!last.has_value() || n->isSafeMode()) continue;
 
             if (requireValidProof) {
                 auto proof = n->lastProof();
@@ -284,6 +253,34 @@ public:
         double multiplier = fn(*n);
         double reward = baseRewardTokens * multiplier;
         return n->accrueReward(taskId, reward);
+    }
+
+    // Detect potential Byzantine nodes
+    std::vector<NodeId> detectByzantineNodes() const {
+        std::lock_guard<std::mutex> lock(mu_);
+        std::vector<NodeId> byzantine;
+        if (nodes_.size() < 3) return byzantine;
+
+        std::vector<double> computePowers;
+        for (auto* n : nodes_) {
+            auto last = n->last();
+            if (!last.has_value()) continue;
+            computePowers.push_back(last->compute.instantaneousPower_GFLOPS);
+        }
+        if (computePowers.empty()) return byzantine;
+
+        std::sort(computePowers.begin(), computePowers.end());
+        double median = computePowers[computePowers.size() / 2];
+
+        for (auto* n : nodes_) {
+            auto last = n->last();
+            if (!last.has_value()) continue;
+            double dev = std::abs(last->compute.instantaneousPower_GFLOPS - median);
+            double mad = 0.6745 * dev;
+            if (mad > 3.0) byzantine.push_back(n->id());
+        }
+
+        return byzantine;
     }
 
     std::string clusterId() const { return clusterId_; }
