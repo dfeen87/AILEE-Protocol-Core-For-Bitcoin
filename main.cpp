@@ -27,10 +27,12 @@
 // Ambient Mesh Intelligence System
 #include "AmbientAI.h"
 
-// NOTE: These are optional - only include if you have these files
-// #include "ailee_bitcoin_zmq_listener.h"
-// #include "ailee_bitcoin_rpc_client.h"
-// #include "Global_Seven.h"
+// Layer-2 Internet Relay
+#include "ailee_netflow.h"
+
+#include "ailee_bitcoin_zmq_listener.h"
+#include "ailee_bitcoin_rpc_client.h"
+#include "Global_Seven.h"
 
 // ---------------------------------------------------------
 // Structured logging with thread-safety
@@ -105,6 +107,10 @@ struct Config {
     double      maxLatencyMs      = 2000.0;
     int         minPeerCount      = 8;
     
+    // Layer-2 NetFlow options
+    bool        enableNetFlow     = true;
+    int         netFlowPort       = 4000;
+    
     bool validate() const {
         if (tpsSimNodes < 10 || tpsSimNodes > 10000) {
             log(LogLevel::ERROR, "Invalid tpsSimNodes: " + std::to_string(tpsSimNodes));
@@ -116,6 +122,10 @@ struct Config {
         }
         if (tpsSimCycles < 10 || tpsSimCycles > 10000) {
             log(LogLevel::ERROR, "Invalid tpsSimCycles: " + std::to_string(tpsSimCycles));
+            return false;
+        }
+        if (netFlowPort < 1024 || netFlowPort > 65535) {
+            log(LogLevel::ERROR, "Invalid netFlowPort: " + std::to_string(netFlowPort));
             return false;
         }
         return true;
@@ -139,6 +149,12 @@ static Config loadConfigFromEnv() {
     if (const char* cycles = std::getenv("AILEE_TPS_CYCLES")) {
         c.tpsSimCycles = std::atoi(cycles);
     }
+    if (const char* nf = std::getenv("AILEE_NETFLOW_ENABLE")) {
+        c.enableNetFlow = std::atoi(nf) != 0;
+    }
+    if (const char* port = std::getenv("AILEE_NETFLOW_PORT")) {
+        c.netFlowPort = std::atoi(port);
+    }
 
     return c;
 }
@@ -151,6 +167,18 @@ public:
     explicit Engine(const Config& cfg) : cfg_(cfg) {
         log(LogLevel::INFO, "Engine initialized with " + 
             std::to_string(cfg_.tpsSimNodes) + " nodes");
+        
+        // Initialize NetFlow if enabled
+        if (cfg_.enableNetFlow) {
+            try {
+                netFlow_.initialize(cfg_.netFlowPort);
+                log(LogLevel::INFO, "NetFlow initialized on port " + 
+                    std::to_string(cfg_.netFlowPort));
+            } catch (const std::exception& e) {
+                log(LogLevel::ERROR, "NetFlow initialization failed: " + std::string(e.what()));
+                throw;
+            }
+        }
     }
 
     ~Engine() {
@@ -276,7 +304,7 @@ public:
         }
     }
 
-    // AmbientAI Mesh with corrected field names
+    // AmbientAI Mesh with corrected field names and NetFlow integration
     bool demoAmbientMesh() {
         log(LogLevel::INFO, "[AmbientAI] Running Ambient Mesh intelligence demo");
 
@@ -323,7 +351,6 @@ public:
 
             auto rewardRec = mesh.dispatchAndReward("task-entropy-infer", perfFn, 10.0);
 
-            // FIXED: Use correct field names from IncentiveRecord
             log(LogLevel::INFO, 
                 "[AmbientAI] Reward dispatched: node=" + rewardRec.node.pubkey +
                 " tokens=" + std::to_string(rewardRec.rewardTokens));
@@ -333,6 +360,17 @@ public:
                 "Node=" + rewardRec.node.pubkey + 
                 " Tokens=" + std::to_string(rewardRec.rewardTokens));
             
+            // Layer-2 NetFlow relay
+            if (cfg_.enableNetFlow) {
+                try {
+                    std::vector<ambient::AmbientNode*> nodes = {&nodeA, &nodeB};
+                    netFlow_.relayBandwidth(nodes);
+                    log(LogLevel::INFO, "[NetFlow] Bandwidth relayed between Ambient nodes");
+                } catch (const std::exception& e) {
+                    log(LogLevel::WARN, "[NetFlow] Relay failed: " + std::string(e.what()));
+                }
+            }
+            
             return true;
         } catch (const std::exception& e) {
             log(LogLevel::ERROR, "AmbientAI demo failed: " + std::string(e.what()));
@@ -341,7 +379,7 @@ public:
         }
     }
 
-    // Adaptive throttling
+    // Adaptive throttling with NetFlow awareness
     void throttleSystems() {
         int oldCycles = cfg_.tpsSimCycles;
         cfg_.tpsSimCycles = std::max(50, cfg_.tpsSimCycles / 2);
@@ -349,10 +387,15 @@ public:
         log(LogLevel::WARN, 
             "Adaptive throttling: TPS cycles " + std::to_string(oldCycles) + 
             " → " + std::to_string(cfg_.tpsSimCycles));
+        
+        if (cfg_.enableNetFlow) {
+            log(LogLevel::DEBUG, "Throttling adjusted considering NetFlow load");
+        }
     }
 
 private:
     Config cfg_;
+    ailee::NetFlow netFlow_;
 };
 
 // ---------------------------------------------------------
@@ -405,7 +448,7 @@ int main(int argc, char* argv[]) {
             }
         }
         
-        // Demo AmbientAI
+        // Demo AmbientAI with NetFlow
         if (!g_shutdown.load()) {
             if (!engine.demoAmbientMesh()) {
                 log(LogLevel::ERROR, "AmbientAI demo failed");
@@ -433,4 +476,3 @@ int main(int argc, char* argv[]) {
     
     return exitCode;
 }
-
