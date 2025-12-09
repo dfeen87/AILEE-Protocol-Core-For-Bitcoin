@@ -1,20 +1,272 @@
-// config_loader.h
-#pragma once
-#include "config_types.h"
-#include <optional>
-#include <string>
+// config_loader.cpp
+#include "config_loader.h"
+#include <yaml-cpp/yaml.h>
+#include <fstream>
+#include <sstream>
+#include <iostream>
 
-struct ConfigError {
-  std::string message;
-  std::string path;     // JSON/YAML path for clarity
-};
+static std::string slurp(const std::string& file) {
+  std::ifstream in(file, std::ios::binary);
+  if (!in) return {};
+  std::ostringstream ss; 
+  ss << in.rdbuf();
+  return ss.str();
+}
 
-struct ConfigResult {
-  std::optional<Config> cfg;
-  std::vector<ConfigError> errors;
-};
+// YAML parser implementation
+static std::optional<Config> parse_yaml(const std::string& text) {
+  try {
+    YAML::Node root = YAML::Load(text);
+    Config cfg;
+    
+    // Basic fields
+    if (root["version"]) cfg.version = root["version"].as<int>();
+    if (root["mode"]) cfg.mode = root["mode"].as<std::string>();
+    if (root["step_ms"]) cfg.step_ms = root["step_ms"].as<size_t>();
+    if (root["horizon_s"]) cfg.horizon_s = root["horizon_s"].as<size_t>();
+    
+    // Signals
+    if (root["signals"]) {
+      for (const auto& sig : root["signals"]) {
+        SignalSpec s;
+        s.name = sig["name"].as<std::string>();
+        s.source = sig["source"].as<std::string>();
+        s.window_ms = sig["window_ms"].as<size_t>();
+        cfg.signals.push_back(s);
+      }
+    }
+    
+    // Metrics
+    if (root["metrics"]) {
+      for (const auto& met : root["metrics"]) {
+        MetricSpec m;
+        m.name = met["name"].as<std::string>();
+        m.type = met["type"].as<std::string>();
+        
+        if (met["signals"]) {
+          for (const auto& sig : met["signals"]) {
+            m.signals.push_back(sig.as<std::string>());
+          }
+        }
+        
+        m.window_ms = met["window_ms"].as<size_t>();
+        m.stride_ms = met["stride_ms"].as<size_t>();
+        cfg.metrics.push_back(m);
+      }
+    }
+    
+    // Policies
+    if (root["policies"]) {
+      for (const auto& pol : root["policies"]) {
+        PolicySpec p;
+        p.name = pol["name"].as<std::string>();
+        p.when = pol["when"].as<std::string>();
+        
+        if (pol["actions"]) {
+          for (const auto& act : pol["actions"]) {
+            PolicyAction a;
+            a.type = act["type"].as<std::string>();
+            
+            if (act["args"]) {
+              for (const auto& arg : act["args"]) {
+                a.args[arg.first.as<std::string>()] = arg.second.as<std::string>();
+              }
+            }
+            
+            p.actions.push_back(a);
+          }
+        }
+        
+        cfg.policies.push_back(p);
+      }
+    }
+    
+    // Pipelines
+    if (root["pipelines"]) {
+      for (const auto& pipe : root["pipelines"]) {
+        PipelineSpec ps;
+        ps.name = pipe["name"].as<std::string>();
+        ps.enabled = pipe["enabled"].as<bool>();
+        cfg.pipelines.push_back(ps);
+      }
+    }
+    
+    // Outputs
+    if (root["outputs"]) {
+      for (const auto& out : root["outputs"]) {
+        OutputSpec o;
+        o.type = out["type"].as<std::string>();
+        o.path = out["path"].as<std::string>();
+        
+        if (out["fields"]) {
+          for (const auto& field : out["fields"]) {
+            o.fields.push_back(field.as<std::string>());
+          }
+        }
+        
+        cfg.outputs.push_back(o);
+      }
+    }
+    
+    return cfg;
+  } catch (const YAML::Exception& e) {
+    std::cerr << "YAML parse error: " << e.what() << std::endl;
+    return std::nullopt;
+  } catch (const std::exception& e) {
+    std::cerr << "Parse error: " << e.what() << std::endl;
+    return std::nullopt;
+  }
+}
 
-enum class ConfigFormat { YAML, JSON, TOML };
+// JSON parser stub (implement when needed)
+static std::optional<Config> parse_json(const std::string& text) {
+  // TODO: Implement using nlohmann/json or jsoncpp
+  std::cerr << "JSON parsing not yet implemented" << std::endl;
+  return std::nullopt;
+}
 
-ConfigResult load_config(const std::string& file, ConfigFormat fmt);
-bool validate(const Config& cfg, std::vector<ConfigError>& errors);
+// TOML parser stub (implement when needed)
+static std::optional<Config> parse_toml(const std::string& text) {
+  // TODO: Implement using toml++
+  std::cerr << "TOML parsing not yet implemented" << std::endl;
+  return std::nullopt;
+}
+
+ConfigResult load_config(const std::string& file, ConfigFormat fmt) {
+  ConfigResult r;
+  auto text = slurp(file);
+  
+  if (text.empty()) {
+    r.errors.push_back({"Config file not found or empty", file});
+    return r;
+  }
+  
+  std::optional<Config> parsed;
+  switch (fmt) {
+    case ConfigFormat::YAML: 
+      parsed = parse_yaml(text); 
+      break;
+    case ConfigFormat::JSON: 
+      parsed = parse_json(text); 
+      break;
+    case ConfigFormat::TOML: 
+      parsed = parse_toml(text); 
+      break;
+  }
+  
+  if (!parsed) {
+    r.errors.push_back({"Parse failed", file});
+    return r;
+  }
+  
+  std::vector<ConfigError> errs;
+  if (!validate(*parsed, errs)) {
+    r.errors = std::move(errs);
+    return r;
+  }
+  
+  r.cfg = std::move(parsed);
+  return r;
+}
+
+bool validate(const Config& cfg, std::vector<ConfigError>& e) {
+  auto add = [&](const std::string& m, const std::string& p) { 
+    e.push_back({m, p}); 
+  };
+  
+  // Mode validation
+  if (cfg.mode != "simulation" && cfg.mode != "live") {
+    add("mode must be 'simulation' or 'live'", "mode");
+  }
+  
+  // Timing validation
+  if (cfg.step_ms < 5 || cfg.step_ms > 1000) {
+    add("step_ms out of bounds [5..1000]", "step_ms");
+  }
+  
+  if (cfg.horizon_s < 10 || cfg.horizon_s > 86400) {
+    add("horizon_s out of bounds [10..86400]", "horizon_s");
+  }
+  
+  // Signals validation
+  if (cfg.signals.empty()) {
+    add("at least one signal required", "signals");
+  }
+  
+  for (size_t i = 0; i < cfg.signals.size(); ++i) {
+    const auto& s = cfg.signals[i];
+    
+    if (s.name.empty()) {
+      add("signal.name required", "signals[" + std::to_string(i) + "].name");
+    }
+    
+    if (s.source.empty()) {
+      add("signal.source required", "signals[" + std::to_string(i) + "].source");
+    }
+    
+    if (s.window_ms < cfg.step_ms) {
+      add("signal.window_ms must be >= step_ms", 
+          "signals[" + std::to_string(i) + "].window_ms");
+    }
+  }
+  
+  // Metrics validation
+  for (size_t i = 0; i < cfg.metrics.size(); ++i) {
+    const auto& m = cfg.metrics[i];
+    
+    if (m.name.empty()) {
+      add("metric.name required", "metrics[" + std::to_string(i) + "]");
+    }
+    
+    if (m.window_ms < cfg.step_ms) {
+      add("metric.window_ms >= step_ms", 
+          "metrics[" + std::to_string(i) + "].window_ms");
+    }
+    
+    if (m.stride_ms < cfg.step_ms) {
+      add("metric.stride_ms >= step_ms", 
+          "metrics[" + std::to_string(i) + "].stride_ms");
+    }
+    
+    if (m.signals.size() < 2) {
+      add("metric must reference >=2 signals", 
+          "metrics[" + std::to_string(i) + "].signals");
+    }
+  }
+  
+  // Policies validation
+  for (size_t i = 0; i < cfg.policies.size(); ++i) {
+    const auto& p = cfg.policies[i];
+    
+    if (p.name.empty()) {
+      add("policy.name required", "policies[" + std::to_string(i) + "]");
+    }
+    
+    if (p.when.empty()) {
+      add("policy.when expression required", 
+          "policies[" + std::to_string(i) + "].when");
+    }
+    
+    if (p.actions.empty()) {
+      add("policy must have actions", 
+          "policies[" + std::to_string(i) + "].actions");
+    }
+  }
+  
+  // Outputs validation
+  for (size_t i = 0; i < cfg.outputs.size(); ++i) {
+    const auto& o = cfg.outputs[i];
+    
+    if (o.type != "csv") {
+      add("outputs.type currently supports 'csv' only", 
+          "outputs[" + std::to_string(i) + "].type");
+    }
+    
+    if (o.path.empty()) {
+      add("outputs.path required", 
+          "outputs[" + std::to_string(i) + "].path");
+    }
+  }
+  
+  return e.empty();
+}
