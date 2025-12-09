@@ -1,5 +1,5 @@
 /**
- * AILEE Loss Bitcoin Recovery Protocol
+ * AILEE Lost Bitcoin Recovery Protocol
  * 
  * A trustless, cryptographically-secured protocol for recovering long-dormant
  * Bitcoin using Zero-Knowledge Proofs and Verifiable Delay Functions.
@@ -16,7 +16,10 @@
 #include <memory>
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <chrono>
+#include <fstream>
+#include <mutex>
 #include <openssl/sha.h>
 #include <openssl/evp.h>
 
@@ -458,10 +461,36 @@ public:
         return validatorNetwork_.get(); 
     }
 
+    // ============ NEW: Incident Logging ============
+    static void recordIncident(const std::string& incidentType, 
+                               const std::string& details) {
+        std::lock_guard<std::mutex> lock(incidentMutex_);
+        
+        try {
+            std::ofstream logFile("ailee_incidents.log", std::ios::app);
+            if (logFile.is_open()) {
+                auto now = std::chrono::system_clock::now();
+                auto time_t = std::chrono::system_clock::to_time_t(now);
+                
+                logFile << "[" << std::ctime(&time_t) << "] "
+                        << "Type: " << incidentType << " | "
+                        << "Details: " << details << std::endl;
+                
+                logFile.close();
+            }
+        } catch (...) {
+            // Silent failure for logging - don't crash the system
+        }
+    }
+
 private:
     std::map<std::string, std::shared_ptr<RecoveryClaim>> claims_;
     std::unique_ptr<ValidatorNetwork> validatorNetwork_;
+    static std::mutex incidentMutex_;
 };
+
+// Static member initialization
+std::mutex RecoveryProtocol::incidentMutex_;
 
 } // namespace ailee
 
