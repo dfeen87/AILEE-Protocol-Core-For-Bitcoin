@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-// AmbientAI.h — Ambient energy/compute interfaces for AILEE-Core
-// Fully integrated: ZK proofs, telemetry, safety policies, federated learning, token incentives,
-// Byzantine detection, cluster safety, and health scoring.
+// AmbientAI.h — Bulletproof Ambient AI Node Interfaces for AILEE-Core
+// Full integration of telemetry, ZK proofs, federated learning, token incentives,
+// Byzantine detection, safety policies, and weighted node health scoring.
 
 #pragma once
 
@@ -16,6 +16,7 @@
 #include <cmath>
 #include <algorithm>
 #include <numeric>
+#include <iostream>
 
 #include "zk_proofs.h" // ZK proof module
 
@@ -24,7 +25,7 @@ namespace ambient {
 // ================= Core Data Models =================
 
 struct NodeId {
-    std::string pubkey;       // Public key for verifiable identity
+    std::string pubkey;       // Verifiable identity
     std::string region;       // Geo/cluster tag
     std::string deviceClass;  // e.g., "smartphone", "gateway", "miner"
 };
@@ -45,13 +46,13 @@ struct ComputeProfile {
     double availableMemMB = 0.0;
     double bandwidthMbps = 0.0;
     double latencyMs = 0.0;
-    double instantaneousPower_GFLOPS = 0.0;
+    double instantaneousPower_GFLOPS = 0.0; // For reward calculations
 };
 
 struct PrivacyBudget {
     double epsilon = 1.0;
     double delta  = 1e-5;
-    double privacyBudgetRemaining = 1.0;
+    double privacyBudgetRemaining = 1.0; // %
     bool homomorphicEncryptionEnabled = false;
     bool zeroKnowledgeProofEnabled = false;
 };
@@ -68,7 +69,7 @@ struct TelemetrySample {
 
 struct FederatedUpdate {
     std::string modelId;
-    std::vector<float> gradient;  // Quantized gradients
+    std::vector<float> gradient;  // Placeholder for quantized gradients
     PrivacyBudget privacy;
 };
 
@@ -106,7 +107,7 @@ struct SafetyPolicy {
     int    maxErrorCount   = 25;
 };
 
-// ================= Byzantine Node Types =================
+// ================= Byzantine Behavior =================
 
 enum class NodeBehavior {
     HONEST,
@@ -130,10 +131,18 @@ public:
         safeMode_.store(sample.energy.temperatureC > policy_.maxTemperatureC ||
                         sample.compute.latencyMs > policy_.maxLatencyMs);
 
-        // Auto-generate ZK proof for telemetry
+        // Event logging
+        if (safeMode_.load()) {
+            std::cout << "[SAFE MODE] Node " << id_.pubkey
+                      << " triggered safe mode.\n";
+        }
+
+        // Generate ZK proof automatically
         ailee::zk::ZKEngine zkEngine;
-        auto proof = zkEngine.generateProof(id_.pubkey, std::to_string(sample.compute.cpuUtilization));
-        lastProof_ = { "telemetry_circuit", proof.proofData, zkEngine.verifyProof(proof), proof.timestampMs };
+        auto proof = zkEngine.generateProof(id_.pubkey,
+                                            std::to_string(sample.compute.cpuUtilization));
+        lastProof_ = { "telemetry_circuit", proof.proofData,
+                       zkEngine.verifyProof(proof), proof.timestampMs };
     }
 
     FederatedUpdate runLocalTraining(const std::string& modelId,
@@ -153,6 +162,7 @@ public:
                                   const std::string& resultHash) {
         ailee::zk::ZKEngine zkEngine;
         auto proof = zkEngine.generateProof(taskId, resultHash);
+
         ZKProofStub p;
         p.circuitId = circuitId;
         p.proofHash = proof.proofData;
@@ -185,6 +195,7 @@ public:
     }
 
     bool isSafeMode() const { return safeMode_.load(); }
+
     NodeId id() const { return id_; }
 
     Reputation reputation() const {
@@ -202,6 +213,21 @@ public:
         return lastProof_;
     }
 
+    // ================= Health Scoring =================
+    double healthScore() const {
+        std::lock_guard<std::mutex> lock(mu_);
+        if (!lastSample_.has_value()) return 0.0;
+
+        const auto& s = lastSample_.value();
+        double score = 0.0;
+        score += s.compute.bandwidthMbps * 0.4;      // bandwidth
+        score += -s.compute.latencyMs * 0.3;         // latency penalty
+        score += s.energy.computeEfficiency_GFLOPS_W * 0.2; // compute efficiency
+        score += rep_.score * 0.1;                   // reputation weight
+        if (safeMode_.load()) score *= 0.5;          // safe mode penalty
+        return std::max(0.0, score);
+    }
+
 private:
     NodeId id_;
     SafetyPolicy policy_;
@@ -216,8 +242,7 @@ private:
 
 class MeshCoordinator {
 public:
-    using TaskFn = std::function<double(const AmbientNode&)>;
-
+    template<typename TaskFn>
     explicit MeshCoordinator(std::string clusterId)
         : clusterId_(std::move(clusterId)) {}
 
@@ -232,55 +257,39 @@ public:
         double bestScore = -1.0;
 
         for (auto* n : nodes_) {
+            if (n->isSafeMode()) continue;
+
             auto last = n->last();
-            if (!last.has_value() || n->isSafeMode()) continue;
+            if (!last.has_value()) continue;
 
             if (requireValidProof) {
                 auto proof = n->lastProof();
                 if (!proof.has_value() || !proof->verified) continue;
             }
 
-            double score = last->compute.bandwidthMbps - last->compute.latencyMs * 0.1;
+            double score = n->healthScore();
             if (score > bestScore) { bestScore = score; best = n; }
         }
         return best;
     }
 
+    template<typename TaskFn>
     IncentiveRecord dispatchAndReward(const std::string& taskId, TaskFn fn, double baseRewardTokens) {
         AmbientNode* n = selectNodeForTask();
         if (!n) return IncentiveRecord{taskId, NodeId{"", "", ""}, 0.0, false};
 
         double multiplier = fn(*n);
         double reward = baseRewardTokens * multiplier;
+
+        // Scale reward based on privacy compliance and compute efficiency
+        auto lastTelemetry = n->last();
+        if (lastTelemetry.has_value()) {
+            const auto& s = lastTelemetry.value();
+            reward *= s.energy.computeEfficiency_GFLOPS_W;
+            reward *= std::clamp(s.privacy.privacyBudgetRemaining, 0.0, 1.0);
+        }
+
         return n->accrueReward(taskId, reward);
-    }
-
-    // Detect potential Byzantine nodes
-    std::vector<NodeId> detectByzantineNodes() const {
-        std::lock_guard<std::mutex> lock(mu_);
-        std::vector<NodeId> byzantine;
-        if (nodes_.size() < 3) return byzantine;
-
-        std::vector<double> computePowers;
-        for (auto* n : nodes_) {
-            auto last = n->last();
-            if (!last.has_value()) continue;
-            computePowers.push_back(last->compute.instantaneousPower_GFLOPS);
-        }
-        if (computePowers.empty()) return byzantine;
-
-        std::sort(computePowers.begin(), computePowers.end());
-        double median = computePowers[computePowers.size() / 2];
-
-        for (auto* n : nodes_) {
-            auto last = n->last();
-            if (!last.has_value()) continue;
-            double dev = std::abs(last->compute.instantaneousPower_GFLOPS - median);
-            double mad = 0.6745 * dev;
-            if (mad > 3.0) byzantine.push_back(n->id());
-        }
-
-        return byzantine;
     }
 
     std::string clusterId() const { return clusterId_; }
