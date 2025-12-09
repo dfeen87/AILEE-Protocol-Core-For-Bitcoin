@@ -417,7 +417,105 @@ public:
     }
 };
 
-// ... Repeat per chain (Polygon, Solana, Avalanche, etc.)
+class PolygonAdapter final : public IChainAdapter {
+public:
+    bool init(const AdapterConfig&, ErrorCallback) override;
+    bool start(TxCallback, BlockCallback, EnergyCallback) override;
+    void stop() override;
+    bool broadcastTransaction(const std::vector<TxOut>&,
+                              const std::unordered_map<std::string, std::string>&,
+                              std::string&) override;
+    std::optional<NormalizedTx> getTransaction(const std::string& chainTxId) override;
+    std::optional<BlockHeader>  getBlockHeader(const std::string& blockHash) override;
+    std::optional<uint64_t>     getBlockHeight() override;
+    Chain chain() const override { return Chain::Polygon; }
+    AdapterTraits traits() const override {
+        return AdapterTraits{
+            true, true, true, false, false,
+            UnitSpec{18, "wei", "MATIC"}, "PolygonAdapter", "1.0.0", false
+        };
+    }
+};
+
+class SolanaAdapter final : public IChainAdapter {
+public:
+    bool init(const AdapterConfig&, ErrorCallback) override;
+    bool start(TxCallback, BlockCallback, EnergyCallback) override;
+    void stop() override;
+    bool broadcastTransaction(const std::vector<TxOut>&,
+                              const std::unordered_map<std::string, std::string>&,
+                              std::string&) override;
+    std::optional<NormalizedTx> getTransaction(const std::string& chainTxId) override;
+    std::optional<BlockHeader>  getBlockHeader(const std::string& blockHash) override;
+    std::optional<uint64_t>     getBlockHeight() override;
+    Chain chain() const override { return Chain::Solana; }
+    AdapterTraits traits() const override {
+        return AdapterTraits{
+            true, true, true, false, false,
+            UnitSpec{9, "lamports", "SOL"}, "SolanaAdapter", "1.0.0", false
+        };
+    }
+};
+
+class AvalancheAdapter final : public IChainAdapter {
+public:
+    bool init(const AdapterConfig&, ErrorCallback) override;
+    bool start(TxCallback, BlockCallback, EnergyCallback) override;
+    void stop() override;
+    bool broadcastTransaction(const std::vector<TxOut>&,
+                              const std::unordered_map<std::string, std::string>&,
+                              std::string&) override;
+    std::optional<NormalizedTx> getTransaction(const std::string& chainTxId) override;
+    std::optional<BlockHeader>  getBlockHeader(const std::string& blockHash) override;
+    std::optional<uint64_t>     getBlockHeight() override;
+    Chain chain() const override { return Chain::Avalanche; }
+    AdapterTraits traits() const override {
+        return AdapterTraits{
+            true, true, true, false, false,
+            UnitSpec{18, "wei", "AVAX"}, "AvalancheAdapter", "1.0.0", false
+        };
+    }
+};
+
+class CardanoAdapter final : public IChainAdapter {
+public:
+    bool init(const AdapterConfig&, ErrorCallback) override;
+    bool start(TxCallback, BlockCallback, EnergyCallback) override;
+    void stop() override;
+    bool broadcastTransaction(const std::vector<TxOut>&,
+                              const std::unordered_map<std::string, std::string>&,
+                              std::string&) override;
+    std::optional<NormalizedTx> getTransaction(const std::string& chainTxId) override;
+    std::optional<BlockHeader>  getBlockHeader(const std::string& blockHash) override;
+    std::optional<uint64_t>     getBlockHeight() override;
+    Chain chain() const override { return Chain::Cardano; }
+    AdapterTraits traits() const override {
+        return AdapterTraits{
+            true, true, true, false, false,
+            UnitSpec{6, "lovelace", "ADA"}, "CardanoAdapter", "1.0.0", false
+        };
+    }
+};
+
+class PolkadotAdapter final : public IChainAdapter {
+public:
+    bool init(const AdapterConfig&, ErrorCallback) override;
+    bool start(TxCallback, BlockCallback, EnergyCallback) override;
+    void stop() override;
+    bool broadcastTransaction(const std::vector<TxOut>&,
+                              const std::unordered_map<std::string, std::string>&,
+                              std::string&) override;
+    std::optional<NormalizedTx> getTransaction(const std::string& chainTxId) override;
+    std::optional<BlockHeader>  getBlockHeader(const std::string& blockHash) override;
+    std::optional<uint64_t>     getBlockHeight() override;
+    Chain chain() const override { return Chain::Polkadot; }
+    AdapterTraits traits() const override {
+        return AdapterTraits{
+            true, true, true, false, false,
+            UnitSpec{10, "plancks", "DOT"}, "PolkadotAdapter", "1.0.0", false
+        };
+    }
+};
 
 } // namespace global_seven
 } // namespace ailee
