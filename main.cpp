@@ -30,7 +30,7 @@
 // Layer-2 Internet Relay
 #include "ailee_netflow.h"
 
-#include "ailee_bitcoin_zmq_listener.h"
+#include "BitcoinZMQListener.h"
 #include "BitcoinRPCClient.h"
 #include "Global_Seven.h"
 
