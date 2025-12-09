@@ -31,7 +31,7 @@
 #include "ailee_netflow.h"
 
 #include "ailee_bitcoin_zmq_listener.h"
-#include "ailee_bitcoin_rpc_client.h"
+#include "BitcoinRPCClient.h"
 #include "Global_Seven.h"
 
 // ---------------------------------------------------------
