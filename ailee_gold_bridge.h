@@ -16,8 +16,11 @@
 #include <memory>
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <chrono>
 #include <functional>
+#include <algorithm>
+#include <cmath>
 #include <openssl/sha.h>
 #include <openssl/evp.h>
 
