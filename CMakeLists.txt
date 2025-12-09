@@ -30,7 +30,7 @@ endif()
 # 1. OpenSSL (Required for SHA256 in Recovery Protocol & Gold Bridge)
 find_package(OpenSSL REQUIRED)
 
-# 2. CURL (Required for BitcoinRPCClient.h)
+# 2. CURL (Required for BitcoinRPCClient.h & BitcoinAdapter RPC)
 find_package(CURL REQUIRED)
 
 # 3. ZeroMQ & cppzmq (Required for BitcoinZMQListener.h)
@@ -50,13 +50,20 @@ endif()
 # Find the C++ bindings (header only usually)
 find_package(cppzmq QUIET)
 
-# 4. JsonCpp (For future RPC parsing updates)
+# 4. JsonCpp (For RPC parsing in BitcoinAdapter)
 pkg_check_modules(JSONCPP jsoncpp)
 if(NOT JSONCPP_FOUND)
     find_package(jsoncpp QUIET)
+    if(jsoncpp_FOUND)
+        set(JSONCPP_LIBRARIES jsoncpp_lib)
+        get_target_property(JSONCPP_INCLUDE_DIRS jsoncpp_lib INTERFACE_INCLUDE_DIRECTORIES)
+    endif()
 endif()
 
-# 5. Threads (Required for running ZMQ listener in background)
+# 5. yaml-cpp (Required for policy config hot-reload system)
+find_package(yaml-cpp QUIET)
+
+# 6. Threads (Required for running ZMQ listener in background)
 find_package(Threads REQUIRED)
 
 # ============================================================================
@@ -72,6 +79,11 @@ include_directories(
     ${ZeroMQ_INCLUDE_DIR}
 )
 
+# Add yaml-cpp include if found
+if(yaml-cpp_FOUND)
+    include_directories(${YAML_CPP_INCLUDE_DIR})
+endif()
+
 # ============================================================================
 # Source & Header Files
 # ============================================================================
@@ -85,9 +97,22 @@ set(AILEE_HEADERS
     ailee_bitcoin_rpc_client.h
     ailee_energy_telemetry.h
     ailee_circuit_breaker.h
+    ailee_sidechain_bridge.h
+    ailee_dao_governance.h
+    Global_Seven.h
 )
 
-# Your Adapter implementation sources
+# Policy System Headers (new files)
+set(POLICY_HEADERS
+    policies.h
+    metrics.h
+    expr.h
+    config_types.h
+    config_loader.h
+    config_hot_reload.h
+)
+
+# Adapter implementation sources
 set(ADAPTER_SOURCES
     BitcoinAdapter.cpp
     EthereumAdapter.cpp
@@ -101,11 +126,22 @@ set(ADAPTER_SOURCES
     AdapterRegistry.cpp
 )
 
+# Policy System Sources (new files)
+set(POLICY_SOURCES
+    policies.cpp
+    metrics.cpp
+    expr.cpp
+    config_loader.cpp
+    config_hot_reload.cpp
+)
+
 # Main Executable Sources
 set(CORE_SOURCES
     main.cpp
     ${ADAPTER_SOURCES}
-    ${AILEE_HEADERS} 
+    ${POLICY_SOURCES}
+    ${AILEE_HEADERS}
+    ${POLICY_HEADERS}
 )
 
 # ============================================================================
@@ -124,24 +160,50 @@ target_link_libraries(ailee_node
     Threads::Threads
 )
 
+# Link yaml-cpp if found (for policy system)
+if(yaml-cpp_FOUND)
+    target_link_libraries(ailee_node PRIVATE yaml-cpp)
+else()
+    message(WARNING "yaml-cpp not found - policy hot-reload system will be disabled")
+endif()
+
 # Robust ZeroMQ Linking
 if(TARGET cppzmq)
     target_link_libraries(ailee_node PRIVATE cppzmq)
-else()
+elseif(ZeroMQ_LIBRARY)
     # Fallback if the target doesn't exist (manual linking)
     target_link_libraries(ailee_node PRIVATE ${ZeroMQ_LIBRARY})
+else()
+    message(WARNING "ZeroMQ not found - real-time Bitcoin event listening will be disabled")
 endif()
 
 # --- 2. Adapter Library (Static) ---
 # Useful for testing adapters without running the full node
-add_library(ailee_adapters STATIC ${ADAPTER_SOURCES})
+add_library(ailee_adapters STATIC 
+    ${ADAPTER_SOURCES}
+    ${POLICY_SOURCES}
+)
+
 target_link_libraries(ailee_adapters
     PRIVATE
     OpenSSL::SSL
     OpenSSL::Crypto
     ${CURL_LIBRARIES}
+    ${JSONCPP_LIBRARIES}
     Threads::Threads
 )
+
+# Link yaml-cpp to library as well
+if(yaml-cpp_FOUND)
+    target_link_libraries(ailee_adapters PRIVATE yaml-cpp)
+endif()
+
+# Robust ZeroMQ Linking for library
+if(TARGET cppzmq)
+    target_link_libraries(ailee_adapters PRIVATE cppzmq)
+elseif(ZeroMQ_LIBRARY)
+    target_link_libraries(ailee_adapters PRIVATE ${ZeroMQ_LIBRARY})
+endif()
 
 # ============================================================================
 # Unit Tests (Optional)
@@ -152,14 +214,30 @@ if(BUILD_TESTS)
     find_package(GTest REQUIRED)
     enable_testing()
 
-    add_executable(ailee_tests AdapterRegistryTests.cpp)
+    add_executable(ailee_tests 
+        AdapterRegistryTests.cpp
+    )
+    
     target_link_libraries(ailee_tests
         PRIVATE
         ailee_adapters
         GTest::GTest
         GTest::Main
     )
+    
     add_test(NAME AdapterTests COMMAND ailee_tests)
+    
+    # Optional: Add policy system tests
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PolicyTests.cpp")
+        add_executable(policy_tests PolicyTests.cpp)
+        target_link_libraries(policy_tests
+            PRIVATE
+            ailee_adapters
+            GTest::GTest
+            GTest::Main
+        )
+        add_test(NAME PolicyTests COMMAND policy_tests)
+    endif()
 endif()
 
 # ============================================================================
@@ -172,8 +250,24 @@ install(TARGETS ailee_node DESTINATION bin)
 # Install the Library Headers (So others can build on AILEE)
 install(FILES 
     ${AILEE_HEADERS}
-    Global_Seven.h 
+    ${POLICY_HEADERS}
     DESTINATION include/ailee
+)
+
+# Install default config file
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/config.yaml")
+    install(FILES config.yaml DESTINATION etc/ailee)
+endif()
+
+# ============================================================================
+# Post-Build: Create output directories
+# ============================================================================
+
+# Create directories for policy system outputs
+add_custom_command(TARGET ailee_node POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory 
+        ${CMAKE_BINARY_DIR}/out
+    COMMENT "Creating output directories for metrics"
 )
 
 # ============================================================================
@@ -185,8 +279,39 @@ message(STATUS "   AILEE Core v${PROJECT_VERSION} Build Configuration        ")
 message(STATUS "=============================================================")
 message(STATUS "   Build Type:       ${CMAKE_BUILD_TYPE}")
 message(STATUS "   C++ Standard:     ${CMAKE_CXX_STANDARD}")
-message(STATUS "   OpenSSL:          Found")
-message(STATUS "   CURL:             Found")
-message(STATUS "   ZeroMQ:           ${ZeroMQ_FOUND} (Include: ${ZeroMQ_INCLUDE_DIR})")
-message(STATUS "   Modules:          TPS, Recovery, Gold, ZMQ, RPC")
+message(STATUS "   Optimization:     ${CMAKE_CXX_FLAGS_RELEASE}")
+message(STATUS "-------------------------------------------------------------")
+message(STATUS "   OpenSSL:          ${OPENSSL_VERSION}")
+message(STATUS "   CURL:             ${CURL_VERSION_STRING}")
+message(STATUS "   ZeroMQ:           ${ZeroMQ_FOUND}")
+if(ZeroMQ_FOUND)
+    message(STATUS "     - Include:      ${ZeroMQ_INCLUDE_DIR}")
+    message(STATUS "     - Library:      ${ZeroMQ_LIBRARY}")
+endif()
+message(STATUS "   JsonCpp:          ${JSONCPP_FOUND}")
+message(STATUS "   yaml-cpp:         ${yaml-cpp_FOUND}")
+message(STATUS "-------------------------------------------------------------")
+message(STATUS "   Core Modules:     TPS Engine, Recovery, Gold Bridge")
+message(STATUS "   Network:          Sidechain Bridge, ZMQ Listener")
+message(STATUS "   Governance:       DAO, Circuit Breaker")
+message(STATUS "   Multi-Chain:      Global Seven (7+ adapters)")
+message(STATUS "   Policy System:    ${yaml-cpp_FOUND}")
+message(STATUS "   Build Tests:      ${BUILD_TESTS}")
 message(STATUS "=============================================================")
+
+# Warnings for missing optional dependencies
+if(NOT yaml-cpp_FOUND)
+    message(STATUS "")
+    message(STATUS "⚠️  WARNING: yaml-cpp not found")
+    message(STATUS "    Policy hot-reload system will be disabled")
+    message(STATUS "    Install: sudo apt-get install libyaml-cpp-dev")
+    message(STATUS "")
+endif()
+
+if(NOT ZeroMQ_FOUND)
+    message(STATUS "")
+    message(STATUS "⚠️  WARNING: ZeroMQ not found")
+    message(STATUS "    Real-time Bitcoin monitoring will fall back to polling")
+    message(STATUS "    Install: sudo apt-get install libzmq3-dev libcppzmq-dev")
+    message(STATUS "")
+endif()
