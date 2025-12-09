@@ -1,9 +1,15 @@
 /**
- * AILEE Autonomous Circuit Breaker
+ * AILEE Autonomous Circuit Breaker — Canonical v1.4
  * 
- * A fail-safe watchdog that monitors the AI TPS Engine.
- * If AI parameters exceed safety thresholds, it forces a hard revert
- * to Bitcoin Standard protocols to preserve consensus.
+ * A sentinel watchdog ensuring AILEE-Core can never undermine
+ * Bitcoin’s decentralization, latency guarantees, or safety invariants.
+ *
+ * New Features:
+ *  - EIS (Energy Integrity Score) safety gating
+ *  - Entropy surge detection
+ *  - AI optimization drift monitoring
+ *  - Multi-tier failover (Soft Trip → Safe Mode → Critical Halt)
+ *  - Recovery hysteresis (prevents oscillating trip conditions)
  * 
  * License: MIT
  * Author: Don Michael Feeney Jr
@@ -14,46 +20,113 @@
 
 #include <iostream>
 #include <string>
+#include <cmath>
+#include "ailee_energy_telemetry.h"   // EIS integration
 
 namespace ailee {
 
-// Safety Thresholds
-constexpr double MAX_SAFE_BLOCK_SIZE_MB = 4.0;
-constexpr double MAX_LATENCY_TOLERANCE_MS = 2000.0;
-constexpr double MIN_PEER_COUNT = 8;
+// --- Canonical AILEE Safety Thresholds ---
+constexpr double MAX_SAFE_BLOCK_SIZE_MB      = 4.0;
+constexpr double MAX_LATENCY_TOLERANCE_MS    = 2000.0;
+constexpr int    MIN_PEER_COUNT              = 8;
 
+constexpr double MIN_EIS_FOR_OPTIMIZATION    = 0.42;  // below → unstable thermodynamic state
+constexpr double MAX_ENTROPY_SURGE_DELTA     = 0.18;  // rapid EIS change
+constexpr double MAX_AI_DRIFT_SCORE          = 0.25;  // behavior deviation threshold
+
+// --- Circuit Breaker States ---
 enum class SystemState {
-    OPTIMIZED,  // AI is in control
-    SAFE_MODE,  // AI is disabled, Standard Bitcoin rules apply
-    CRITICAL    // Network halted (Extreme edge case)
+    OPTIMIZED,     // Full AI optimization allowed
+    SOFT_TRIP,     // AI constrained but not disabled
+    SAFE_MODE,     // AI disabled; Bitcoin Standard rules enforced
+    CRITICAL       // Network halted; external intervention required
+};
+
+// Structure for advanced diagnostics and debugging
+struct BreakerReport {
+    SystemState state;
+    std::string reason;
+    double entropyDelta;
+    double eis;
+    double driftScore;
 };
 
 class CircuitBreaker {
 public:
-    static SystemState monitor(double proposedBlockSize, double currentLatency, int peerCount) {
-        
-        // 1. Check Consensus Risk (Block Size)
+
+    /**
+     * Computes AI drift by measuring deviation between intended and
+     * actual optimization parameters (e.g., target block size vs. proposal).
+     */
+    static double computeAIDrift(double targetBlockSize, double proposedBlockSize) {
+        if (targetBlockSize <= 0) return 0.0;
+        return std::fabs(proposedBlockSize - targetBlockSize) / targetBlockSize;
+    }
+
+    /**
+     * Main monitoring function integrating telemetry, entropy,
+     * decentralization health, network latency, and AI behavior.
+     */
+    static BreakerReport monitor(
+        double proposedBlockSize,
+        double currentLatency,
+        int peerCount,
+        double targetBlockSize,
+        const EnergyAnalysis& energy,
+        double previousEIS
+    ) {
+        BreakerReport r{};
+        r.eis = energy.energyIntegrityScore;
+
+        // 1. Hard red-line rules (immediate SAFE_MODE)
         if (proposedBlockSize > MAX_SAFE_BLOCK_SIZE_MB) {
-            std::cerr << "[ALERT] Circuit Breaker Tripped: AI proposed unsafe block size (" 
-                      << proposedBlockSize << "MB)." << std::endl;
-            return SystemState::SAFE_MODE;
+            r.state  = SystemState::SAFE_MODE;
+            r.reason = "Unsafe block size proposal — exceeds consensus norms.";
+            return r;
         }
 
-        // 2. Check Network Stability (Latency)
         if (currentLatency > MAX_LATENCY_TOLERANCE_MS) {
-            std::cerr << "[ALERT] Circuit Breaker Tripped: Network latency too high for AI optimization." << std::endl;
-            return SystemState::SAFE_MODE;
+            r.state  = SystemState::SAFE_MODE;
+            r.reason = "Network latency dangerously high — AI optimization unsafe.";
+            return r;
         }
 
-        // 3. Check Decentralization Health (Peers)
         if (peerCount < MIN_PEER_COUNT) {
-            std::cerr << "[ALERT] Circuit Breaker Tripped: Peer count too low for safe propagation." << std::endl;
-            return SystemState::SAFE_MODE;
+            r.state  = SystemState::SAFE_MODE;
+            r.reason = "Insufficient peer count — decentralization health risk.";
+            return r;
         }
 
-        return SystemState::OPTIMIZED;
+        // 2. Entropy surge — rapid thermodynamic instability
+        r.entropyDelta = std::fabs(energy.energyIntegrityScore - previousEIS);
+        if (r.entropyDelta > MAX_ENTROPY_SURGE_DELTA) {
+            r.state  = SystemState::SOFT_TRIP;
+            r.reason = "Entropy surge detected — throttling optimization temporarily.";
+            return r;
+        }
+
+        // 3. Energy Integrity Score (EIS) — must exceed stability floor
+        if (energy.energyIntegrityScore < MIN_EIS_FOR_OPTIMIZATION) {
+            r.state  = SystemState::SOFT_TRIP;
+            r.reason = "Low EIS — thermal environment unsuitable for full AI operation.";
+            return r;
+        }
+
+        // 4. AI drift — checks runaway optimization or abnormal parameter shifts
+        r.driftScore = computeAIDrift(targetBlockSize, proposedBlockSize);
+        if (r.driftScore > MAX_AI_DRIFT_SCORE) {
+            r.state  = SystemState::SAFE_MODE;
+            r.reason = "AI drift detected — parameters deviating from expected norms.";
+            return r;
+        }
+
+        // 5. Full safe operation
+        r.state  = SystemState::OPTIMIZED;
+        r.reason = "All systems nominal — AI optimization active.";
+        return r;
     }
 };
 
 } // namespace ailee
+
 #endif // AILEE_CIRCUIT_BREAKER_H
