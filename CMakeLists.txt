@@ -100,6 +100,7 @@ set(AILEE_HEADERS
     ailee_sidechain_bridge.h
     ailee_dao_governance.h
     Global_Seven.h
+    AmbientAI.h
 )
 
 # Policy System Headers (new files)
@@ -126,7 +127,12 @@ set(ADAPTER_SOURCES
     AdapterRegistry.cpp
 )
 
-# Policy System Sources (new files)
+# AmbientAI Sources (new mesh intelligence layer)
+set(AMBIENT_SOURCES
+    AmbientAI.cpp
+)
+
+# Policy System Sources
 set(POLICY_SOURCES
     policies.cpp
     metrics.cpp
@@ -139,6 +145,7 @@ set(POLICY_SOURCES
 set(CORE_SOURCES
     main.cpp
     ${ADAPTER_SOURCES}
+    ${AMBIENT_SOURCES}
     ${POLICY_SOURCES}
     ${AILEE_HEADERS}
     ${POLICY_HEADERS}
@@ -181,6 +188,7 @@ endif()
 # Useful for testing adapters without running the full node
 add_library(ailee_adapters STATIC 
     ${ADAPTER_SOURCES}
+    ${AMBIENT_SOURCES}
     ${POLICY_SOURCES}
 )
 
@@ -295,6 +303,7 @@ message(STATUS "   Core Modules:     TPS Engine, Recovery, Gold Bridge")
 message(STATUS "   Network:          Sidechain Bridge, ZMQ Listener")
 message(STATUS "   Governance:       DAO, Circuit Breaker")
 message(STATUS "   Multi-Chain:      Global Seven (7+ adapters)")
+message(STATUS "   AmbientAI:        Mesh Intelligence (Federated)")
 message(STATUS "   Policy System:    ${yaml-cpp_FOUND}")
 message(STATUS "   Build Tests:      ${BUILD_TESTS}")
 message(STATUS "=============================================================")
