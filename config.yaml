@@ -1,0 +1,45 @@
+version: 1
+mode: simulation
+step_ms: 50
+horizon_s: 600
+
+signals:
+  - name: latency_ms
+    source: telemetry.latency
+    window_ms: 5000
+  - name: tps
+    source: engine.tps
+    window_ms: 5000
+  - name: heat_w
+    source: telemetry.heat
+    window_ms: 5000
+  - name: entropy
+    source: telemetry.entropy
+    window_ms: 5000
+
+metrics:
+  - name: avg_corr
+    type: correlation_average
+    signals: [latency_ms, tps, heat_w, entropy]
+    window_ms: 5000
+    stride_ms: 200
+
+policies:
+  - name: propagation_control
+    when: "(avg_corr < 0.15) && (tps > 40000)"
+    actions:
+      - type: adjust_propagation_delay
+        args: { delta_ms: "-10" }
+      - type: switch_route
+        args: { route: "low_latency_mesh" }
+
+pipelines:
+  - name: ai_tps_loop
+    enabled: true
+  - name: energy_guard
+    enabled: true
+
+outputs:
+  - type: csv
+    path: "out/metrics.csv"
+    fields: [time, avg_corr, tps, latency_ms]
