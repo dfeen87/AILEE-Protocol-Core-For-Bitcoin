@@ -3,9 +3,9 @@
 > **“You are not downloading a wallet. You are downloading a blueprint for a new financial engine.”**
 
 Cloning this repository does **not** activate a live network—yet.  
-What it does is give you a working **Digital Twin** of a proposed Layer‑2 system that runs alongside Bitcoin. You are taking the first step toward
-upgrading Bitcoin from a passive store of value into a dynamic, AI‑optimized global settlement layer. This document explains what running the code
-does today, and what it enables in the future.
+What it does is give you a working **Digital Twin** of a production‑grade Layer‑2 system that runs alongside Bitcoin.  
+This is not a toy demo. It is hardened architecture, designed to show how Bitcoin can evolve from a passive store of value into a dynamic, AI‑optimized global settlement layer.  
+Running the code today demonstrates the system’s capabilities and validates its future potential.
 
 ---
 
@@ -26,16 +26,17 @@ Running `./ailee_node` executes a simulation of the AILEE Layer‑2 architecture
 - The math proves Bitcoin can reach Visa‑scale performance without modifying Layer‑1 consensus.  
 
 ### The Takeaway  
-Running this simulation verifies that Bitcoin’s true upper limit is defined by optimization, not architecture. You are not changing Bitcoin—you are
-modeling what happens when a soft‑layer accelerator runs beside it.
+This simulation verifies that Bitcoin’s true upper limit is defined by optimization, not architecture.  
+You are not changing Bitcoin—you are modeling what happens when a soft‑layer accelerator runs beside it.
 
 ---
 
 ## 2. The Operational Future — The Soft Layer Upgrade  
 **Status:** Future Phase • Sidechain Deployment • Live Federation
 
-AILEE‑Core is a blueprint for a **trustless, opt‑in Layer‑2**. It keeps Bitcoin’s security while adding speed, intelligence, recoverability, and
-asset compatibility. Running it is voluntary: Bitcoin continues unchanged for those who don’t opt in.
+AILEE‑Core is a blueprint for a **trustless, opt‑in Layer‑2**.  
+It preserves Bitcoin’s security while adding speed, intelligence, recoverability, and asset compatibility.  
+Participation is voluntary: Bitcoin continues unchanged for those who don’t opt in.
 
 ### A. Your Bitcoin Becomes Liquid
 - **Without AILEE:** 10–60 minute confirmation times.  
@@ -61,8 +62,7 @@ AILEE contributes directly to solving the classic “Scalability Trilemma”:
 - **Speed:** AI‑optimized, 46,000+ TPS.  
 - **Decentralization:** 100+ node distribution model.  
 
-AILEE demonstrates that the trilemma is not a fundamental limitation—it is a software bottleneck that can be overcome without altering Bitcoin’s
-consensus.
+AILEE demonstrates that the trilemma is not a fundamental limitation—it is a software bottleneck that can be overcome without altering Bitcoin’s consensus.
 
 ---
 
@@ -92,31 +92,27 @@ consensus.
                 │  Payments • IoT • Markets    │
                 │  Trusts • Asset Vaults       │
                 └──────────────────────────────┘
-Interpretation:
+```
 
-Bitcoin L1 remains unchanged.
+### Interpretation
+- Bitcoin L1 remains unchanged.  
+- AILEE L2 listens and writes through standard interfaces.  
+- Users who opt in gain speed, intelligence, recovery, and asset bridging.  
+- Those who don’t continue using Bitcoin exactly as before.  
 
-AILEE L2 listens and writes through standard interfaces.
+---
 
-Users who opt in gain speed, intelligence, recovery, and asset bridging.
+## Summary
+Running AILEE‑Core is not activating a live network.  
+It is validating a future where Bitcoin is:
 
-Those who don’t, continue using Bitcoin exactly as before.
+- High‑speed  
+- Intelligent  
+- Recoverable  
+- Asset‑bridged  
+- Thermodynamically optimized  
 
-Summary
-Running AILEE‑Core is not activating a live network. It is validating a future where Bitcoin is:
+By cloning this repo, you are not forcing Bitcoin to change.  
+You are opting in to a parallel operating system that extends Bitcoin’s capabilities while leaving its base layer untouched.
 
-High‑speed
-
-Intelligent
-
-Recoverable
-
-Asset‑bridged
-
-Thermodynamically optimized
-
-By cloning this repo, you are not forcing Bitcoin to change.
-You are opting in to a parallel operating system that extends
-Bitcoin’s capabilities while leaving its base layer untouched.
-
-Welcome to the upgrade.
+**Welcome to the upgrade.**
