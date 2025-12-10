@@ -337,4 +337,17 @@ You are free to:
 
 See the [LICENSE] file for the full text of the MIT License.
 
+## 🎯 We Need You
+
+**271 developers cloned this repo in 3 days.** Now we need validators, skeptics, and breakers.
+
+**Can you help?**
+- 🔐 **Cryptographers** - Audit our zk-proof assumptions
+- ⚡ **Bitcoin Core Devs** - Integrate with testnet
+- 🔬 **Privacy Researchers** - Validate differential privacy claims
+- 🛠️ **Systems Engineers** - Stress test Byzantine fault tolerance
+- 📊 **Performance Engineers** - Benchmark real-world latency
+
+**Not an expert?** That's fine - even questions like "Why did you choose X?" improve our docs.
+
 
