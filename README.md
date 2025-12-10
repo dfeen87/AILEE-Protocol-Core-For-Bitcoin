@@ -256,10 +256,58 @@ See: [CONTRIBUTING.md]
 
 ---
 
-## 🎓 How It Works (Simple Version)
+🎓 How It Works (Simple Version)
 
-- **Problem:** Bitcoin is slow (7 TPS) and expensive.  
-- **Solution:** AILEE adds an AI-optimized layer that:  
-  - Processes transactions 6,000x faster (46K TPS)  
-  - Settles to Bitcoin mainnet for security  
-  - Supports 20+ block
+**Problem:** Bitcoin is slow (7 TPS) and expensive.  
+
+**Solution:** AILEE adds an AI-optimized layer that:  
+- Processes transactions 6,000x faster (46K TPS)  
+- Settles to Bitcoin mainnet for security  
+- Supports 20+ blockchains (ETH, SOL, MATIC, LTC, DOGE, ADA, DOT, AVAX...)  
+
+**But there’s more:**
+
+- 🔑 **Recovery of Dormant Bitcoin**  
+  Unlock 3–4 million BTC lost to forgotten keys using Zero-Knowledge Proofs and Verifiable Delay Functions.  
+  Owners can prove legitimacy without revealing private keys, while a 180-day challenge period ensures fairness.  
+
+- 🪙 **BTC ↔ Gold Bridge**  
+  Burn BTC to mint tokenized gold (wGOLD), backed by physical reserves.  
+  This creates a deflationary effect on Bitcoin supply while offering a hedge in gold.  
+
+- 🌱 **Energy Telemetry**  
+  Every transaction carries verifiable “green hash” proofs.  
+  Mining operations can demonstrate thermodynamic efficiency and waste heat recovery, aligning Bitcoin with sustainability goals.  
+
+- 🛡️ **Circuit Breaker Safety**  
+  If AI optimization pushes parameters beyond safe thresholds (block size, latency, peer count),  
+  AILEE automatically reverts to Bitcoin Standard consensus.  
+  This ensures resilience and prevents systemic risk.  
+
+- ⚖️ **DAO Governance**  
+  No company, no CEO—just math.  
+  Protocol upgrades and treasury decisions are made through quadratic voting,  
+  balancing stake with reputation to prevent whale dominance.  
+
+**Key Insight:**  
+Bitcoin remains the immutable settlement layer.  
+AILEE doesn’t fork or replace it—it runs alongside, optimizing throughput, recoverability, and sustainability.  
+Think of it as Bitcoin’s **operating system upgrade**, opt-in and trustless.  
+
+---
+
+## 📄 License & Copyright
+
+**Copyright © 2025 Don Michael Feeney Jr.**
+
+This software is released under the **MIT License**.  
+You are free to:
+
+- ✅ Use commercially  
+- ✅ Modify  
+- ✅ Distribute  
+- ✅ Sublicense  
+
+See the [LICENSE] file for the full text of the MIT License.
+
+
