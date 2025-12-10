@@ -378,8 +378,6 @@ See the [LICENSE] file for the full text of the MIT License.
 
 ## 🎯 We Need You
 
-**271 developers cloned this repo in 3 days.** Now we need validators, skeptics, and breakers.
-
 **Can you help?**
 - 🔐 **Cryptographers** - Audit our zk-proof assumptions
 - ⚡ **Bitcoin Core Devs** - Integrate with testnet
