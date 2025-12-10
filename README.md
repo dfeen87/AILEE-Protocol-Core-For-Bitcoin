@@ -1,4 +1,3 @@
-``markdown
 # 🌐 AILEE-Core: Post-Consensus Bitcoin Evolution
 
 > **“We build not to replace Bitcoin — but to evolve it.”**
