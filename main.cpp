@@ -34,6 +34,12 @@
 #include "BitcoinRPCClient.h"
 #include "Global_Seven.h"
 
+#include "WasmEngine.h"
+#include "InZKVerifier.h"
+#include "FederatedLearning.h"
+#include "Orchestrator.h"
+#include "Ledger.h"
+
 // ---------------------------------------------------------
 // Structured logging with thread-safety
 // ---------------------------------------------------------
