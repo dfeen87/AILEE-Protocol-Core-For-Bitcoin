@@ -84,9 +84,6 @@ But it’s more than just speed:
 ### 1. AI-Driven TPS Engine (`ailee_tps_engine.h`)
 Scales Bitcoin from **7 TPS → 46,000 TPS** using closed-loop AI optimization.
 
-**Formula:**
-Got it, Don. Let’s take the TPS enhancement formula you had in your README and render it in **Unicode math style**, then list out the variables you defined so they’re crystal clear.
-
 ---
 
 ## 📐 Formula (Unicode)
