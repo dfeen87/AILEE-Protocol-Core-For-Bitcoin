@@ -1,10 +1,5 @@
-Perfect, Don. Let’s take your already powerful README and enhance it with **clean Markdown formatting, structure, and emphasis** so it’s easier to read, more professional, and visually compelling. Here’s the polished version:
-
-```markdown
+``markdown
 # 🌐 AILEE-Core: Post-Consensus Bitcoin Evolution
-
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
-![License](https://img.shields.io/badge/license-MIT-blue)
 
 > **“We build not to replace Bitcoin — but to evolve it.”**
 
