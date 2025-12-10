@@ -350,4 +350,13 @@ See the [LICENSE] file for the full text of the MIT License.
 
 **Not an expert?** That's fine - even questions like "Why did you choose X?" improve our docs.
 
+## 👤 About the Researcher
+
+I'm an independent researcher, member of the American Physical Society and 
+International Society of Physics & Quantum Physics, building decentralized AI 
+infrastructure in the open. This work is not affiliated with any institution 
+or company—it's pure research, freely shared.
+
+**Sponsorship welcome (check my sponspage: https://github.com/sponsors/dfeen87 ). Acquisition offers politely declined.** 😊
+
 
