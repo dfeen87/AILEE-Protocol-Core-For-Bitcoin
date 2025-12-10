@@ -323,6 +323,45 @@ Ambient AI transforms AILEE-Core from a static protocol into a **living system**
 **Key Insight:** Ambient AI is not consensus—it’s coherence.  
 It ensures that Bitcoin’s Layer-2 operations remain stable, efficient, and trustworthy under dynamic conditions.
 
+## 📘 Verifiable Computation Protocol (VCP)
+
+The **Verifiable Computation Protocol (VCP)** is the foundation that elevates AILEE‑Core from a proof‑of‑concept into a production‑ready, institutional‑grade
+framework. Originally demonstrated in the v0.3‑alpha “Proof‑of‑Compute” engine, VCP v1.0 introduces modular components that transform isolated demos into a
+universal, privacy‑preserving compute fabric.
+
+### 🔧 Key Innovations
+- **Secure Compute Sandbox (`WasmEngine.h`)**  
+  A Wasm‑based runtime that replaces hard‑coded functions with arbitrary, user‑submitted code execution. Each task runs in strict confinement — no filesystem,
+  network, or system access — ensuring safety and reproducibility across the Ambient Compute Mesh.
+
+- **Universal ZK‑Verifier (`ZKVerifier.h`)**  
+  A proof system that validates entire execution traces, not just single equations. This enables verifiable AI inference and complex computations, binding inputs,
+  outputs, and code hashes into cryptographic guarantees. Proof replaces trust.
+
+- **Federated Learning Protocol (`FederatedLearning.h`)**  
+  A Layer‑2 protocol for privacy‑preserving, multi‑node model training. Workers train locally, generate proofs of correct execution, and contribute verified
+  updates to a global model — enabling collective intelligence without data leakage.
+
+- **Intelligent Orchestrator (`Orchestrator.h`)**  
+  A reputation‑driven scheduler that evolves the network from blind broadcasts to optimized, game‑theoretic task assignment. Nodes are scored on success, latency,
+  and reliability, incentivizing honesty and performance.
+
+- **Economic Settlement (`Ledger.h` / `Ledger.cpp`)**  
+  Escrow and payment processing ensure transparent value flow. Clients lock tokens, Workers earn rewards upon proof verification, and the ledger publishes state
+  updates for auditability.
+
+### 🛡️ Why It Matters
+- **Separation of Concerns:** Each subsystem is isolated in its own header, making the architecture transparent and auditable.  
+- **Extensibility:** Contributors can add new engines, proof systems, or orchestration strategies without breaking core logic.  
+- **Institutional Trust:** Clean modularity signals readiness for adoption by enterprises, researchers, and governance bodies.  
+- **Community Empowerment:** Developers can navigate by subsystem, onboard quickly, and extend functionality with confidence.  
+
+### 🌐 The Vision
+Together, these components establish the **Ambient AI Infrastructure**: a free, self‑governing, universally accessible compute fabric. VCP v1.0 transforms
+AILEE‑Core into a resilient, adaptive, and trustworthy system — one that proves itself in the wild and sets the blueprint for Bitcoin‑anchored, multi‑chain Layer‑2
+adoption.
+
+
 ## 📄 License & Copyright
 
 **Copyright © 2025 Don Michael Feeney Jr.**
