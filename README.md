@@ -296,6 +296,36 @@ Think of it as Bitcoin’s **operating system upgrade**, opt-in and trustless.
 
 ---
 
+## 🌌 Ambient AI Module (`AmbientAI.h` / `AmbientAI.cpp`)
+
+The **Ambient AI** module is designed to give AILEE-Core a *contextual intelligence layer* that continuously monitors, adapts, and optimizes system behavior without requiring manual intervention.  
+It acts as the "nervous system" of the protocol, sensing environmental signals and adjusting parameters in real time.
+
+### ✨ Purpose
+- Provide **adaptive coherence** across modules (TPS engine, recovery, gold bridge, governance).  
+- Detect anomalies in latency, throughput, or entropy before they cascade into systemic risk.  
+- Enable **self-tuning** of parameters based on live telemetry and historical patterns.  
+
+### 🔧 Core Functions
+- **Signal Monitoring:** Tracks latency, TPS, entropy, and node health.  
+- **Correlation Analysis:** Computes average correlation between signals to detect stability vs. chaos.  
+- **Policy Triggers:** Activates circuit breakers, cooldowns, or rerouting when thresholds are breached.  
+- **Configurable Interpreter:** Reads YAML/JSON/TOML configs to hot-swap strategies without recompilation.  
+
+### 🧠 Example Behaviors
+- If **avg_corr < 0.15** and **TPS > 40,000**, Ambient AI can throttle unsafe proposals or reroute traffic.  
+- If latency spikes above 2s, it can automatically switch to **SAFE_MODE** until conditions stabilize.  
+- If entropy rises, it can adjust propagation delays or rebalance node distribution.  
+
+### 🌱 Why It Matters
+Ambient AI transforms AILEE-Core from a static protocol into a **living system**:  
+- **Resilient:** Responds before collapse, not after.  
+- **Configurable:** Contributors can experiment with new strategies in real time.  
+- **Institutional-Grade:** Provides the adaptive safety layer required for large-scale adoption.  
+
+**Key Insight:** Ambient AI is not consensus—it’s coherence.  
+It ensures that Bitcoin’s Layer-2 operations remain stable, efficient, and trustworthy under dynamic conditions.
+
 ## 📄 License & Copyright
 
 **Copyright © 2025 Don Michael Feeney Jr.**
