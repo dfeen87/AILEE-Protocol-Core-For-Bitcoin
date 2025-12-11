@@ -374,7 +374,7 @@ You are free to:
 - ✅ Distribute  
 - ✅ Sublicense  
 
-See the [LICENSE] file for the full text of the MIT License.
+See the [LICENSE](LICENSE) file for the full text of the MIT License.
 
 ## 🎯 We Need You
 
