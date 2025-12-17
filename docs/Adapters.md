@@ -41,6 +41,21 @@ A new adapter typically requires:
 
 ---
 
+## Adapter Semantics
+
+Chain adapters (e.g., BitcoinAdapter) are authoritative and may submit
+transactions, query state, and participate in network interaction.
+
+AILEE adapters are observational only. They:
+- do not submit transactions
+- do not alter consensus behavior
+- do not influence routing decisions
+- may be attached or omitted without changing system correctness
+
+This separation is intentional and enforced by design.
+
+---
+
 ## Roadmap
 
 - **Future chains:** Additional coins/blockchains will be implemented over time, guided by community demand and institutional relevance.
