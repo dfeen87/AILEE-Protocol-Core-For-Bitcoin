@@ -148,7 +148,21 @@ This repository is intended as a **reference framework**, not a mandate.
 
 ---
 
-## 9. Status
+## 9. Non-Goals
+
+This project explicitly does not:
+- modify Bitcoin consensus rules
+- alter transaction validity or ordering guarantees
+- introduce centralized coordination or control
+- promise universal throughput or energy improvements
+- replace protocol-level scaling mechanisms
+
+AILEE-Core-Bitcoin focuses on systems-level modeling,
+observation, and optimization within existing constraints.
+
+---
+
+## 10. Status
 
 This document reflects the current state of the framework and will evolve only when:
 - New measurable claims are introduced
