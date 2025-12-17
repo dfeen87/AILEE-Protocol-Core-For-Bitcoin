@@ -2,6 +2,8 @@
 
 All notable changes to this project are documented here.
 
+Note: v1.1.0 was intentionally skipped to align versioning with capability boundaries introduced in v1.2.0.
+
 ## v1.2.0 — AILEE Observational Adapter Layer
 - Added optional, read-only AILEE adapters:
   - Mempool state
