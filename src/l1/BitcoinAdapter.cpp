@@ -7,6 +7,7 @@
 // - Reorg detection and handling
 // - Idempotent broadcast with mempool tracking
 // - Connection pooling and retry logic
+// - Optional AILEE observational adapters (mempool, network, energy)
 
 #include "Global_Seven.h"
 #include <curl/curl.h>
@@ -20,8 +21,21 @@
 #include <iomanip>
 #include <iostream>
 
+// Forward declarations for AILEE adapters
+class AILEEMempoolAdapter;
+class AILEENetworkAdapter;
+class AILEEEnergyAdapter;
+
 namespace ailee {
 namespace global_seven {
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+// Default load estimate for energy adapter when actual metrics unavailable
+// Future: derive from mempool depth, tx arrival rate, or queue metrics
+constexpr double kDefaultLoadEstimate = 0.5;
 
 // ============================================================================
 // JSON-RPC Client Implementation
@@ -582,6 +596,11 @@ struct BTCState {
     std::thread eventThread;
     BTCInternal internal;
     uint64_t lastSeenHeight{0};
+    
+    // AILEE adapters (optional, read-only)
+    std::unique_ptr<AILEEMempoolAdapter> mempoolAdapter_;
+    std::unique_ptr<AILEENetworkAdapter> networkAdapter_;
+    std::unique_ptr<AILEEEnergyAdapter> energyAdapter_;
 };
 
 // ============================================================================
@@ -681,6 +700,13 @@ bool BitcoinAdapter::start(TxCallback onTx, BlockCallback onBlock,
                 et.latencyMs = 10.0;
                 et.nodeTempC = 45.0;
                 et.energyEfficiencyScore = 88.0;
+                
+                // Optionally enrich with AILEE energy adapter (if attached)
+                if (s->energyAdapter_) {
+                    auto snap = s->energyAdapter_->snapshot(kDefaultLoadEstimate);
+                    et.energyEfficiencyScore = snap.efficiency_eta * 100.0;
+                }
+                
                 s->onEnergy(et);
                 lastEnergy = std::chrono::steady_clock::now();
             }
@@ -753,6 +779,34 @@ std::optional<uint64_t> BitcoinAdapter::getBlockHeight() {
 
 // Static member initialization
 std::shared_ptr<BTCState> BitcoinAdapter::state_;
+
+// ============================================================================
+// AILEE Adapter Attachment (Optional, Read-Only)
+// ============================================================================
+
+void BitcoinAdapter::attachMempoolAdapter(
+    std::unique_ptr<AILEEMempoolAdapter> adapter
+) {
+    if (state_) {
+        state_->mempoolAdapter_ = std::move(adapter);
+    }
+}
+
+void BitcoinAdapter::attachNetworkAdapter(
+    std::unique_ptr<AILEENetworkAdapter> adapter
+) {
+    if (state_) {
+        state_->networkAdapter_ = std::move(adapter);
+    }
+}
+
+void BitcoinAdapter::attachEnergyAdapter(
+    std::unique_ptr<AILEEEnergyAdapter> adapter
+) {
+    if (state_) {
+        state_->energyAdapter_ = std::move(adapter);
+    }
+}
 
 } // namespace global_seven
 } // namespace ailee
