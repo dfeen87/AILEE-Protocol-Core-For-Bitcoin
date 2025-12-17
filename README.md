@@ -16,6 +16,14 @@ Together, these form a **trustless, institutional-grade Layer-2** capable of hig
 
 ---
 
+## Start Here
+
+1. `ARCHITECTURE.md` — system design and boundaries
+2. `VERIFICATION.md` — claims, limits, and falsifiability
+3. `Adapters.md` — chain vs observational adapter model
+
+---
+
 ## 🚀 Quick Start (Build in 30 Seconds)
 
 ```bash
