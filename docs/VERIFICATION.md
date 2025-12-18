@@ -1,8 +1,9 @@
 # Verification & Falsifiability
 
-This document defines the verification boundaries, measurable claims, and falsifiability conditions for the **AILEE-CORE-BITCOIN** framework.
+This document defines the authoritative verification boundaries, measurable claims,
+and falsifiability conditions for the AILEE-Core-Bitcoin framework.
+Architectural concepts and exploratory designs are documented separately.
 
-AILEE-CORE-BITCOIN is not a protocol replacement, fork, or consensus modification. It is a systems-level optimization and modeling framework intended to analyze and improve transaction efficiency, latency behavior, and energy utilization *within Bitcoin’s existing invariants*.
 
 The purpose of this document is to clearly separate:
 - What is claimed
