@@ -2,6 +2,18 @@
 
 **A Comprehensive Technical Overview of the AI-Driven Bitcoin Layer-2 Scaling Solution**
 
+> ⚠ Architectural Scope Notice
+>
+> This document contains a mix of:
+> - implemented components,
+> - simulated models,
+> - and conceptual research directions.
+>
+> It does not represent a binding protocol specification.
+> Authoritative behavior is defined by the codebase and
+> by VERIFICATION.md.
+
+
 ---
 
 ## Table of Contents
