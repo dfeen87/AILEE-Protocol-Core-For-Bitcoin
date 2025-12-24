@@ -24,6 +24,8 @@
 namespace ailee {
 namespace global_seven {
 
+struct ETHState;
+
 // ---------- Canonical chain set (extensible) ----------
 
 enum class Chain {

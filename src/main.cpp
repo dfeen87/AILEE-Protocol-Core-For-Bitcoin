@@ -43,7 +43,6 @@
 
 // *** NEW: Unified Orchestration Engine ***
 #include "Orchestrator.h"
-#include "Engine.h"
 #include "Ledger.h"
 
 // ---------------------------------------------------------
@@ -705,7 +704,7 @@ private:
                 metricsA.region = lastA->node.region;
                 metricsA.bandwidthMbps = lastA->compute.bandwidthMbps;
                 metricsA.latencyMs = lastA->compute.latencyMs;
-                metricsA.cpuUtilization = lastA->compute.cpuUsage / 100.0;
+                metricsA.cpuUtilization = lastA->compute.cpuUtilization / 100.0;
                 metricsA.capacityScore = 0.7;
                 
                 orchestrationEngine_->registerNode(metricsA);
@@ -717,7 +716,7 @@ private:
                 metricsB.region = lastB->node.region;
                 metricsB.bandwidthMbps = lastB->compute.bandwidthMbps;
                 metricsB.latencyMs = lastB->compute.latencyMs;
-                metricsB.cpuUtilization = lastB->compute.cpuUsage / 100.0;
+                metricsB.cpuUtilization = lastB->compute.cpuUtilization / 100.0;
                 metricsB.capacityScore = 0.6;
                 
                 orchestrationEngine_->registerNode(metricsB);
