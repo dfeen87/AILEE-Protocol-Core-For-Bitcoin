@@ -4,6 +4,17 @@ All notable changes to this project are documented here.
 
 Note: v1.1.0 was intentionally skipped to align versioning with capability boundaries introduced in v1.2.0.
 
+## [Unreleased]
+
+### Changed
+- Removed legacy onboarding document that framed simulations and architectural concepts as active system behavior.
+- Clarified project positioning as research and work-in-progress, with vision documented in `VISION.md`.
+
+### Rationale
+This change improves alignment between documentation and current implementation status.
+
+---
+
 ## v1.2.0 — AILEE Observational Adapter Layer
 - Added optional, read-only AILEE adapters:
   - Mempool state
@@ -13,6 +24,8 @@ Note: v1.1.0 was intentionally skipped to align versioning with capability bound
 - No transaction routing or submission changes
 - Bitcoin adapter remains authoritative
 - Telemetry enrichment only
+
+---
 
 ## v1.1.0 — Verification & Systems Integrity
 - Added formal verification and falsifiability boundaries
