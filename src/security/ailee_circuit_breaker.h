@@ -7,17 +7,56 @@
  * Author: Don Michael Feeney Jr
  */
 
-#include "ailee_circuit_breaker.h"
-#include <chrono>
-#include <mutex>
+#pragma once
+
 #include <atomic>
-#include <sstream>
+#include <chrono>
+#include <cmath>
 #include <iostream>
+#include <mutex>
+#include <sstream>
 
 // Optional: record incidents (header may exist in your tree)
 #include "ailee_recovery_protocol.h"
+#include "ailee_energy_telemetry.h"
 
 namespace ailee {
+
+enum class SystemState {
+    OPTIMIZED,
+    SOFT_TRIP,
+    SAFE_MODE,
+    CRITICAL
+};
+
+struct BreakerReport {
+    SystemState state = SystemState::OPTIMIZED;
+    std::string reason;
+    double eis = 0.0;
+    double entropyDelta = 0.0;
+    double driftScore = 0.0;
+};
+
+class CircuitBreaker {
+public:
+    static constexpr double MAX_SAFE_BLOCK_SIZE_MB = 4.0;
+    static constexpr double MAX_LATENCY_TOLERANCE_MS = 2000.0;
+    static constexpr int MIN_PEER_COUNT = 8;
+    static constexpr double MAX_ENTROPY_SURGE_DELTA = 0.25;
+    static constexpr double MIN_EIS_FOR_OPTIMIZATION = 0.5;
+    static constexpr double MAX_AI_DRIFT_SCORE = 0.5;
+
+    static double computeAIDrift(double targetBlockSize, double proposedBlockSize);
+
+    static BreakerReport monitor(
+        double proposedBlockSize,
+        double currentLatency,
+        int peerCount,
+        double targetBlockSize,
+        const EnergyAnalysis& energy,
+        double previousEIS
+    );
+};
 
 // Internal module state to support hysteresis and rate-limited transitions
 namespace {
@@ -56,12 +95,12 @@ namespace {
     }
 } // namespace (internal)
 
-double CircuitBreaker::computeAIDrift(double targetBlockSize, double proposedBlockSize) {
+inline double CircuitBreaker::computeAIDrift(double targetBlockSize, double proposedBlockSize) {
     if (targetBlockSize <= 0.0) return 0.0;
     return std::fabs(proposedBlockSize - targetBlockSize) / targetBlockSize;
 }
 
-BreakerReport CircuitBreaker::monitor(
+inline BreakerReport CircuitBreaker::monitor(
     double proposedBlockSize,
     double currentLatency,
     int peerCount,

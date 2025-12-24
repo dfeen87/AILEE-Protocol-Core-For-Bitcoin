@@ -164,8 +164,5 @@ std::optional<uint64_t> EthereumAdapter::getBlockHeight() {
     return state_->internal.height();
 }
 
-// Private member to hold state
-std::shared_ptr<ETHState> EthereumAdapter::state_;
-
 } // namespace global_seven
 } // namespace ailee

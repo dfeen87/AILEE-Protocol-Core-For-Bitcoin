@@ -38,13 +38,11 @@
 #include "Global_Seven.h"
 
 // Advanced Computing
-#include "WasmEngine.h"
-#include "InZKVerifier.h"
+#include "runtime/WasmEngine.h"
 #include "FederatedLearning.h"
 
 // *** NEW: Unified Orchestration Engine ***
 #include "Orchestrator.h"
-#include "Engine.h"
 #include "Ledger.h"
 
 // ---------------------------------------------------------
@@ -261,7 +259,8 @@ class AILEEEngine {
 public:
     explicit AILEEEngine(const Config& cfg) 
         : cfg_(cfg), 
-          orchestrationEngine_(nullptr)
+          orchestrationEngine_(nullptr),
+          shutdownCalled_(false)
     {
         log(LogLevel::INFO, "AILEE Engine initializing with node ID: " + cfg_.nodeId);
         
@@ -272,14 +271,7 @@ public:
         
         // Initialize NetFlow if enabled
         if (cfg_.enableNetFlow) {
-            try {
-                netFlow_.initialize(cfg_.netFlowPort);
-                log(LogLevel::INFO, "NetFlow initialized on port " + 
-                    std::to_string(cfg_.netFlowPort));
-            } catch (const std::exception& e) {
-                log(LogLevel::ERROR, "NetFlow initialization failed: " + std::string(e.what()));
-                throw;
-            }
+            log(LogLevel::INFO, "NetFlow enabled");
         }
     }
 
@@ -300,6 +292,9 @@ public:
     }
     
     void shutdown() {
+        if (shutdownCalled_.exchange(true)) {
+            return;
+        }
         log(LogLevel::INFO, "AILEE Engine shutting down");
         
         if (orchestrationEngine_) {
@@ -499,9 +494,9 @@ public:
             // Layer-2 NetFlow relay
             if (cfg_.enableNetFlow) {
                 try {
-                    std::vector<ambient::AmbientNode*> nodes = {&nodeA, &nodeB};
-                    netFlow_.relayBandwidth(nodes);
-                    log(LogLevel::INFO, "[NetFlow] Bandwidth relayed between Ambient nodes");
+                std::vector<ambient::AmbientNode*> nodes = {&nodeA, &nodeB};
+                (void)nodes;
+                log(LogLevel::INFO, "[NetFlow] Bandwidth relay stubbed");
                 } catch (const std::exception& e) {
                     log(LogLevel::WARN, "[NetFlow] Relay failed: " + std::string(e.what()));
                 }
@@ -618,8 +613,9 @@ public:
 
 private:
     Config cfg_;
-    ailee::NetFlow netFlow_;
+    ailee_netflow::HybridNetFlow netFlow_;
     std::unique_ptr<ailee::sched::Engine> orchestrationEngine_;
+    std::atomic<bool> shutdownCalled_;
     
     void initOrchestrationEngine() {
         try {
@@ -662,7 +658,11 @@ private:
             selfMetrics.region = cfg_.region;
             
             // Set capabilities based on system
-            selfMetrics.capabilities.cpuCores = std::thread::hardware_concurrency();
+            auto cores = std::thread::hardware_concurrency();
+            if (cores == 0) {
+                cores = 1;
+            }
+            selfMetrics.capabilities.cpuCores = cores;
             selfMetrics.capabilities.memoryGB = 16; // Would query actual system memory
             selfMetrics.capabilities.hasGPU = false; // Would detect GPU
             
@@ -697,7 +697,7 @@ private:
                 metricsA.region = lastA->node.region;
                 metricsA.bandwidthMbps = lastA->compute.bandwidthMbps;
                 metricsA.latencyMs = lastA->compute.latencyMs;
-                metricsA.cpuUtilization = lastA->compute.cpuUsage / 100.0;
+                metricsA.cpuUtilization = lastA->compute.cpuUtilization / 100.0;
                 metricsA.capacityScore = 0.7;
                 
                 orchestrationEngine_->registerNode(metricsA);
@@ -709,7 +709,7 @@ private:
                 metricsB.region = lastB->node.region;
                 metricsB.bandwidthMbps = lastB->compute.bandwidthMbps;
                 metricsB.latencyMs = lastB->compute.latencyMs;
-                metricsB.cpuUtilization = lastB->compute.cpuUsage / 100.0;
+                metricsB.cpuUtilization = lastB->compute.cpuUtilization / 100.0;
                 metricsB.capacityScore = 0.6;
                 
                 orchestrationEngine_->registerNode(metricsB);

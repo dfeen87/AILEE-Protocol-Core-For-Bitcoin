@@ -55,6 +55,32 @@ public:
     NetFlowTunnel(RelayNode node, TunnelMode mode)
         : node_(std::move(node)), mode_(mode), active_(false) {}
 
+    NetFlowTunnel(const NetFlowTunnel& other)
+        : node_(other.node_), mode_(other.mode_), active_(other.active_.load()) {}
+
+    NetFlowTunnel& operator=(const NetFlowTunnel& other) {
+        if (this != &other) {
+            std::lock_guard<std::mutex> lock(mu_);
+            node_ = other.node_;
+            mode_ = other.mode_;
+            active_.store(other.active_.load());
+        }
+        return *this;
+    }
+
+    NetFlowTunnel(NetFlowTunnel&& other) noexcept
+        : node_(std::move(other.node_)), mode_(other.mode_), active_(other.active_.load()) {}
+
+    NetFlowTunnel& operator=(NetFlowTunnel&& other) noexcept {
+        if (this != &other) {
+            std::lock_guard<std::mutex> lock(mu_);
+            node_ = std::move(other.node_);
+            mode_ = other.mode_;
+            active_.store(other.active_.load());
+        }
+        return *this;
+    }
+
     void activate() {
         std::lock_guard<std::mutex> lock(mu_);
         active_ = true;
@@ -120,6 +146,15 @@ public:
         std::vector<RelayNode> vec;
         for (auto& [_, n] : nodes_) vec.push_back(n);
         return vec;
+    }
+
+    void refillAll(double refillMbps) {
+        std::lock_guard<std::mutex> lock(mu_);
+        for (auto& [_, node] : nodes_) {
+            node.advertisedBandwidthMbps += refillMbps;
+            node.online = true;
+            node.lastSeen = std::chrono::system_clock::now();
+        }
     }
 
     // Token reward for providing bandwidth
