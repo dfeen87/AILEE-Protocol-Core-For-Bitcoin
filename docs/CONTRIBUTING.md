@@ -1,9 +1,9 @@
 # Contributing to AILEE-Core
 
 First off, thank you for considering contributing to **AILEE-Core (AI-Load Energy Efficiency)**.  
-This project is not just code; it is a **call to action** to evolve Bitcoin into a dynamic global financial powerhouse. AILEE-Core has moved beyond simulation into
-**production-ready infrastructure**, validated by hundreds of clones and deployments. We actively welcome skeptics, cryptographers, mathematicians, systems
-engineers, and builders to challenge, extend, and refine this framework.
+This project is not just code; it is a **call to action** to evolve Bitcoin into a dynamic global financial powerhouse. AILEE-Core is currently a **research and
+prototype codebase**, and many components are experimental or incomplete. We actively welcome skeptics, cryptographers, mathematicians, systems engineers, and
+builders to challenge, extend, and refine this framework.
 
 ---
 
@@ -14,18 +14,6 @@ Faith is what drives this project. We operate on principles of **truth, respect,
 * **Skepticism is Welcome:** Challenge the throughput models, recovery logic, or coherence assumptions.  
 * **Respect is Mandatory:** We attack ideas, not people.  
 * **Open Source is Vital:** Innovation thrives when shared. We are building this in the public domain to ensure transparency.
-
----
-
-## 📊 Community Momentum
-
-**As of Day 3:**
-- **271 unique developers** have cloned this repository
-- **1,032 views** from serious technical evaluators
-- **506 total clones** showing real implementation intent
-
-**We see you.** Even if you haven't opened an issue yet, your interest matters. This section is specifically for the **silent majority** who are evaluating,
-learning, or building privately.
 
 ---
 
@@ -164,8 +152,8 @@ mkdir build && cd build
 cmake ..
 make
 
-# Run tests (once implemented)
-make test
+# Run tests (if available)
+ctest
 
 # Run basic simulation
 ./ailee_core
