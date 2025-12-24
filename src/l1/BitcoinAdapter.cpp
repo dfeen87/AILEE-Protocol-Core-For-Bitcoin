@@ -14,7 +14,6 @@
 #if defined(AILEE_HAS_ZMQ)
 #include <zmq.hpp>
 #endif
-#if defined(AILEE_HAS_JSONCPP)
 #include <json/json.h>
 #endif
 #include <thread>
