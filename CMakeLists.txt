@@ -115,12 +115,12 @@ set(AILEE_HEADERS
 
 # Policy System Headers (new files)
 set(POLICY_HEADERS
-    src/security/policies.h
-    src/security/metrics.h
-    src/security/expr.h
-    src/security/config_types.h
-    src/security/config_loader.h
-    src/security/config_hot_reload.h
+    include/policies.h
+    include/metrics.h
+    include/expr.h
+    include/config_types.h
+    include/config_loader.h
+    include/config_hot_reload.h
 )
 
 # Adapter implementation sources
@@ -130,13 +130,11 @@ set(ADAPTER_SOURCES
     src/l1/PolygonAdapter.cpp
     src/l1/SolanaAdapter.cpp
     src/l1/AvalancheAdapter.cpp
+    src/l1/CardanoAdapter.cpp
+    src/l1/PolkadotAdapter.cpp
     src/l1/LitecoinAdapter.cpp
     src/l1/DogecoinAdapter.cpp
     src/l1/AdapterRegistry.cpp
-    src/l1/AILEEMempoolAdapter.cpp
-    src/l1/AILEENetworkAdapter.cpp
-    src/l1/AILEEEnergyAdapter.cpp
-    src/l1/EvmBaseAdapter.cpp
 )
 
 # AmbientAI Sources (new mesh intelligence layer)
@@ -146,11 +144,11 @@ set(AMBIENT_SOURCES
 
 # Policy System Sources
 set(POLICY_SOURCES
-    src/security/policies.cpp
-    src/security/metrics.cpp
-    src/security/expr.cpp
-    src/security/config_loader.cpp
-    src/security/config_hot_reload.cpp
+    src/policies.cpp
+    src/metrics.cpp
+    src/expr.cpp
+    src/config_loader.cpp
+    src/config_hot_reload.cpp
 )
 
 # Main Executable Sources
