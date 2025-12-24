@@ -7,8 +7,7 @@ Note: v1.1.0 was intentionally skipped to align versioning with capability bound
 ## [Unreleased]
 
 ### Changed
-- Removed legacy onboarding document that framed simulations and architectural concepts as active system behavior.
-- Clarified project positioning as research and work-in-progress, with vision documented in `VISION.md`.
+- None.
 
 ### Rationale
 This change improves alignment between documentation and current implementation status.
@@ -24,6 +23,13 @@ This change improves alignment between documentation and current implementation 
 - No transaction routing or submission changes
 - Bitcoin adapter remains authoritative
 - Telemetry enrichment only
+
+---
+
+## v1.2.1 — Build & Test Hardening
+- Fixed unit test source paths for CMake discovery
+- Added FetchContent fallback for GoogleTest when not installed
+- Added CI workflow to build and run tests on Ubuntu
 
 ---
 
