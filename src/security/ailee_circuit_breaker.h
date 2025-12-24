@@ -7,7 +7,6 @@
  * Author: Don Michael Feeney Jr
  */
 
-#include "ailee_circuit_breaker.h"
 #include <chrono>
 #include <mutex>
 #include <atomic>

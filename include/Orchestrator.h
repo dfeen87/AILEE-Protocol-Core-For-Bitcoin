@@ -473,6 +473,8 @@ public:
         if (monitoringThread_.joinable()) {
             monitoringThread_.join();
         }
+
+        failAllPending("Engine stopped before assignment");
     }
     
     bool isRunning() const {
@@ -486,7 +488,10 @@ public:
         auto future = promise->get_future();
         
         taskQueue_.enqueue(task, task.priority);
-        pendingPromises_[task.taskId] = promise;
+        {
+            std::lock_guard<std::mutex> lock(pendingMutex_);
+            pendingPromises_[task.taskId] = promise;
+        }
         
         return future;
     }
@@ -496,6 +501,9 @@ public:
         
         if (candidates.empty()) {
             // No nodes available
+            totalTasksFailed_++;
+            resolvePromise(task.taskId,
+                           makeFailureAssignment(task, "No available nodes for task"));
             return;
         }
         
@@ -508,6 +516,9 @@ public:
         
         if (assignment.assigned) {
             dispatch(assignment, task);
+        } else {
+            totalTasksFailed_++;
+            resolvePromise(task.taskId, assignment);
         }
     }
     
@@ -593,6 +604,7 @@ private:
     std::thread monitoringThread_;
     
     std::unordered_map<std::string, std::shared_ptr<std::promise<Assignment>>> pendingPromises_;
+    mutable std::mutex pendingMutex_;
     
     std::atomic<uint64_t> totalTasksSubmitted_{0};
     std::atomic<uint64_t> totalTasksCompleted_{0};
@@ -611,7 +623,9 @@ private:
                 runTask(*taskOpt);
             } catch (const std::exception& e) {
                 totalTasksFailed_++;
-                // Log error
+                resolvePromise(taskOpt->taskId,
+                               makeFailureAssignment(*taskOpt,
+                                                    "Task processing error: " + std::string(e.what())));
             }
         }
     }
@@ -693,10 +707,60 @@ private:
         );
         
         // Resolve promise if exists
-        auto it = pendingPromises_.find(task.taskId);
-        if (it != pendingPromises_.end()) {
-            it->second->set_value(assignment);
+        resolvePromise(task.taskId, assignment);
+    }
+
+    Assignment makeFailureAssignment(const TaskPayload& task, const std::string& reason) const {
+        Assignment assignment;
+        assignment.assigned = false;
+        assignment.reason = reason;
+        assignment.assignmentId = task.taskId + "-failed";
+        assignment.assignedAt = std::chrono::system_clock::now();
+        return assignment;
+    }
+
+    void resolvePromise(const std::string& taskId, const Assignment& assignment) {
+        std::shared_ptr<std::promise<Assignment>> promise;
+        {
+            std::lock_guard<std::mutex> lock(pendingMutex_);
+            auto it = pendingPromises_.find(taskId);
+            if (it == pendingPromises_.end()) {
+                return;
+            }
+            promise = std::move(it->second);
             pendingPromises_.erase(it);
+        }
+
+        if (promise) {
+            try {
+                promise->set_value(assignment);
+            } catch (const std::future_error&) {
+                // Promise already satisfied or broken; ignore.
+            }
+        }
+    }
+
+    void failAllPending(const std::string& reason) {
+        std::unordered_map<std::string, std::shared_ptr<std::promise<Assignment>>> pending;
+        {
+            std::lock_guard<std::mutex> lock(pendingMutex_);
+            pending.swap(pendingPromises_);
+        }
+
+        for (auto& [taskId, promise] : pending) {
+            if (!promise) {
+                continue;
+            }
+            Assignment assignment;
+            assignment.assigned = false;
+            assignment.reason = reason;
+            assignment.assignmentId = taskId + "-cancelled";
+            assignment.assignedAt = std::chrono::system_clock::now();
+            try {
+                promise->set_value(assignment);
+            } catch (const std::future_error&) {
+                // Promise already satisfied or broken; ignore.
+            }
         }
     }
 };
@@ -711,7 +775,8 @@ inline Config createDefaultConfig() {
     Config config;
     config.performance.defaultStrategy = SchedulingStrategy::WEIGHTED_SCORE;
     config.performance.maxConcurrentTasks = 100;
-    config.performance.workerThreads = std::thread::hardware_concurrency();
+    auto cores = std::thread::hardware_concurrency();
+    config.performance.workerThreads = cores == 0 ? 1 : cores;
     config.economic.defaultMaxCostTokens = 1000;
     config.economic.minReputationThreshold = 0.5;
     return config;

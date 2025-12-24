@@ -11,8 +11,12 @@
 
 #include "Global_Seven.h"
 #include <curl/curl.h>
+#if defined(AILEE_HAS_ZMQ)
 #include <zmq.hpp>
+#endif
+#if defined(AILEE_HAS_JSONCPP)
 #include <json/json.h>
+#endif
 #include <thread>
 #include <atomic>
 #include <mutex>
@@ -29,6 +33,42 @@ class AILEEEnergyAdapter;
 namespace ailee {
 namespace global_seven {
 
+#if !defined(AILEE_HAS_JSONCPP)
+static inline void logEvt(Severity s, const std::string& msg, const std::string& comp, ErrorCallback cb) {
+    if (cb) cb(AdapterError{s, msg, comp, 0});
+}
+
+bool BitcoinAdapter::init(const AdapterConfig&, ErrorCallback onError) {
+    logEvt(Severity::Error, "BitcoinAdapter disabled (JsonCpp not available)", "Init", onError);
+    return false;
+}
+
+bool BitcoinAdapter::start(TxCallback, BlockCallback, EnergyCallback) {
+    return false;
+}
+
+void BitcoinAdapter::stop() {}
+
+bool BitcoinAdapter::broadcastTransaction(const std::vector<TxOut>&,
+                                          const std::unordered_map<std::string, std::string>&,
+                                          std::string& outChainTxId) {
+    outChainTxId.clear();
+    return false;
+}
+
+std::optional<NormalizedTx> BitcoinAdapter::getTransaction(const std::string&) {
+    return std::nullopt;
+}
+
+std::optional<BlockHeader> BitcoinAdapter::getBlockHeader(const std::string&) {
+    return std::nullopt;
+}
+
+std::optional<uint64_t> BitcoinAdapter::getBlockHeight() {
+    return std::nullopt;
+}
+
+#else
 // ============================================================================
 // Constants
 // ============================================================================
@@ -148,6 +188,7 @@ private:
 
 class BitcoinZMQSubscriber {
 public:
+#if defined(AILEE_HAS_ZMQ)
     BitcoinZMQSubscriber(const std::string& endpoint)
         : context_(1), subscriber_(context_, ZMQ_SUB), endpoint_(endpoint) {}
 
@@ -169,7 +210,19 @@ public:
             zmq::message_t topicMsg;
             zmq::message_t dataMsg;
 
-            auto result = subscriber_.recv(topicMsg, zmq::recv_flags::dontwait);
+            zmq::pollitem_t items[] = {
+                { static_cast<void*>(subscriber_), 0, ZMQ_POLLIN, 0 }
+            };
+            auto timeout = std::chrono::milliseconds(timeoutMs);
+            if (timeoutMs < 0) {
+                timeout = std::chrono::milliseconds{-1};
+            }
+            zmq::poll(items, 1, timeout);
+            if (!(items[0].revents & ZMQ_POLLIN)) {
+                return false;
+            }
+
+            auto result = subscriber_.recv(topicMsg, zmq::recv_flags::none);
             if (!result) return false;
 
             subscriber_.recv(dataMsg, zmq::recv_flags::none);
@@ -197,6 +250,30 @@ private:
     zmq::socket_t subscriber_;
     std::string endpoint_;
     std::string lastError_;
+#else
+    explicit BitcoinZMQSubscriber(const std::string& endpoint)
+        : endpoint_(endpoint) {}
+
+    bool connect() {
+        lastError_ = "ZeroMQ support not compiled";
+        return false;
+    }
+
+    bool poll(std::string& topic, std::vector<uint8_t>& data, int timeoutMs = 1000) {
+        (void)topic;
+        (void)data;
+        (void)timeoutMs;
+        return false;
+    }
+
+    void close() {}
+
+    std::string getLastError() const { return lastError_; }
+
+private:
+    std::string endpoint_;
+    std::string lastError_;
+#endif
 };
 
 // ============================================================================
@@ -807,6 +884,8 @@ void BitcoinAdapter::attachEnergyAdapter(
         state_->energyAdapter_ = std::move(adapter);
     }
 }
+
+#endif
 
 } // namespace global_seven
 } // namespace ailee

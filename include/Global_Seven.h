@@ -19,6 +19,7 @@
 #include <unordered_map>
 #include <memory>
 #include <atomic>
+#include <cmath>
 
 namespace ailee {
 namespace global_seven {
@@ -415,6 +416,10 @@ public:
             UnitSpec{18, "wei", "ETH"}, "EthereumAdapter", "1.0.0", false
         };
     }
+
+private:
+    struct ETHState;
+    static std::shared_ptr<ETHState> state_;
 };
 
 class PolygonAdapter final : public IChainAdapter {

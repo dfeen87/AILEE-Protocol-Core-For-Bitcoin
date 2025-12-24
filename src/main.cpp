@@ -38,8 +38,7 @@
 #include "Global_Seven.h"
 
 // Advanced Computing
-#include "WasmEngine.h"
-#include "InZKVerifier.h"
+#include "runtime/WasmEngine.h"
 #include "FederatedLearning.h"
 
 // *** NEW: Unified Orchestration Engine ***
@@ -261,7 +260,8 @@ class AILEEEngine {
 public:
     explicit AILEEEngine(const Config& cfg) 
         : cfg_(cfg), 
-          orchestrationEngine_(nullptr)
+          orchestrationEngine_(nullptr),
+          shutdownCalled_(false)
     {
         log(LogLevel::INFO, "AILEE Engine initializing with node ID: " + cfg_.nodeId);
         
@@ -300,6 +300,9 @@ public:
     }
     
     void shutdown() {
+        if (shutdownCalled_.exchange(true)) {
+            return;
+        }
         log(LogLevel::INFO, "AILEE Engine shutting down");
         
         if (orchestrationEngine_) {
@@ -620,6 +623,7 @@ private:
     Config cfg_;
     ailee::NetFlow netFlow_;
     std::unique_ptr<ailee::sched::Engine> orchestrationEngine_;
+    std::atomic<bool> shutdownCalled_;
     
     void initOrchestrationEngine() {
         try {
@@ -662,7 +666,11 @@ private:
             selfMetrics.region = cfg_.region;
             
             // Set capabilities based on system
-            selfMetrics.capabilities.cpuCores = std::thread::hardware_concurrency();
+            auto cores = std::thread::hardware_concurrency();
+            if (cores == 0) {
+                cores = 1;
+            }
+            selfMetrics.capabilities.cpuCores = cores;
             selfMetrics.capabilities.memoryGB = 16; // Would query actual system memory
             selfMetrics.capabilities.hasGPU = false; // Would detect GPU
             
