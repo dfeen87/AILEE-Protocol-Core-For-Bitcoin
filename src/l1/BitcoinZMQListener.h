@@ -15,7 +15,9 @@
 #ifndef AILEE_BITCOIN_ZMQ_LISTENER_H
 #define AILEE_BITCOIN_ZMQ_LISTENER_H
 
+#if defined(AILEE_HAS_ZMQ)
 #include <zmq.hpp>
+#endif
 #include <iostream>
 #include <vector>
 #include <string>
@@ -29,6 +31,7 @@ namespace ailee {
 
 class BitcoinZMQListener {
 public:
+#if defined(AILEE_HAS_ZMQ)
     explicit BitcoinZMQListener(const std::string& endpoint = "tcp://127.0.0.1:28332")
         : context_(1), subscriber_(context_, ZMQ_SUB), running_(false), endpoint_(endpoint) {}
 
@@ -169,6 +172,23 @@ private:
             // Keep trying loop will catch it
         }
     }
+#else
+    explicit BitcoinZMQListener(const std::string& endpoint = "tcp://127.0.0.1:28332")
+        : endpoint_(endpoint) {}
+
+    void init() {
+        std::cerr << "[ZMQ] ZeroMQ support not compiled; listener disabled." << std::endl;
+    }
+
+    void start() {
+        std::cerr << "[ZMQ] ZeroMQ support not compiled; listener disabled." << std::endl;
+    }
+
+    void stop() {}
+
+private:
+    std::string endpoint_;
+#endif
 };
 
 } // namespace ailee

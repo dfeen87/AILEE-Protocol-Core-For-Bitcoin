@@ -19,6 +19,7 @@
 #include <unordered_map>
 #include <memory>
 #include <atomic>
+#include <cmath>
 
 namespace ailee {
 namespace global_seven {
