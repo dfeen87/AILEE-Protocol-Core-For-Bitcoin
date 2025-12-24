@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(AILEE_Core VERSION 1.0.0 LANGUAGES CXX)
+project(AILEE_Core VERSION 1.2.1 LANGUAGES CXX)
 
 # ============================================================================
 # Compiler & Standard Settings
@@ -255,30 +255,39 @@ endif()
 
 option(BUILD_TESTS "Build unit tests" OFF)
 if(BUILD_TESTS)
-    find_package(GTest REQUIRED)
+    find_package(GTest QUIET)
+    if(NOT GTest_FOUND)
+        include(FetchContent)
+        FetchContent_Declare(
+            googletest
+            URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+        )
+        set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+        FetchContent_MakeAvailable(googletest)
+    endif()
     enable_testing()
 
     add_executable(ailee_tests 
-        AdapterRegistryTests.cpp
+        tests/AdapterRegistryTests.cpp
     )
     
     target_link_libraries(ailee_tests
         PRIVATE
         ailee_adapters
-        GTest::GTest
-        GTest::Main
+        GTest::gtest
+        GTest::gtest_main
     )
     
     add_test(NAME AdapterTests COMMAND ailee_tests)
     
     # Optional: Add policy system tests
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PolicyTests.cpp")
-        add_executable(policy_tests PolicyTests.cpp)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/PolicyTests.cpp")
+        add_executable(policy_tests tests/PolicyTests.cpp)
         target_link_libraries(policy_tests
             PRIVATE
             ailee_adapters
-            GTest::GTest
-            GTest::Main
+            GTest::gtest
+            GTest::gtest_main
         )
         add_test(NAME PolicyTests COMMAND policy_tests)
     endif()
