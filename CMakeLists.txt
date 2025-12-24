@@ -122,6 +122,9 @@ set(POLICY_HEADERS
     config/config_types.h
     config/config_loader.h
     config/config_hot_reload.h
+    include/config_types.h
+    include/config_loader.h
+    include/config_hot_reload.h
 )
 
 # Adapter implementation sources
@@ -138,6 +141,11 @@ set(ADAPTER_SOURCES
     src/l1/AILEENetworkAdapter.cpp
     src/l1/AILEEEnergyAdapter.cpp
     src/l1/EvmBaseAdapter.cpp
+    src/l1/CardanoAdapter.cpp
+    src/l1/PolkadotAdapter.cpp
+    src/l1/LitecoinAdapter.cpp
+    src/l1/DogecoinAdapter.cpp
+    src/l1/AdapterRegistry.cpp
 )
 
 # AmbientAI Sources (new mesh intelligence layer)
@@ -149,6 +157,8 @@ set(AMBIENT_SOURCES
 set(POLICY_SOURCES
     src/security/policies.cpp
     src/telemetry/metrics.cpp
+    src/policies.cpp
+    src/metrics.cpp
     src/expr.cpp
     src/config_loader.cpp
     src/config_hot_reload.cpp
@@ -157,6 +167,7 @@ set(POLICY_SOURCES
 # Main Executable Sources
 set(CORE_SOURCES
     src/main.cpp
+    src/security/ailee_circuit_breaker.cpp
     ${ADAPTER_SOURCES}
     ${AMBIENT_SOURCES}
     ${POLICY_SOURCES}

@@ -154,6 +154,7 @@ public:
             node.advertisedBandwidthMbps += refillMbps;
             node.online = true;
             node.lastSeen = std::chrono::system_clock::now();
+            markNodeOnline(node);
         }
     }
 

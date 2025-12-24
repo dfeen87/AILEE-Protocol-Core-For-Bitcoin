@@ -421,6 +421,8 @@ public:
 
 private:
     std::shared_ptr<ETHState> state_;
+    struct ETHState;
+    static std::shared_ptr<ETHState> state_;
 };
 
 class PolygonAdapter final : public IChainAdapter {
