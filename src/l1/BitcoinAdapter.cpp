@@ -169,7 +169,19 @@ public:
             zmq::message_t topicMsg;
             zmq::message_t dataMsg;
 
-            auto result = subscriber_.recv(topicMsg, zmq::recv_flags::dontwait);
+            zmq::pollitem_t items[] = {
+                { static_cast<void*>(subscriber_), 0, ZMQ_POLLIN, 0 }
+            };
+            auto timeout = std::chrono::milliseconds(timeoutMs);
+            if (timeoutMs < 0) {
+                timeout = std::chrono::milliseconds{-1};
+            }
+            zmq::poll(items, 1, timeout);
+            if (!(items[0].revents & ZMQ_POLLIN)) {
+                return false;
+            }
+
+            auto result = subscriber_.recv(topicMsg, zmq::recv_flags::none);
             if (!result) return false;
 
             subscriber_.recv(dataMsg, zmq::recv_flags::none);
