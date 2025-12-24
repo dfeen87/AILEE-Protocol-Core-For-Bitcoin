@@ -130,13 +130,11 @@ set(ADAPTER_SOURCES
     src/l1/PolygonAdapter.cpp
     src/l1/SolanaAdapter.cpp
     src/l1/AvalancheAdapter.cpp
+    src/l1/CardanoAdapter.cpp
+    src/l1/PolkadotAdapter.cpp
     src/l1/LitecoinAdapter.cpp
     src/l1/DogecoinAdapter.cpp
     src/l1/AdapterRegistry.cpp
-    src/l1/AILEEMempoolAdapter.cpp
-    src/l1/AILEENetworkAdapter.cpp
-    src/l1/AILEEEnergyAdapter.cpp
-    src/l1/EvmBaseAdapter.cpp
 )
 
 # AmbientAI Sources (new mesh intelligence layer)
