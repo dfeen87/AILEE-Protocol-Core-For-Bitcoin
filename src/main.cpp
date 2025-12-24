@@ -271,14 +271,7 @@ public:
         
         // Initialize NetFlow if enabled
         if (cfg_.enableNetFlow) {
-            try {
-                netFlow_.initialize(cfg_.netFlowPort);
-                log(LogLevel::INFO, "NetFlow initialized on port " + 
-                    std::to_string(cfg_.netFlowPort));
-            } catch (const std::exception& e) {
-                log(LogLevel::ERROR, "NetFlow initialization failed: " + std::string(e.what()));
-                throw;
-            }
+            log(LogLevel::INFO, "NetFlow enabled");
         }
     }
 
@@ -501,9 +494,9 @@ public:
             // Layer-2 NetFlow relay
             if (cfg_.enableNetFlow) {
                 try {
-                    std::vector<ambient::AmbientNode*> nodes = {&nodeA, &nodeB};
-                    netFlow_.relayBandwidth(nodes);
-                    log(LogLevel::INFO, "[NetFlow] Bandwidth relayed between Ambient nodes");
+                std::vector<ambient::AmbientNode*> nodes = {&nodeA, &nodeB};
+                (void)nodes;
+                log(LogLevel::INFO, "[NetFlow] Bandwidth relay stubbed");
                 } catch (const std::exception& e) {
                     log(LogLevel::WARN, "[NetFlow] Relay failed: " + std::string(e.what()));
                 }
@@ -620,7 +613,7 @@ public:
 
 private:
     Config cfg_;
-    ailee::NetFlow netFlow_;
+    ailee_netflow::HybridNetFlow netFlow_;
     std::unique_ptr<ailee::sched::Engine> orchestrationEngine_;
     std::atomic<bool> shutdownCalled_;
     

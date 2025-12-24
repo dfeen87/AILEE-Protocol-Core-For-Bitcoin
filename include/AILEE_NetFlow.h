@@ -152,6 +152,8 @@ public:
         std::lock_guard<std::mutex> lock(mu_);
         for (auto& [_, node] : nodes_) {
             node.advertisedBandwidthMbps += refillMbps;
+            node.online = true;
+            node.lastSeen = std::chrono::system_clock::now();
             markNodeOnline(node);
         }
     }

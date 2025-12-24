@@ -146,6 +146,11 @@ struct Reputation {
         }
         return std::clamp(base, 0.0, 1.0);
     }
+
+    void decay(std::chrono::seconds elapsed) {
+        double decayFactor = std::min(0.5, elapsed.count() / 86400.0 * 0.01);
+        trustScore = std::max(0.0, trustScore - decayFactor);
+    }
 };
 
 class IReputationLedger {

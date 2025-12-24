@@ -150,7 +150,7 @@ public:
         std::lock_guard<std::mutex> lock(mu_);
         FederatedUpdate up;
         up.modelId = modelId;
-        up.privacy = lastSample_.privacy;
+        up.privacy = lastSample_->privacy;
 
         float sum = std::accumulate(miniBatch.begin(), miniBatch.end(), 0.0f);
         up.gradient = {sum};
@@ -301,4 +301,3 @@ private:
 };
 
 } // namespace ambient
-
