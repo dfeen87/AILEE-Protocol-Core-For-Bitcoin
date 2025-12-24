@@ -177,6 +177,10 @@ target_link_libraries(ailee_node
     Threads::Threads
 )
 
+if(JSONCPP_FOUND OR jsoncpp_FOUND)
+    target_compile_definitions(ailee_node PRIVATE AILEE_HAS_JSONCPP=1)
+endif()
+
 # Link yaml-cpp if found (for policy system)
 if(yaml-cpp_FOUND)
     target_link_libraries(ailee_node PRIVATE yaml-cpp)
@@ -212,6 +216,10 @@ target_link_libraries(ailee_adapters
     ${JSONCPP_LIBRARIES}
     Threads::Threads
 )
+
+if(JSONCPP_FOUND OR jsoncpp_FOUND)
+    target_compile_definitions(ailee_adapters PRIVATE AILEE_HAS_JSONCPP=1)
+endif()
 
 # Link yaml-cpp to library as well
 if(yaml-cpp_FOUND)
