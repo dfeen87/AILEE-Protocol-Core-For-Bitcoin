@@ -73,6 +73,7 @@ find_package(Threads REQUIRED)
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/include # Best practice to keep headers here
+    ${CMAKE_CURRENT_SOURCE_DIR}/config
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/src/l1
     ${CMAKE_CURRENT_SOURCE_DIR}/src/l2
@@ -118,6 +119,9 @@ set(POLICY_HEADERS
     include/policies.h
     include/metrics.h
     include/expr.h
+    config/config_types.h
+    config/config_loader.h
+    config/config_hot_reload.h
     include/config_types.h
     include/config_loader.h
     include/config_hot_reload.h
@@ -130,6 +134,13 @@ set(ADAPTER_SOURCES
     src/l1/PolygonAdapter.cpp
     src/l1/SolanaAdapter.cpp
     src/l1/AvalancheAdapter.cpp
+    src/l1/LitecoinAdapter.cpp
+    src/l1/DogecoinAdapter.cpp
+    src/l1/AdapterRegistry.cpp
+    src/l1/AILEEMempoolAdapter.cpp
+    src/l1/AILEENetworkAdapter.cpp
+    src/l1/AILEEEnergyAdapter.cpp
+    src/l1/EvmBaseAdapter.cpp
     src/l1/CardanoAdapter.cpp
     src/l1/PolkadotAdapter.cpp
     src/l1/LitecoinAdapter.cpp
@@ -144,6 +155,8 @@ set(AMBIENT_SOURCES
 
 # Policy System Sources
 set(POLICY_SOURCES
+    src/security/policies.cpp
+    src/telemetry/metrics.cpp
     src/policies.cpp
     src/metrics.cpp
     src/expr.cpp

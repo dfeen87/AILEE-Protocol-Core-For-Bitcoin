@@ -38,8 +38,7 @@
 #include "Global_Seven.h"
 
 // Advanced Computing
-#include "WasmEngine.h"
-#include "InZKVerifier.h"
+#include "runtime/WasmEngine.h"
 #include "FederatedLearning.h"
 
 // *** NEW: Unified Orchestration Engine ***
