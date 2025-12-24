@@ -166,5 +166,3 @@ AILEE-Core exists because Bitcoin is too important to leave unexplored questions
 This repository is an **open research effort**, shared early and transparently, with the understanding that correctness matters more than speed.
 
 If you are here to learn, question, or help shape the future — welcome.
-
-You handled this with integrity.
