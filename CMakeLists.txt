@@ -167,6 +167,7 @@ set(POLICY_SOURCES
 # Main Executable Sources
 set(CORE_SOURCES
     src/main.cpp
+    src/security/ailee_circuit_breaker.cpp
     ${ADAPTER_SOURCES}
     ${AMBIENT_SOURCES}
     ${POLICY_SOURCES}
