@@ -775,7 +775,8 @@ inline Config createDefaultConfig() {
     Config config;
     config.performance.defaultStrategy = SchedulingStrategy::WEIGHTED_SCORE;
     config.performance.maxConcurrentTasks = 100;
-    config.performance.workerThreads = std::thread::hardware_concurrency();
+    auto cores = std::thread::hardware_concurrency();
+    config.performance.workerThreads = cores == 0 ? 1 : cores;
     config.economic.defaultMaxCostTokens = 1000;
     config.economic.minReputationThreshold = 0.5;
     return config;
