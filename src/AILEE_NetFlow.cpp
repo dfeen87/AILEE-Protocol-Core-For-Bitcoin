@@ -123,10 +123,7 @@ void simulateNetworkLoad(HybridNetFlow& net, double totalMbps, double intervalMs
 // ----------------- Node Bandwidth Refill -----------------
 
 void refillNodeBandwidth(NetFlowMesh& mesh, double refillMbps) {
-    for (auto& node : mesh.allNodes()) {
-        node.advertisedBandwidthMbps += refillMbps;
-        markNodeOnline(node);
-    }
+    mesh.refillAll(refillMbps);
 }
 
 } // namespace ailee_netflow

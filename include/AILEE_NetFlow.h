@@ -122,6 +122,14 @@ public:
         return vec;
     }
 
+    void refillAll(double refillMbps) {
+        std::lock_guard<std::mutex> lock(mu_);
+        for (auto& [_, node] : nodes_) {
+            node.advertisedBandwidthMbps += refillMbps;
+            markNodeOnline(node);
+        }
+    }
+
     // Token reward for providing bandwidth
     TokenizedBandwidth rewardNode(const RelayNode& node, double bandwidthUsed, double baseRate) {
         TokenizedBandwidth t;
