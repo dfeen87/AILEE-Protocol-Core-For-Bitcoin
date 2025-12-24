@@ -11,7 +11,9 @@
 
 #include "Global_Seven.h"
 #include <curl/curl.h>
+#if defined(AILEE_HAS_ZMQ)
 #include <zmq.hpp>
+#endif
 #include <json/json.h>
 #include <thread>
 #include <atomic>
@@ -148,6 +150,7 @@ private:
 
 class BitcoinZMQSubscriber {
 public:
+#if defined(AILEE_HAS_ZMQ)
     BitcoinZMQSubscriber(const std::string& endpoint)
         : context_(1), subscriber_(context_, ZMQ_SUB), endpoint_(endpoint) {}
 
@@ -209,6 +212,30 @@ private:
     zmq::socket_t subscriber_;
     std::string endpoint_;
     std::string lastError_;
+#else
+    explicit BitcoinZMQSubscriber(const std::string& endpoint)
+        : endpoint_(endpoint) {}
+
+    bool connect() {
+        lastError_ = "ZeroMQ support not compiled";
+        return false;
+    }
+
+    bool poll(std::string& topic, std::vector<uint8_t>& data, int timeoutMs = 1000) {
+        (void)topic;
+        (void)data;
+        (void)timeoutMs;
+        return false;
+    }
+
+    void close() {}
+
+    std::string getLastError() const { return lastError_; }
+
+private:
+    std::string endpoint_;
+    std::string lastError_;
+#endif
 };
 
 // ============================================================================

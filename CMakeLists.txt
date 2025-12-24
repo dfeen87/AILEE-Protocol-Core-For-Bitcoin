@@ -187,9 +187,11 @@ endif()
 # Robust ZeroMQ Linking
 if(TARGET cppzmq)
     target_link_libraries(ailee_node PRIVATE cppzmq)
+    target_compile_definitions(ailee_node PRIVATE AILEE_HAS_ZMQ=1)
 elseif(ZeroMQ_LIBRARY)
     # Fallback if the target doesn't exist (manual linking)
     target_link_libraries(ailee_node PRIVATE ${ZeroMQ_LIBRARY})
+    target_compile_definitions(ailee_node PRIVATE AILEE_HAS_ZMQ=1)
 else()
     message(WARNING "ZeroMQ not found - real-time Bitcoin event listening will be disabled")
 endif()
@@ -219,8 +221,10 @@ endif()
 # Robust ZeroMQ Linking for library
 if(TARGET cppzmq)
     target_link_libraries(ailee_adapters PRIVATE cppzmq)
+    target_compile_definitions(ailee_adapters PRIVATE AILEE_HAS_ZMQ=1)
 elseif(ZeroMQ_LIBRARY)
     target_link_libraries(ailee_adapters PRIVATE ${ZeroMQ_LIBRARY})
+    target_compile_definitions(ailee_adapters PRIVATE AILEE_HAS_ZMQ=1)
 endif()
 
 # ============================================================================
