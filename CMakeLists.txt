@@ -73,11 +73,22 @@ find_package(Threads REQUIRED)
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/include # Best practice to keep headers here
+    ${CMAKE_CURRENT_SOURCE_DIR}/config
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/l1
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/l2
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/security
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/telemetry
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/recovery
     ${OPENSSL_INCLUDE_DIR}
     ${CURL_INCLUDE_DIRS}
     ${JSONCPP_INCLUDE_DIRS}
-    ${ZeroMQ_INCLUDE_DIR}
 )
+
+if(ZeroMQ_INCLUDE_DIR)
+    include_directories(${ZeroMQ_INCLUDE_DIR})
+endif()
 
 # Add yaml-cpp include if found
 if(yaml-cpp_FOUND)
@@ -90,60 +101,62 @@ endif()
 
 # Explicitly list headers so they appear in IDEs (VS Code / CLion)
 set(AILEE_HEADERS
-    ailee_tps_engine.h
-    ailee_gold_bridge.h
-    ailee_recovery_protocol.h
-    ailee_bitcoin_zmq_listener.h
-    ailee_bitcoin_rpc_client.h
-    ailee_energy_telemetry.h
-    ailee_circuit_breaker.h
-    ailee_sidechain_bridge.h
-    ailee_dao_governance.h
-    Global_Seven.h
-    AmbientAI.h
+    src/l2/ailee_tps_engine.h
+    src/l2/ailee_gold_bridge.h
+    src/recovery/ailee_recovery_protocol.h
+    src/l1/BitcoinZMQListener.h
+    src/l1/BitcoinRPCClient.h
+    src/telemetry/ailee_energy_telemetry.h
+    src/security/ailee_circuit_breaker.h
+    src/l2/ailee_sidechain_bridge.h
+    include/ailee_dao_governance.h
+    include/Global_Seven.h
+    include/AmbientAI.h
 )
 
 # Policy System Headers (new files)
 set(POLICY_HEADERS
-    policies.h
-    metrics.h
-    expr.h
-    config_types.h
-    config_loader.h
-    config_hot_reload.h
+    include/policies.h
+    include/metrics.h
+    include/expr.h
+    config/config_types.h
+    config/config_loader.h
+    config/config_hot_reload.h
 )
 
 # Adapter implementation sources
 set(ADAPTER_SOURCES
-    BitcoinAdapter.cpp
-    EthereumAdapter.cpp
-    PolygonAdapter.cpp
-    SolanaAdapter.cpp
-    AvalancheAdapter.cpp
-    CardanoAdapter.cpp
-    PolkadotAdapter.cpp
-    LitecoinAdapter.cpp
-    DogecoinAdapter.cpp
-    AdapterRegistry.cpp
+    src/l1/BitcoinAdapter.cpp
+    src/l1/EthereumAdapter.cpp
+    src/l1/PolygonAdapter.cpp
+    src/l1/SolanaAdapter.cpp
+    src/l1/AvalancheAdapter.cpp
+    src/l1/LitecoinAdapter.cpp
+    src/l1/DogecoinAdapter.cpp
+    src/l1/AdapterRegistry.cpp
+    src/l1/AILEEMempoolAdapter.cpp
+    src/l1/AILEENetworkAdapter.cpp
+    src/l1/AILEEEnergyAdapter.cpp
+    src/l1/EvmBaseAdapter.cpp
 )
 
 # AmbientAI Sources (new mesh intelligence layer)
 set(AMBIENT_SOURCES
-    AmbientAI.cpp
+    src/AmbientAI.cpp
 )
 
 # Policy System Sources
 set(POLICY_SOURCES
-    policies.cpp
-    metrics.cpp
-    expr.cpp
-    config_loader.cpp
-    config_hot_reload.cpp
+    src/security/policies.cpp
+    src/telemetry/metrics.cpp
+    src/expr.cpp
+    src/config_loader.cpp
+    src/config_hot_reload.cpp
 )
 
 # Main Executable Sources
 set(CORE_SOURCES
-    main.cpp
+    src/main.cpp
     ${ADAPTER_SOURCES}
     ${AMBIENT_SOURCES}
     ${POLICY_SOURCES}
