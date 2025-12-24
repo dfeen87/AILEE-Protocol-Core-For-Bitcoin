@@ -5,7 +5,14 @@
 
 #pragma once
 
-#include "Orchestrator.h"
+#include <algorithm>
+#include <cstdint>
+#include <functional>
+#include <limits>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <vector>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -14,6 +21,188 @@
 #include <future>
 
 namespace ailee::sched {
+
+// ==================== CORE TYPES ====================
+
+enum class SchedulingStrategy {
+    WEIGHTED_SCORE,
+    ROUND_ROBIN,
+    LEAST_LOADED,
+    LOWEST_LATENCY,
+    HIGHEST_REPUTATION,
+    LOWEST_COST,
+    GENETIC_ALGORITHM,
+    GEOGRAPHIC_AFFINITY,
+    LOAD_BALANCING
+};
+
+enum class TaskType {
+    AI_INFERENCE,
+    AI_TRAINING,
+    FEDERATED_LEARNING,
+    WASM_EXECUTION,
+    ZK_PROOF_GENERATION,
+    DATA_PROCESSING,
+    BANDWIDTH_RELAY
+};
+
+enum class TaskPriority {
+    LOW,
+    NORMAL,
+    HIGH,
+    CRITICAL
+};
+
+struct ResourceRequirements {
+    uint32_t minCpuCores = 1;
+    uint32_t minMemoryGB = 1;
+    uint32_t minStorageGB = 1;
+    double minBandwidthMbps = 1.0;
+    bool requiresGPU = false;
+    uint32_t minGpuMemoryGB = 0;
+    bool requiresTPU = false;
+    std::vector<std::string> requiredCapabilities;
+};
+
+struct NodeCapabilities {
+    uint32_t cpuCores = 1;
+    uint32_t memoryGB = 1;
+    uint32_t storageGB = 0;
+    uint32_t gpuMemoryGB = 0;
+    bool hasGPU = false;
+    bool hasTPU = false;
+    std::vector<std::string> supportedArchitectures;
+    std::vector<std::string> runtimeVersions;
+};
+
+struct NodeMetrics {
+    std::string peerId;
+    std::string region;
+    double bandwidthMbps = 0.0;
+    double latencyMs = std::numeric_limits<double>::infinity();
+    double cpuUtilization = 0.0;
+    double capacityScore = 0.0;
+    double costPerHour = 0.0;
+    uint64_t tokensAvailable = 0;
+    uint32_t maxConcurrentTasks = 0;
+    uint32_t activeTaskCount = 0;
+    double carbonIntensity = 0.0;
+    std::chrono::system_clock::time_point lastSeen{};
+    NodeCapabilities capabilities;
+};
+
+struct TaskPayload {
+    std::string taskId;
+    TaskType taskType = TaskType::DATA_PROCESSING;
+    TaskPriority priority = TaskPriority::NORMAL;
+    std::string submitterId;
+    std::chrono::system_clock::time_point submittedAt{};
+    ResourceRequirements requirements;
+    uint64_t maxCostTokens = 0;
+    double minReputationScore = 0.0;
+    std::optional<std::string> preferredRegion;
+    bool preferGreenEnergy = false;
+    std::vector<std::string> blacklistedNodes;
+    std::vector<std::uint8_t> payloadBytes;
+};
+
+struct Assignment {
+    bool assigned = false;
+    std::string reason;
+    std::string assignmentId;
+    std::chrono::system_clock::time_point assignedAt{};
+    std::string workerPeerId;
+    std::string workerRegion;
+    std::string backupWorkerPeerId;
+    double finalScore = 0.0;
+    double reputationScore = 0.0;
+    double expectedLatencyMs = std::numeric_limits<double>::infinity();
+    double latencyScore = 0.0;
+    double capacityScore = 0.0;
+    double costScore = 0.0;
+    uint64_t expectedCostTokens = 0;
+    std::chrono::milliseconds estimatedCompletionTime{0};
+    std::vector<std::pair<std::string, double>> candidateScores;
+};
+
+struct Reputation {
+    std::string peerId;
+    double trustScore = 0.5;
+    double allTimeSuccessRate = 0.0;
+    uint64_t totalTasks = 0;
+    uint64_t successfulTasks = 0;
+    uint64_t failedTasks = 0;
+    double avgQualityScore = 0.0;
+    double avgResponseTime = 0.0;
+    uint64_t byzantineBehaviors = 0;
+    uint64_t totalSlashings = 0;
+    std::chrono::system_clock::time_point lastUpdated{};
+
+    double score() const {
+        double base = trustScore;
+        if (totalTasks > 0) {
+            double responseFactor = 1.0 - std::min(avgResponseTime / 10.0, 1.0);
+            base = (allTimeSuccessRate * 0.7) + (avgQualityScore * 0.2) + (responseFactor * 0.1);
+        }
+        return std::clamp(base, 0.0, 1.0);
+    }
+};
+
+class IReputationLedger {
+public:
+    virtual ~IReputationLedger() = default;
+    virtual Reputation get(const std::string& peerId) const = 0;
+    virtual void update(const std::string& peerId, int deltaSuccess, int deltaFailure) = 0;
+    virtual void updateBatch(const std::vector<std::pair<std::string, std::pair<int, int>>>& updates) = 0;
+    virtual void recordTaskCompletion(const std::string& peerId, bool success,
+                                      double qualityScore, std::chrono::milliseconds responseTime) = 0;
+    virtual void recordByzantineBehavior(const std::string& peerId, const std::string& reason) = 0;
+    virtual void rewardNode(const std::string& peerId, double reputationBoost) = 0;
+    virtual void slashNode(const std::string& peerId, double reputationPenalty, uint64_t tokenSlash) = 0;
+    virtual std::vector<std::string> getTopNodes(std::size_t n) const = 0;
+    virtual std::vector<std::string> getNodesAboveThreshold(double threshold) const = 0;
+    virtual std::unordered_map<std::string, Reputation> getAllReputations() const = 0;
+    virtual void decayInactiveNodes(std::chrono::seconds inactivityThreshold) = 0;
+    virtual bool resetReputation(const std::string& peerId, const std::string& reason) = 0;
+    virtual std::vector<std::string> exportReputationLog() const = 0;
+};
+
+class ILatencyMap {
+public:
+    virtual ~ILatencyMap() = default;
+    virtual std::optional<double> getLatencyMs(const std::string& peerId) const = 0;
+    virtual void updateLatency(const std::string& peerId, double latencyMs) = 0;
+    virtual std::optional<double> getBandwidthMbps(const std::string& peerId) const = 0;
+    virtual std::optional<double> getJitterMs(const std::string& peerId) const = 0;
+    virtual std::optional<double> probeLatency(const std::string& peerId) = 0;
+    virtual std::optional<double> getDistanceKm(const std::string& peerId) const = 0;
+    virtual std::unordered_map<std::string, double> getAllLatencies() const = 0;
+    virtual void cleanupStale(std::chrono::seconds maxAge) = 0;
+};
+
+class IOrchestrator {
+public:
+    struct OrchestratorMetrics {
+        uint64_t totalAssignments = 0;
+        uint64_t successfulAssignments = 0;
+        uint64_t failedAssignments = 0;
+        std::chrono::milliseconds avgAssignmentTime{0};
+        std::unordered_map<std::string, uint64_t> assignmentsByWorker;
+    };
+
+    virtual ~IOrchestrator() = default;
+    virtual Assignment assignBestWorker(const TaskPayload& task,
+                                        const std::vector<NodeMetrics>& candidates,
+                                        double trustW,
+                                        double speedW,
+                                        double powerW) const = 0;
+    virtual Assignment assignWithStrategy(const TaskPayload& task,
+                                          const std::vector<NodeMetrics>& candidates,
+                                          SchedulingStrategy strategy) const = 0;
+    virtual void setStrategy(SchedulingStrategy strategy) = 0;
+    virtual SchedulingStrategy getStrategy() const = 0;
+    virtual OrchestratorMetrics getMetrics() const = 0;
+};
 
 // ==================== CONFIGURATION ====================
 
@@ -337,6 +526,73 @@ private:
     std::unordered_map<std::string, LatencyEntry> latencies_;
 };
 
+// ==================== ORCHESTRATOR ====================
+
+class WeightedOrchestrator final : public IOrchestrator {
+public:
+    using ScorerFn = std::function<double(const NodeMetrics&, const TaskPayload&)>;
+
+    WeightedOrchestrator(IReputationLedger& rep, ILatencyMap& lat)
+        : rep_(rep), lat_(lat) {}
+
+    Assignment assignBestWorker(const TaskPayload& task,
+                                const std::vector<NodeMetrics>& candidates,
+                                double trustW,
+                                double speedW,
+                                double powerW) const override;
+    Assignment assignWithStrategy(const TaskPayload& task,
+                                  const std::vector<NodeMetrics>& candidates,
+                                  SchedulingStrategy strategy) const override;
+
+    void setStrategy(SchedulingStrategy strategy) override { strategy_ = strategy; }
+    SchedulingStrategy getStrategy() const override { return strategy_; }
+
+    OrchestratorMetrics getMetrics() const override { return metrics_; }
+
+    void setCustomScorer(ScorerFn scorer) { customScorer_ = std::move(scorer); }
+
+    std::vector<Assignment> assignParallel(const std::vector<TaskPayload>& tasks,
+                                           const std::vector<NodeMetrics>& candidates) const;
+    std::vector<std::pair<std::string, double>> rankCandidates(
+        const TaskPayload& task,
+        const std::vector<NodeMetrics>& candidates) const;
+    std::optional<Assignment> findBackupWorker(const TaskPayload& task,
+                                               const std::vector<NodeMetrics>& candidates,
+                                               const std::string& excludePeerId) const;
+    std::vector<Assignment> scheduleBatch(const std::vector<TaskPayload>& tasks,
+                                          const std::vector<NodeMetrics>& candidates) const;
+    std::vector<std::pair<std::string, std::string>> rebalanceTasks(
+        const std::vector<TaskPayload>& tasks,
+        const std::vector<NodeMetrics>& candidates) const;
+    std::optional<Assignment> findCheapestWorker(const TaskPayload& task,
+                                                 const std::vector<NodeMetrics>& candidates) const;
+    uint64_t estimateCost(const TaskPayload& task, const NodeMetrics& worker) const;
+    Assignment optimizeCostPerformance(const TaskPayload& task,
+                                       const std::vector<NodeMetrics>& candidates) const;
+    Assignment assignRoundRobin(const std::vector<NodeMetrics>& candidates) const;
+    Assignment assignLeastLoaded(const std::vector<NodeMetrics>& candidates) const;
+    Assignment assignLowestLatency(const std::vector<NodeMetrics>& candidates) const;
+    Assignment assignHighestReputation(const std::vector<NodeMetrics>& candidates) const;
+    Assignment assignLowestCost(const std::vector<NodeMetrics>& candidates) const;
+    Assignment assignGeneticAlgorithm(const TaskPayload& task,
+                                      const std::vector<NodeMetrics>& candidates) const;
+
+private:
+    double scoreNode(const NodeMetrics& node,
+                     const TaskPayload& task,
+                     double trustW,
+                     double speedW,
+                     double powerW) const;
+    std::vector<NodeMetrics> filterCandidates(const std::vector<NodeMetrics>& candidates,
+                                              const TaskPayload& task) const;
+
+    IReputationLedger& rep_;
+    ILatencyMap& lat_;
+    SchedulingStrategy strategy_{SchedulingStrategy::WEIGHTED_SCORE};
+    OrchestratorMetrics metrics_{};
+    std::optional<ScorerFn> customScorer_;
+};
+
 // ==================== TASK QUEUE ====================
 
 class TaskQueue {
@@ -473,6 +729,8 @@ public:
         if (monitoringThread_.joinable()) {
             monitoringThread_.join();
         }
+
+        failAllPending("Engine stopped before assignment");
     }
     
     bool isRunning() const {
@@ -486,7 +744,10 @@ public:
         auto future = promise->get_future();
         
         taskQueue_.enqueue(task, task.priority);
-        pendingPromises_[task.taskId] = promise;
+        {
+            std::lock_guard<std::mutex> lock(pendingMutex_);
+            pendingPromises_[task.taskId] = promise;
+        }
         
         return future;
     }
@@ -496,6 +757,9 @@ public:
         
         if (candidates.empty()) {
             // No nodes available
+            totalTasksFailed_++;
+            resolvePromise(task.taskId,
+                           makeFailureAssignment(task, "No available nodes for task"));
             return;
         }
         
@@ -508,6 +772,9 @@ public:
         
         if (assignment.assigned) {
             dispatch(assignment, task);
+        } else {
+            totalTasksFailed_++;
+            resolvePromise(task.taskId, assignment);
         }
     }
     
@@ -593,6 +860,7 @@ private:
     std::thread monitoringThread_;
     
     std::unordered_map<std::string, std::shared_ptr<std::promise<Assignment>>> pendingPromises_;
+    mutable std::mutex pendingMutex_;
     
     std::atomic<uint64_t> totalTasksSubmitted_{0};
     std::atomic<uint64_t> totalTasksCompleted_{0};
@@ -611,7 +879,9 @@ private:
                 runTask(*taskOpt);
             } catch (const std::exception& e) {
                 totalTasksFailed_++;
-                // Log error
+                resolvePromise(taskOpt->taskId,
+                               makeFailureAssignment(*taskOpt,
+                                                    "Task processing error: " + std::string(e.what())));
             }
         }
     }
@@ -693,10 +963,60 @@ private:
         );
         
         // Resolve promise if exists
-        auto it = pendingPromises_.find(task.taskId);
-        if (it != pendingPromises_.end()) {
-            it->second->set_value(assignment);
+        resolvePromise(task.taskId, assignment);
+    }
+
+    Assignment makeFailureAssignment(const TaskPayload& task, const std::string& reason) const {
+        Assignment assignment;
+        assignment.assigned = false;
+        assignment.reason = reason;
+        assignment.assignmentId = task.taskId + "-failed";
+        assignment.assignedAt = std::chrono::system_clock::now();
+        return assignment;
+    }
+
+    void resolvePromise(const std::string& taskId, const Assignment& assignment) {
+        std::shared_ptr<std::promise<Assignment>> promise;
+        {
+            std::lock_guard<std::mutex> lock(pendingMutex_);
+            auto it = pendingPromises_.find(taskId);
+            if (it == pendingPromises_.end()) {
+                return;
+            }
+            promise = std::move(it->second);
             pendingPromises_.erase(it);
+        }
+
+        if (promise) {
+            try {
+                promise->set_value(assignment);
+            } catch (const std::future_error&) {
+                // Promise already satisfied or broken; ignore.
+            }
+        }
+    }
+
+    void failAllPending(const std::string& reason) {
+        std::unordered_map<std::string, std::shared_ptr<std::promise<Assignment>>> pending;
+        {
+            std::lock_guard<std::mutex> lock(pendingMutex_);
+            pending.swap(pendingPromises_);
+        }
+
+        for (auto& [taskId, promise] : pending) {
+            if (!promise) {
+                continue;
+            }
+            Assignment assignment;
+            assignment.assigned = false;
+            assignment.reason = reason;
+            assignment.assignmentId = taskId + "-cancelled";
+            assignment.assignedAt = std::chrono::system_clock::now();
+            try {
+                promise->set_value(assignment);
+            } catch (const std::future_error&) {
+                // Promise already satisfied or broken; ignore.
+            }
         }
     }
 };
@@ -711,7 +1031,8 @@ inline Config createDefaultConfig() {
     Config config;
     config.performance.defaultStrategy = SchedulingStrategy::WEIGHTED_SCORE;
     config.performance.maxConcurrentTasks = 100;
-    config.performance.workerThreads = std::thread::hardware_concurrency();
+    auto cores = std::thread::hardware_concurrency();
+    config.performance.workerThreads = cores == 0 ? 1 : cores;
     config.economic.defaultMaxCostTokens = 1000;
     config.economic.minReputationThreshold = 0.5;
     return config;

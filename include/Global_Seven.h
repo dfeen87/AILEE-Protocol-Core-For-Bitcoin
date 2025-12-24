@@ -19,9 +19,12 @@
 #include <unordered_map>
 #include <memory>
 #include <atomic>
+#include <cmath>
 
 namespace ailee {
 namespace global_seven {
+
+struct ETHState;
 
 // ---------- Canonical chain set (extensible) ----------
 
@@ -415,6 +418,9 @@ public:
             UnitSpec{18, "wei", "ETH"}, "EthereumAdapter", "1.0.0", false
         };
     }
+
+private:
+    std::shared_ptr<ETHState> state_;
 };
 
 class PolygonAdapter final : public IChainAdapter {
