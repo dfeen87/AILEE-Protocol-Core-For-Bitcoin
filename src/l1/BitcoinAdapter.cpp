@@ -11,7 +11,9 @@
 
 #include "Global_Seven.h"
 #include <curl/curl.h>
+#if defined(AILEE_HAS_ZMQ)
 #include <zmq.hpp>
+#endif
 #include <json/json.h>
 #include <thread>
 #include <atomic>
@@ -148,6 +150,7 @@ private:
 
 class BitcoinZMQSubscriber {
 public:
+#if defined(AILEE_HAS_ZMQ)
     BitcoinZMQSubscriber(const std::string& endpoint)
         : context_(1), subscriber_(context_, ZMQ_SUB), endpoint_(endpoint) {}
 
@@ -169,7 +172,19 @@ public:
             zmq::message_t topicMsg;
             zmq::message_t dataMsg;
 
-            auto result = subscriber_.recv(topicMsg, zmq::recv_flags::dontwait);
+            zmq::pollitem_t items[] = {
+                { static_cast<void*>(subscriber_), 0, ZMQ_POLLIN, 0 }
+            };
+            auto timeout = std::chrono::milliseconds(timeoutMs);
+            if (timeoutMs < 0) {
+                timeout = std::chrono::milliseconds{-1};
+            }
+            zmq::poll(items, 1, timeout);
+            if (!(items[0].revents & ZMQ_POLLIN)) {
+                return false;
+            }
+
+            auto result = subscriber_.recv(topicMsg, zmq::recv_flags::none);
             if (!result) return false;
 
             subscriber_.recv(dataMsg, zmq::recv_flags::none);
@@ -197,6 +212,30 @@ private:
     zmq::socket_t subscriber_;
     std::string endpoint_;
     std::string lastError_;
+#else
+    explicit BitcoinZMQSubscriber(const std::string& endpoint)
+        : endpoint_(endpoint) {}
+
+    bool connect() {
+        lastError_ = "ZeroMQ support not compiled";
+        return false;
+    }
+
+    bool poll(std::string& topic, std::vector<uint8_t>& data, int timeoutMs = 1000) {
+        (void)topic;
+        (void)data;
+        (void)timeoutMs;
+        return false;
+    }
+
+    void close() {}
+
+    std::string getLastError() const { return lastError_; }
+
+private:
+    std::string endpoint_;
+    std::string lastError_;
+#endif
 };
 
 // ============================================================================
