@@ -15,6 +15,8 @@
 #include <unordered_map>
 #include <random>
 #include <chrono>
+#include <memory>
+#include "JsonRpcClient.h"
 
 namespace ailee {
 namespace global_seven {
@@ -44,68 +46,132 @@ public:
         rpcEndpoint_ = cfg.nodeEndpoint;
         tlsEnabled_ = rpcEndpoint_.rfind("https://", 0) == 0;
         commitment_ = (cfg.network == "mainnet") ? "confirmed" : "processed";
-        connectedRPC_ = true; // TODO: init TLS HTTP client
+        rpcClient_ = std::make_unique<JsonRpcClient>(rpcEndpoint_, cfg.authUsername, cfg.authPassword);
+        auto resp = rpcClient_->call("getHealth", nlohmann::json::array(), onError);
+        if (!resp || !resp->contains("result")) {
+            connectedRPC_ = false;
+            return false;
+        }
+        connectedRPC_ = true;
         logEvt(Severity::Info, "SOL RPC connected: " + rpcEndpoint_, "RPC", onError);
         return true;
     }
 
     bool connectWS(const std::string& endpoint, ErrorCallback onError) {
         wsEndpoint_ = endpoint;
-        connectedWS_ = true; // TODO: open WS, subscribe to slots/newBlocks
+        if (wsEndpoint_.rfind("ws://", 0) != 0 && wsEndpoint_.rfind("wss://", 0) != 0) {
+            connectedWS_ = false;
+            logEvt(Severity::Warn, "SOL WS endpoint invalid; expected ws:// or wss://", "Listener", onError);
+            return false;
+        }
+        connectedWS_ = true;
         logEvt(Severity::Info, "SOL WS connected: " + wsEndpoint_, "Listener", onError);
         return true;
     }
 
     bool refreshRecentBlockhash(ErrorCallback onError) {
-        if (!connectedRPC_) return false;
-        // TODO: getLatestBlockhash {blockhash,lastValidBlockHeight}
-        recentBlockhash_ = "sol_recent_" + std::to_string(++hashCounter_);
-        lastValidBlockHeight_ = ++heightCounter_;
+        if (!connectedRPC_ || !rpcClient_) return false;
+        auto params = nlohmann::json::array({ { {"commitment", commitment_} } });
+        auto resp = rpcClient_->call("getLatestBlockhash", params, onError);
+        if (!resp || !resp->contains("result")) return false;
+        const auto& result = (*resp)["result"];
+        if (!result.contains("value")) return false;
+        const auto& value = result["value"];
+        if (value.contains("blockhash")) {
+            recentBlockhash_ = value["blockhash"].get<std::string>();
+        }
+        if (value.contains("lastValidBlockHeight")) {
+            lastValidBlockHeight_ = value["lastValidBlockHeight"].get<uint64_t>();
+        }
         logEvt(Severity::Debug, "SOL recent blockhash: " + recentBlockhash_, "RPC", onError);
         return true;
     }
 
     bool sendRawBase64(const std::string& base64Tx, std::string& outSig, ErrorCallback onError) {
-        if (!connectedRPC_) return false;
-
-        auto now = std::chrono::system_clock::now();
-        // TODO: sendTransaction(base64Tx, {skipPreflight:false, maxRetries:3, commitment})
-        outSig = "sol_sig_" + std::to_string(++sigCounter_);
-        recentBroadcasts_[outSig] = now;
-
+        if (!connectedRPC_ || !rpcClient_) return false;
+        if (base64Tx.empty()) {
+            logEvt(Severity::Error, "Base64 transaction missing", "Broadcast", onError);
+            return false;
+        }
+        nlohmann::json opts = {
+            {"encoding", "base64"},
+            {"skipPreflight", false},
+            {"maxRetries", 3},
+            {"preflightCommitment", commitment_}
+        };
+        auto resp = rpcClient_->call("sendTransaction",
+                                     nlohmann::json::array({base64Tx, opts}),
+                                     onError);
+        if (!resp || !resp->contains("result")) return false;
+        outSig = (*resp)["result"].get<std::string>();
+        recentBroadcasts_[outSig] = std::chrono::system_clock::now();
         logEvt(Severity::Info, "SOL broadcast sig=" + outSig, "Broadcast", onError);
         return true;
     }
 
     std::optional<NormalizedTx> getTx(const std::string& sig) {
-        if (!connectedRPC_) return std::nullopt;
+        if (!connectedRPC_ || !rpcClient_) return std::nullopt;
+        nlohmann::json opts = {
+            {"encoding", "json"},
+            {"commitment", commitment_}
+        };
+        auto resp = rpcClient_->call("getTransaction",
+                                     nlohmann::json::array({sig, opts}),
+                                     nullptr);
+        if (!resp || !resp->contains("result") || (*resp)["result"].is_null()) {
+            return std::nullopt;
+        }
         NormalizedTx nt;
         nt.chainTxId = sig;
         nt.normalizedId = sig;
         nt.chain = Chain::Solana;
-        nt.confirmed = false;
+        nt.confirmed = true;
         nt.confirmations = 0;
         return nt;
     }
 
     std::optional<BlockHeader> getHeader(const std::string& slotId) {
-        if (!connectedRPC_) return std::nullopt;
+        if (!connectedRPC_ || !rpcClient_) return std::nullopt;
+        uint64_t slot = 0;
+        try {
+            slot = std::stoull(slotId);
+        } catch (const std::exception&) {
+            return std::nullopt;
+        }
+        nlohmann::json opts = {
+            {"encoding", "json"},
+            {"transactionDetails", "none"},
+            {"rewards", false}
+        };
+        auto resp = rpcClient_->call("getBlock",
+                                     nlohmann::json::array({slot, opts}),
+                                     nullptr);
+        if (!resp || !resp->contains("result") || (*resp)["result"].is_null()) {
+            return std::nullopt;
+        }
+        const auto& block = (*resp)["result"];
         BlockHeader bh;
         bh.hash = slotId;
-        bh.height = ++heightCounter_; // placeholder
-        bh.parentHash = "sol_parent";
-        bh.timestamp = std::chrono::system_clock::now();
+        bh.height = slot;
+        if (block.contains("previousBlockhash")) {
+            bh.parentHash = block["previousBlockhash"].get<std::string>();
+        }
+        if (block.contains("blockTime") && block["blockTime"].is_number_unsigned()) {
+            bh.timestamp = fromUnixSeconds(block["blockTime"].get<uint64_t>());
+        }
         bh.chain = Chain::Solana;
         return bh;
     }
 
     std::optional<uint64_t> height(ErrorCallback onError) {
-        if (!connectedRPC_) {
+        if (!connectedRPC_ || !rpcClient_) {
             logEvt(Severity::Error, "SOL heartbeat RPC not connected", "Listener", onError);
             return std::nullopt;
         }
-        // TODO: getSlot / getBlockHeight
-        return ++heightCounter_;
+        nlohmann::json opts = { {"commitment", commitment_} };
+        auto resp = rpcClient_->call("getSlot", nlohmann::json::array({opts}), onError);
+        if (!resp || !resp->contains("result")) return std::nullopt;
+        return (*resp)["result"].get<uint64_t>();
     }
 
     // Accessors for recent blockhash if needed in builder
@@ -120,11 +186,8 @@ private:
     uint64_t lastValidBlockHeight_{0};
     std::string commitment_{"processed"};
 
-    uint64_t sigCounter_{0};
-    uint64_t hashCounter_{0};
-    uint64_t heightCounter_{0};
-
     std::unordered_map<std::string, std::chrono::system_clock::time_point> recentBroadcasts_;
+    std::unique_ptr<JsonRpcClient> rpcClient_;
 };
 
 // ---- Adapter state ----
@@ -161,10 +224,13 @@ static void clearState(const SolanaAdapter* self) {
 static std::string buildSolanaBase64(const SOLState& st,
                                      const std::vector<TxOut>& outputs,
                                      const std::unordered_map<std::string, std::string>& opts) {
-    (void)outputs; (void)opts;
-    // In production: construct a Message using recentBlockhash, feePayer, instructions,
-    // sign with keypair/HSM, serialize to base64.
-    return "AQIDBA==";
+    (void)outputs;
+    auto it = opts.find("base64_tx");
+    if (it != opts.end()) return it->second;
+    it = opts.find("signed_tx");
+    if (it != opts.end()) return it->second;
+    logEvt(Severity::Error, "Missing signed transaction base64 in opts (base64_tx or signed_tx)", "Broadcast", st.onError);
+    return {};
 }
 
 // ---- IChainAdapter implementation ----
@@ -331,4 +397,3 @@ std::optional<uint64_t> SolanaAdapter::getBlockHeight() {
 
 } // namespace global_seven
 } // namespace ailee
-

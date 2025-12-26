@@ -15,6 +15,8 @@
 #include <unordered_map>
 #include <random>
 #include <chrono>
+#include <memory>
+#include "JsonRpcClient.h"
 
 namespace ailee {
 namespace global_seven {
@@ -43,7 +45,16 @@ public:
     bool connectRPC(const AdapterConfig& cfg, ErrorCallback onError) {
         rpcEndpoint_ = cfg.nodeEndpoint;
         tlsEnabled_ = rpcEndpoint_.rfind("https://", 0) == 0;
-        connectedRPC_ = true; // TODO: init TLS HTTP JSON-RPC client; call getblockchaininfo
+        rpcClient_ = std::make_unique<JsonRpcClient>(rpcEndpoint_,
+                                                     cfg.authUsername,
+                                                     cfg.authPassword,
+                                                     "1.0");
+        auto resp = rpcClient_->call("getblockchaininfo", nlohmann::json::array(), onError);
+        if (!resp || !resp->contains("result")) {
+            connectedRPC_ = false;
+            return false;
+        }
+        connectedRPC_ = true;
         logEvt(Severity::Info, "LTC RPC connected: " + rpcEndpoint_, "RPC", onError);
         return true;
     }
@@ -56,41 +67,74 @@ public:
     }
 
     std::optional<uint64_t> height(ErrorCallback onError) {
-        if (!connectedRPC_) {
+        if (!connectedRPC_ || !rpcClient_) {
             logEvt(Severity::Error, "LTC heartbeat RPC not connected", "Listener", onError);
             return std::nullopt;
         }
-        // TODO: RPC getblockcount
-        return ++heartbeatHeight_;
+        auto resp = rpcClient_->call("getblockcount", nlohmann::json::array(), onError);
+        if (!resp || !resp->contains("result")) return std::nullopt;
+        return (*resp)["result"].get<uint64_t>();
     }
 
     bool broadcastRaw(const std::string& rawHex, std::string& outTxId, ErrorCallback onError) {
-        if (!connectedRPC_) return false;
-        // TODO: RPC sendrawtransaction(rawHex); prefer idempotent check
-        outTxId = "ltc_tx_" + std::to_string(++broadcastCounter_);
+        if (!connectedRPC_ || !rpcClient_) return false;
+        if (rawHex.empty()) {
+            logEvt(Severity::Error, "Raw transaction hex missing", "Broadcast", onError);
+            return false;
+        }
+        auto resp = rpcClient_->call("sendrawtransaction",
+                                     nlohmann::json::array({rawHex}),
+                                     onError);
+        if (!resp || !resp->contains("result")) return false;
+        outTxId = (*resp)["result"].get<std::string>();
         recentBroadcasts_[outTxId] = std::chrono::system_clock::now();
         logEvt(Severity::Info, "LTC broadcast tx=" + outTxId, "Broadcast", onError);
         return true;
     }
 
     std::optional<NormalizedTx> fetchTx(const std::string& txid) {
-        if (!connectedRPC_) return std::nullopt;
+        if (!connectedRPC_ || !rpcClient_) return std::nullopt;
+        auto resp = rpcClient_->call("getrawtransaction",
+                                     nlohmann::json::array({txid, true}),
+                                     nullptr);
+        if (!resp || !resp->contains("result") || (*resp)["result"].is_null()) {
+            return std::nullopt;
+        }
+        const auto& tx = (*resp)["result"];
         NormalizedTx nt;
         nt.chainTxId = txid;
         nt.normalizedId = txid;
         nt.chain = Chain::Litecoin;
-        nt.confirmed = false;
-        nt.confirmations = 0;
+        if (tx.contains("confirmations")) {
+            nt.confirmations = tx["confirmations"].get<uint32_t>();
+            nt.confirmed = nt.confirmations > 0;
+        } else {
+            nt.confirmations = 0;
+            nt.confirmed = false;
+        }
         return nt;
     }
 
     std::optional<BlockHeader> fetchHeader(const std::string& hash) {
-        if (!connectedRPC_) return std::nullopt;
+        if (!connectedRPC_ || !rpcClient_) return std::nullopt;
+        auto resp = rpcClient_->call("getblockheader",
+                                     nlohmann::json::array({hash, true}),
+                                     nullptr);
+        if (!resp || !resp->contains("result") || (*resp)["result"].is_null()) {
+            return std::nullopt;
+        }
+        const auto& header = (*resp)["result"];
         BlockHeader bh;
         bh.hash = hash;
-        bh.height = 0;
-        bh.parentHash = "ltc_parent";
-        bh.timestamp = std::chrono::system_clock::now();
+        if (header.contains("height")) {
+            bh.height = header["height"].get<uint64_t>();
+        }
+        if (header.contains("previousblockhash")) {
+            bh.parentHash = header["previousblockhash"].get<std::string>();
+        }
+        if (header.contains("time")) {
+            bh.timestamp = fromUnixSeconds(header["time"].get<uint64_t>());
+        }
         bh.chain = Chain::Litecoin;
         return bh;
     }
@@ -102,9 +146,8 @@ private:
     bool connectedRPC_{false};
     bool connectedZMQ_{false};
 
-    uint64_t heartbeatHeight_{0};
-    uint64_t broadcastCounter_{0};
     std::unordered_map<std::string, std::chrono::system_clock::time_point> recentBroadcasts_;
+    std::unique_ptr<JsonRpcClient> rpcClient_;
 };
 
 struct LTCState {
@@ -139,9 +182,13 @@ static void clearState(const LitecoinAdapter* self) {
 static std::string buildRawTxHex(const LTCState& st,
                                  const std::vector<TxOut>& outputs,
                                  const std::unordered_map<std::string, std::string>& opts) {
-    (void)st; (void)outputs; (void)opts;
-    // In production: gather UTXOs, build PSBT, sign via wallet/HSM, finalize to raw hex.
-    return "01000000...ltc_raw_hex";
+    (void)st; (void)outputs;
+    auto it = opts.find("raw_tx");
+    if (it != opts.end()) return it->second;
+    it = opts.find("signed_tx");
+    if (it != opts.end()) return it->second;
+    logEvt(Severity::Error, "Missing signed transaction hex in opts (raw_tx or signed_tx)", "Broadcast", st.onError);
+    return {};
 }
 
 // ---- IChainAdapter implementation ----

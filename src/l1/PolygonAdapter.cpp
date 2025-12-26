@@ -12,6 +12,8 @@
 #include <iostream>
 #include <random>
 #include <chrono>
+#include <memory>
+#include "JsonRpcClient.h"
 
 namespace ailee {
 namespace global_seven {
@@ -40,33 +42,76 @@ public:
     bool connectRPC(const AdapterConfig& cfg, ErrorCallback onError) {
         rpcEndpoint_ = cfg.nodeEndpoint;
         tlsEnabled_ = rpcEndpoint_.rfind("https://", 0) == 0;
-        connectedRPC_ = true; // TODO: init TLS HTTP client and authenticate if needed
-        // TODO: query chainId via eth_chainId
-        chainId_ = (cfg.network == "mainnet" ? 137ULL : 80001ULL); // 137=Polygon, 80001=Mumbai (example)
+        rpcClient_ = std::make_unique<JsonRpcClient>(rpcEndpoint_, cfg.authUsername, cfg.authPassword);
+        auto resp = rpcClient_->call("eth_chainId", nlohmann::json::array(), onError);
+        if (!resp || !resp->contains("result")) {
+            connectedRPC_ = false;
+            return false;
+        }
+        auto parsed = parseHexU64((*resp)["result"].get<std::string>());
+        if (!parsed.has_value()) {
+            connectedRPC_ = false;
+            return false;
+        }
+        chainId_ = parsed.value();
+        connectedRPC_ = true;
         logEvt(Severity::Info, "POL RPC connected: " + rpcEndpoint_, "RPC", onError);
         return true;
     }
 
     bool connectWS(const std::string& endpoint, ErrorCallback onError) {
         wsEndpoint_ = endpoint;
-        connectedWS_ = true; // TODO: open WS, subscribe to newHeads
+        if (wsEndpoint_.rfind("ws://", 0) != 0 && wsEndpoint_.rfind("wss://", 0) != 0) {
+            connectedWS_ = false;
+            logEvt(Severity::Warn, "POL WS endpoint invalid; expected ws:// or wss://", "Listener", onError);
+            return false;
+        }
+        connectedWS_ = true;
         logEvt(Severity::Info, "POL WS connected: " + wsEndpoint_, "Listener", onError);
         return true;
     }
 
     bool updateNonce(const std::string& fromAddr, ErrorCallback onError) {
-        if (!connectedRPC_) return false;
-        // TODO: eth_getTransactionCount(fromAddr, "pending")
-        nonce_ += 1; // placeholder increment
+        if (!connectedRPC_ || !rpcClient_) return false;
+        if (fromAddr.empty()) {
+            logEvt(Severity::Warn, "POL nonce refresh skipped: missing from address", "RPC", onError);
+            return false;
+        }
+        auto resp = rpcClient_->call("eth_getTransactionCount",
+                                     nlohmann::json::array({fromAddr, "pending"}),
+                                     onError);
+        if (!resp || !resp->contains("result")) return false;
+        auto parsed = parseHexU64((*resp)["result"].get<std::string>());
+        if (!parsed.has_value()) return false;
+        nonce_ = parsed.value();
         logEvt(Severity::Debug, "POL nonce updated: " + std::to_string(nonce_), "RPC", onError);
         return true;
     }
 
     bool estimateFees(ErrorCallback onError) {
-        if (!connectedRPC_) return false;
-        // TODO: eth_maxPriorityFeePerGas, eth_feeHistory
-        maxPriorityFeeGwei_ = std::min(2.5, maxPriorityFeeGwei_ * 1.03);
-        maxFeeGwei_         = std::min(200.0, maxFeeGwei_ * 1.02);
+        if (!connectedRPC_ || !rpcClient_) return false;
+        auto tipResp = rpcClient_->call("eth_maxPriorityFeePerGas", nlohmann::json::array(), onError);
+        if (tipResp && tipResp->contains("result")) {
+            auto parsed = parseHexU64((*tipResp)["result"].get<std::string>());
+            if (parsed.has_value()) {
+                maxPriorityFeeGwei_ = static_cast<double>(parsed.value()) / 1e9;
+            }
+        }
+
+        auto feeResp = rpcClient_->call("eth_feeHistory",
+                                        nlohmann::json::array({1, "latest", nlohmann::json::array({50})}),
+                                        onError);
+        if (feeResp && feeResp->contains("result")) {
+            const auto& result = (*feeResp)["result"];
+            if (result.contains("baseFeePerGas") && result["baseFeePerGas"].is_array() &&
+                !result["baseFeePerGas"].empty()) {
+                auto parsed = parseHexU64(result["baseFeePerGas"][0].get<std::string>());
+                if (parsed.has_value()) {
+                    double baseGwei = static_cast<double>(parsed.value()) / 1e9;
+                    maxFeeGwei_ = baseGwei * 2.0 + maxPriorityFeeGwei_;
+                }
+            }
+        }
         logEvt(Severity::Debug,
                "POL fees: tip=" + std::to_string(maxPriorityFeeGwei_) +
                " max=" + std::to_string(maxFeeGwei_), "RPC", onError);
@@ -74,45 +119,73 @@ public:
     }
 
     bool sendRawTx(const std::string& rawHex, std::string& outTxHash, ErrorCallback onError) {
-        if (!connectedRPC_) return false;
-        // Idempotency check — in production, compute deterministic hash pre-broadcast
-        auto now = std::chrono::system_clock::now();
-        // TODO: eth_sendRawTransaction(rawHex)
-        outTxHash = "polygon_tx_" + std::to_string(++nonce_);
-        recentBroadcasts_[outTxHash] = now;
+        if (!connectedRPC_ || !rpcClient_) return false;
+        if (rawHex.empty()) {
+            logEvt(Severity::Error, "Raw transaction hex missing", "Broadcast", onError);
+            return false;
+        }
+        auto resp = rpcClient_->call("eth_sendRawTransaction",
+                                     nlohmann::json::array({rawHex}),
+                                     onError);
+        if (!resp || !resp->contains("result")) return false;
+        outTxHash = (*resp)["result"].get<std::string>();
+        recentBroadcasts_[outTxHash] = std::chrono::system_clock::now();
         logEvt(Severity::Info, "POL broadcast tx=" + outTxHash, "Broadcast", onError);
         return true;
     }
 
     std::optional<NormalizedTx> getTx(const std::string& hash) {
-        if (!connectedRPC_) return std::nullopt;
+        if (!connectedRPC_ || !rpcClient_) return std::nullopt;
+        auto resp = rpcClient_->call("eth_getTransactionByHash",
+                                     nlohmann::json::array({hash}),
+                                     nullptr);
+        if (!resp || !resp->contains("result") || (*resp)["result"].is_null()) {
+            return std::nullopt;
+        }
         NormalizedTx nt;
         nt.chainTxId = hash;
         nt.normalizedId = hash;
         nt.chain = Chain::Polygon;
-        nt.confirmed = false;
+        const auto& tx = (*resp)["result"];
+        nt.confirmed = tx.contains("blockNumber") && !tx["blockNumber"].is_null();
         nt.confirmations = 0;
         return nt;
     }
 
     std::optional<BlockHeader> getHeader(const std::string& hash) {
-        if (!connectedRPC_) return std::nullopt;
+        if (!connectedRPC_ || !rpcClient_) return std::nullopt;
+        auto resp = rpcClient_->call("eth_getBlockByHash",
+                                     nlohmann::json::array({hash, false}),
+                                     nullptr);
+        if (!resp || !resp->contains("result") || (*resp)["result"].is_null()) {
+            return std::nullopt;
+        }
+        const auto& block = (*resp)["result"];
         BlockHeader bh;
         bh.hash = hash;
-        bh.height = 0;
-        bh.parentHash = "pol_parent";
-        bh.timestamp = std::chrono::system_clock::now();
+        if (block.contains("number") && block["number"].is_string()) {
+            if (auto parsed = parseHexU64(block["number"].get<std::string>())) {
+                bh.height = parsed.value();
+            }
+        }
+        if (block.contains("parentHash")) bh.parentHash = block["parentHash"].get<std::string>();
+        if (block.contains("timestamp")) {
+            if (auto parsed = parseHexU64(block["timestamp"].get<std::string>())) {
+                bh.timestamp = fromUnixSeconds(parsed.value());
+            }
+        }
         bh.chain = Chain::Polygon;
         return bh;
     }
 
     std::optional<uint64_t> height(ErrorCallback onError) {
-        if (!connectedRPC_) {
+        if (!connectedRPC_ || !rpcClient_) {
             logEvt(Severity::Error, "POL heartbeat RPC not connected", "Listener", onError);
             return std::nullopt;
         }
-        // TODO: eth_blockNumber
-        return ++heartbeatHeight_;
+        auto resp = rpcClient_->call("eth_blockNumber", nlohmann::json::array(), onError);
+        if (!resp || !resp->contains("result")) return std::nullopt;
+        return parseHexU64((*resp)["result"].get<std::string>());
     }
 
     // EIP-1559 parameters (placeholders; override via AdapterConfig.extra)
@@ -124,8 +197,8 @@ private:
     bool connectedRPC_{false}, connectedWS_{false}, tlsEnabled_{false};
     uint64_t chainId_{0};
     uint64_t nonce_{0};
-    uint64_t heartbeatHeight_{0};
     std::unordered_map<std::string, std::chrono::system_clock::time_point> recentBroadcasts_;
+    std::unique_ptr<JsonRpcClient> rpcClient_;
 };
 
 // ---- Adapter state ----
@@ -162,9 +235,13 @@ static void clearState(const PolygonAdapter* self) {
 static std::string buildEip1559Raw(const POLState& st,
                                    const std::vector<TxOut>& outputs,
                                    const std::unordered_map<std::string, std::string>& opts) {
-    (void)outputs; (void)opts;
-    // Use st.internal.maxFeeGwei_, maxPriorityFeeGwei_, nonce, chainId for real crafting.
-    return "0x02f8_polygon_hardened_raw";
+    (void)outputs;
+    auto it = opts.find("raw_tx");
+    if (it != opts.end()) return it->second;
+    it = opts.find("signed_tx");
+    if (it != opts.end()) return it->second;
+    logEvt(Severity::Error, "Missing signed transaction hex in opts (raw_tx or signed_tx)", "Broadcast", st.onError);
+    return {};
 }
 
 // ---- IChainAdapter implementation ----
