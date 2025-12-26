@@ -3,56 +3,107 @@
 #include <thread>
 #include <atomic>
 #include <sstream>
+#include <memory>
+#include "JsonRpcClient.h"
 
 namespace ailee {
 namespace global_seven {
 
 class ETHInternal {
 public:
-    bool connectRPC(const std::string& endpoint) {
-        rpcEndpoint_ = endpoint;
-        // TODO: eth_chainId sanity check
+    bool connectRPC(const AdapterConfig& cfg, ErrorCallback onError) {
+        rpcClient_ = std::make_unique<JsonRpcClient>(cfg.nodeEndpoint,
+                                                     cfg.authUsername,
+                                                     cfg.authPassword);
+        rpcEndpoint_ = cfg.nodeEndpoint;
+        auto resp = rpcClient_->call("eth_chainId", nlohmann::json::array(), onError);
+        if (!resp || !resp->contains("result")) {
+            return false;
+        }
+        auto parsed = parseHexU64((*resp)["result"].get<std::string>());
+        if (!parsed.has_value()) return false;
+        chainId_ = parsed.value();
         return true;
     }
     bool connectWS(const std::string& endpoint) {
         wsEndpoint_ = endpoint;
-        // TODO: open WS, subscribe to newHeads, pendingTransactions
+        if (wsEndpoint_.rfind("ws://", 0) != 0 && wsEndpoint_.rfind("wss://", 0) != 0) {
+            return false;
+        }
+        connectedWS_ = true;
         return true;
     }
-    bool sendRawTx(const std::string& rawHex, std::string& outTxHash) {
-        // TODO: eth_sendRawTransaction
-        outTxHash = "eth_dummy_hash_" + std::to_string(++counter_);
+    bool sendRawTx(const std::string& rawHex, std::string& outTxHash, ErrorCallback onError) {
+        if (!rpcClient_) return false;
+        auto resp = rpcClient_->call("eth_sendRawTransaction",
+                                     nlohmann::json::array({rawHex}),
+                                     onError);
+        if (!resp || !resp->contains("result")) return false;
+        outTxHash = (*resp)["result"].get<std::string>();
         return true;
     }
-    std::optional<NormalizedTx> getTx(const std::string& hash) {
-        // TODO: eth_getTransactionByHash + receipt, normalize
+    std::optional<NormalizedTx> getTx(const std::string& hash, ErrorCallback onError) {
+        if (!rpcClient_) return std::nullopt;
+        auto resp = rpcClient_->call("eth_getTransactionByHash",
+                                     nlohmann::json::array({hash}),
+                                     onError);
+        if (!resp || !resp->contains("result") || (*resp)["result"].is_null()) {
+            return std::nullopt;
+        }
+        const auto& tx = (*resp)["result"];
+        auto receipt = rpcClient_->call("eth_getTransactionReceipt",
+                                        nlohmann::json::array({hash}),
+                                        onError);
         NormalizedTx nt;
         nt.chainTxId = hash;
         nt.normalizedId = hash;
         nt.chain = Chain::Ethereum;
-        nt.confirmed = false;
-        nt.confirmations = 0;
+        if (tx.contains("blockNumber") && !tx["blockNumber"].is_null()) {
+            nt.confirmed = true;
+        }
+        if (receipt && receipt->contains("result") && !(*receipt)["result"].is_null()) {
+            if ((*receipt)["result"].contains("status")) {
+                nt.metadata["status"] = (*receipt)["result"]["status"].get<std::string>();
+            }
+        }
         return nt;
     }
-    std::optional<BlockHeader> getHeader(const std::string& hash) {
-        // TODO: eth_getBlockByHash, normalize
+    std::optional<BlockHeader> getHeader(const std::string& hash, ErrorCallback onError) {
+        if (!rpcClient_) return std::nullopt;
+        auto resp = rpcClient_->call("eth_getBlockByHash",
+                                     nlohmann::json::array({hash, false}),
+                                     onError);
+        if (!resp || !resp->contains("result") || (*resp)["result"].is_null()) {
+            return std::nullopt;
+        }
+        const auto& block = (*resp)["result"];
         BlockHeader bh;
         bh.hash = hash;
-        bh.height = 0;
-        bh.parentHash = "";
-        bh.timestamp = std::chrono::system_clock::now();
+        if (block.contains("number") && block["number"].is_string()) {
+            auto parsed = parseHexU64(block["number"].get<std::string>());
+            if (parsed.has_value()) bh.height = parsed.value();
+        }
+        if (block.contains("parentHash")) bh.parentHash = block["parentHash"].get<std::string>();
+        if (block.contains("timestamp")) {
+            auto parsed = parseHexU64(block["timestamp"].get<std::string>());
+            if (parsed.has_value()) bh.timestamp = fromUnixSeconds(parsed.value());
+        }
         bh.chain = Chain::Ethereum;
         return bh;
     }
     std::optional<uint64_t> height() {
-        // TODO: eth_blockNumber
-        return 0ULL;
+        if (!rpcClient_) return std::nullopt;
+        auto resp = rpcClient_->call("eth_blockNumber", nlohmann::json::array(), nullptr);
+        if (!resp || !resp->contains("result")) return std::nullopt;
+        return parseHexU64((*resp)["result"].get<std::string>());
     }
 
 private:
     std::string rpcEndpoint_;
     std::string wsEndpoint_;
-    uint64_t counter_{0};
+    uint64_t chainId_{0};
+    bool connectedWS_{false};
+    std::unique_ptr<JsonRpcClient> rpcClient_;
 };
 
 struct ETHState {
@@ -71,7 +122,7 @@ bool EthereumAdapter::init(const AdapterConfig& cfg, ErrorCallback onError) {
     state_->cfg = cfg;
     state_->onError = onError;
 
-    if (!state_->internal.connectRPC(cfg.nodeEndpoint)) {
+    if (!state_->internal.connectRPC(cfg, onError)) {
         onError(AdapterError{Severity::Error, "ETH RPC connect failed", "RPC", -1});
         return false;
     }
@@ -139,9 +190,21 @@ bool EthereumAdapter::broadcastTransaction(const std::vector<TxOut>& outputs,
         return false;
     }
 
-    // Placeholder: craft and sign EIP‑1559 transaction off‑chain; here we fake raw hex
-    std::string rawHex = "0x02f8...";
-    bool ok = state_->internal.sendRawTx(rawHex, outChainTxId);
+    auto it = opts.find("raw_tx");
+    std::string rawHex;
+    if (it != opts.end()) {
+        rawHex = it->second;
+    } else if ((it = opts.find("signed_tx")) != opts.end()) {
+        rawHex = it->second;
+    } else {
+        state_->onError(AdapterError{Severity::Error,
+                                     "Missing signed transaction hex in opts (raw_tx or signed_tx)",
+                                     "Broadcast",
+                                     -11});
+        return false;
+    }
+
+    bool ok = state_->internal.sendRawTx(rawHex, outChainTxId, state_->onError);
     if (!ok) {
         state_->onError(AdapterError{Severity::Error, "ETH broadcast failed", "Broadcast", -11});
         return false;
@@ -151,12 +214,12 @@ bool EthereumAdapter::broadcastTransaction(const std::vector<TxOut>& outputs,
 
 std::optional<NormalizedTx> EthereumAdapter::getTransaction(const std::string& chainTxId) {
     if (!state_) return std::nullopt;
-    return state_->internal.getTx(chainTxId);
+    return state_->internal.getTx(chainTxId, state_->onError);
 }
 
 std::optional<BlockHeader> EthereumAdapter::getBlockHeader(const std::string& blockHash) {
     if (!state_) return std::nullopt;
-    return state_->internal.getHeader(blockHash);
+    return state_->internal.getHeader(blockHash, state_->onError);
 }
 
 std::optional<uint64_t> EthereumAdapter::getBlockHeight() {
