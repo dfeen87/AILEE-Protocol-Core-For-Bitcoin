@@ -7,6 +7,10 @@
 #include <random>
 #include <chrono>
 #include <iostream>
+#include <memory>
+#include <optional>
+#include <curl/curl.h>
+#include <nlohmann/json.hpp>
 
 namespace ailee {
 namespace global_seven {
@@ -27,6 +31,110 @@ static bool backoffRetry(size_t attempt, size_t maxAttempts, std::chrono::millis
     return true;
 }
 
+using Json = nlohmann::json;
+
+static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp) {
+    auto* buffer = static_cast<std::string*>(userp);
+    buffer->append(static_cast<char*>(contents), size * nmemb);
+    return size * nmemb;
+}
+
+static std::optional<uint64_t> parseHexU64(const std::string& hex) {
+    if (hex.empty()) return std::nullopt;
+    size_t idx = 0;
+    uint64_t value = 0;
+    try {
+        value = std::stoull(hex, &idx, 16);
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
+    if (idx == 0) return std::nullopt;
+    return value;
+}
+
+static double weiToGwei(uint64_t wei) {
+    return static_cast<double>(wei) / 1e9;
+}
+
+class EvmJsonRpcClient {
+public:
+    EvmJsonRpcClient(std::string endpoint, std::string user, std::string pass)
+        : endpoint_(std::move(endpoint)), user_(std::move(user)), pass_(std::move(pass)) {}
+
+    std::optional<Json> call(const std::string& method, const Json& params, ErrorCallback onError) const {
+        Json payload;
+        payload["jsonrpc"] = "2.0";
+        payload["id"] = 1;
+        payload["method"] = method;
+        payload["params"] = params;
+
+        std::string response;
+        if (!perform(payload.dump(), response, onError)) {
+            return std::nullopt;
+        }
+
+        try {
+            auto json = Json::parse(response);
+            if (json.contains("error")) {
+                logEvt(Severity::Error, "RPC error: " + json["error"].dump(), "RPC", onError);
+                return std::nullopt;
+            }
+            return json;
+        } catch (const std::exception& e) {
+            logEvt(Severity::Error, std::string("RPC parse failed: ") + e.what(), "RPC", onError);
+            return std::nullopt;
+        }
+    }
+
+private:
+    bool perform(const std::string& body, std::string& response, ErrorCallback onError) const {
+        CURL* curl = curl_easy_init();
+        if (!curl) {
+            logEvt(Severity::Error, "Failed to init CURL", "RPC", onError);
+            return false;
+        }
+
+        struct curl_slist* headers = nullptr;
+        headers = curl_slist_append(headers, "Content-Type: application/json");
+
+        curl_easy_setopt(curl, CURLOPT_URL, endpoint_.c_str());
+        curl_easy_setopt(curl, CURLOPT_POST, 1L);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.c_str());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+
+        if (!user_.empty()) {
+            std::string auth = user_ + ":" + pass_;
+            curl_easy_setopt(curl, CURLOPT_USERPWD, auth.c_str());
+        }
+
+        CURLcode res = curl_easy_perform(curl);
+        long http_code = 0;
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+
+        if (res != CURLE_OK) {
+            logEvt(Severity::Error, std::string("RPC request failed: ") + curl_easy_strerror(res),
+                   "RPC", onError);
+            return false;
+        }
+        if (http_code < 200 || http_code >= 300) {
+            logEvt(Severity::Error, "RPC HTTP error: " + std::to_string(http_code), "RPC", onError);
+            return false;
+        }
+
+        return true;
+    }
+
+    std::string endpoint_;
+    std::string user_;
+    std::string pass_;
+};
+
 struct EVMInternal {
     std::string rpcEndpoint, wsEndpoint;
     bool tlsEnabled{false};
@@ -36,43 +144,110 @@ struct EVMInternal {
     double maxPriorityFeeGwei{1.0};
     double maxFeeGwei{50.0};
     std::unordered_map<std::string, std::chrono::system_clock::time_point> broadcasted; // idempotency guard
+    std::unique_ptr<EvmJsonRpcClient> rpcClient;
 
     bool connectRPC(const AdapterConfig& cfg, ErrorCallback onError) {
         rpcEndpoint = cfg.nodeEndpoint;
         tlsEnabled = rpcEndpoint.rfind("https://", 0) == 0;
-        connectedRPC = true; // TODO: create TLS client, authenticate
-        // TODO: chainId = eth_chainId
-        chainId = (cfg.network == "mainnet" ? 1ULL : 11155111ULL); // example: sepolia
-        logEvt(Severity::Info, "EVM RPC connected: " + rpcEndpoint, "RPC", onError);
+        rpcClient = std::make_unique<EvmJsonRpcClient>(rpcEndpoint, cfg.authUsername, cfg.authPassword);
+
+        auto resp = rpcClient->call("eth_chainId", Json::array(), onError);
+        if (!resp || !resp->contains("result")) {
+            logEvt(Severity::Error, "EVM RPC chainId fetch failed", "RPC", onError);
+            connectedRPC = false;
+            return false;
+        }
+
+        auto chainHex = (*resp)["result"].get<std::string>();
+        auto parsed = parseHexU64(chainHex);
+        if (!parsed.has_value()) {
+            logEvt(Severity::Error, "EVM RPC chainId parse failed", "RPC", onError);
+            connectedRPC = false;
+            return false;
+        }
+
+        chainId = parsed.value();
+        connectedRPC = true;
+        logEvt(Severity::Info, "EVM RPC connected: " + rpcEndpoint + " (chainId=" +
+               std::to_string(chainId) + ")", "RPC", onError);
         return true;
     }
 
     bool connectWS(const std::string& endpoint, ErrorCallback onError) {
         wsEndpoint = endpoint;
-        connectedWS = true; // TODO: open WS, subscribe to newHeads
-        logEvt(Severity::Info, "EVM WS connected: " + wsEndpoint, "Listener", onError);
+        if (wsEndpoint.rfind("ws://", 0) != 0 && wsEndpoint.rfind("wss://", 0) != 0) {
+            logEvt(Severity::Warn, "EVM WS endpoint invalid; expected ws:// or wss://", "Listener", onError);
+            connectedWS = false;
+            return false;
+        }
+        connectedWS = true;
+        logEvt(Severity::Info, "EVM WS endpoint configured: " + wsEndpoint, "Listener", onError);
         return true;
     }
 
     bool refreshNonce(const std::string& fromAddr, ErrorCallback onError) {
-        // TODO: eth_getTransactionCount (pending)
-        nonce += 1; // placeholder increment
+        if (!connectedRPC || !rpcClient) return false;
+        if (fromAddr.empty()) {
+            logEvt(Severity::Warn, "Nonce refresh skipped: missing from address", "RPC", onError);
+            return false;
+        }
+
+        Json params = Json::array({fromAddr, "pending"});
+        auto resp = rpcClient->call("eth_getTransactionCount", params, onError);
+        if (!resp || !resp->contains("result")) return false;
+
+        auto hexNonce = (*resp)["result"].get<std::string>();
+        auto parsed = parseHexU64(hexNonce);
+        if (!parsed.has_value()) return false;
+
+        nonce = parsed.value();
         logEvt(Severity::Debug, "Nonce updated to " + std::to_string(nonce), "RPC", onError);
         return true;
     }
 
     bool estimateFees(ErrorCallback onError) {
-        // TODO: eth_maxPriorityFeePerGas + eth_feeHistory
-        maxPriorityFeeGwei = std::min(2.0, maxPriorityFeeGwei * 1.05);
-        maxFeeGwei         = std::min(200.0, maxFeeGwei * 1.02);
-        logEvt(Severity::Debug, "Fees updated: tip=" + std::to_string(maxPriorityFeeGwei) + " max=" + std::to_string(maxFeeGwei), "RPC", onError);
+        if (!connectedRPC || !rpcClient) return false;
+
+        auto tipResp = rpcClient->call("eth_maxPriorityFeePerGas", Json::array(), onError);
+        if (tipResp && tipResp->contains("result")) {
+            auto tipHex = (*tipResp)["result"].get<std::string>();
+            if (auto parsedTip = parseHexU64(tipHex)) {
+                maxPriorityFeeGwei = weiToGwei(*parsedTip);
+            }
+        }
+
+        Json params = Json::array({1, "latest", Json::array({50})});
+        auto feeResp = rpcClient->call("eth_feeHistory", params, onError);
+        if (feeResp && feeResp->contains("result")) {
+            const auto& result = (*feeResp)["result"];
+            if (result.contains("baseFeePerGas") && result["baseFeePerGas"].is_array() &&
+                !result["baseFeePerGas"].empty()) {
+                auto baseHex = result["baseFeePerGas"][0].get<std::string>();
+                if (auto parsedBase = parseHexU64(baseHex)) {
+                    double baseGwei = weiToGwei(*parsedBase);
+                    maxFeeGwei = baseGwei * 2.0 + maxPriorityFeeGwei;
+                }
+            }
+        }
+
+        logEvt(Severity::Debug, "Fees updated: tip=" + std::to_string(maxPriorityFeeGwei) +
+               " max=" + std::to_string(maxFeeGwei), "RPC", onError);
         return true;
     }
 
     bool sendRawTx(const std::string& rawHex, std::string& outTxHash, ErrorCallback onError) {
-        if (!connectedRPC) return false;
-        // TODO: eth_sendRawTransaction; ensure idempotent by checking broadcasted
-        outTxHash = "evm_dummy_" + std::to_string(++nonce);
+        if (!connectedRPC || !rpcClient) return false;
+        if (rawHex.empty()) {
+            logEvt(Severity::Error, "Raw transaction hex missing", "Broadcast", onError);
+            return false;
+        }
+
+        Json params = Json::array({rawHex});
+        auto resp = rpcClient->call("eth_sendRawTransaction", params, onError);
+        if (!resp || !resp->contains("result")) return false;
+
+        outTxHash = (*resp)["result"].get<std::string>();
+        if (broadcasted.count(outTxHash) > 0) return true;
         broadcasted[outTxHash] = std::chrono::system_clock::now();
         logEvt(Severity::Info, "Broadcasted EVM tx=" + outTxHash, "Broadcast", onError);
         return true;
@@ -94,9 +269,11 @@ struct EVMInternal {
     }
 
     std::optional<uint64_t> height() {
-        if (!connectedRPC) return std::nullopt;
-        static uint64_t hb{0};
-        return ++hb; // TODO: eth_blockNumber
+        if (!connectedRPC || !rpcClient) return std::nullopt;
+        auto resp = rpcClient->call("eth_blockNumber", Json::array(), nullptr);
+        if (!resp || !resp->contains("result")) return std::nullopt;
+        auto hex = (*resp)["result"].get<std::string>();
+        return parseHexU64(hex);
     }
 };
 
@@ -135,9 +312,18 @@ protected:
     static std::string buildEip1559Raw(const State& st,
                                        const std::vector<TxOut>& outputs,
                                        const std::unordered_map<std::string, std::string>& opts) {
-        // TODO: craft RLP: chainId, nonce, maxPriorityFee, maxFee, gasLimit, to, value, data, v,r,s
-        (void)outputs; (void)opts;
-        return "0x02f8_hardened_raw";
+        (void)outputs;
+        auto it = opts.find("raw_tx");
+        if (it != opts.end()) {
+            return it->second;
+        }
+        it = opts.find("signed_tx");
+        if (it != opts.end()) {
+            return it->second;
+        }
+        logEvt(Severity::Error, "Missing signed transaction hex in opts (raw_tx or signed_tx)",
+               "Broadcast", st.onError);
+        return {};
     }
 
 public:
