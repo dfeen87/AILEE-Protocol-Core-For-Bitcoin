@@ -1,5 +1,7 @@
 // config_loader.cpp
 #include "config_loader.h"
+#include <nlohmann/json.hpp>
+#include <toml++/toml.h>
 #include <yaml-cpp/yaml.h>
 #include <fstream>
 #include <sstream>
@@ -120,16 +122,230 @@ static std::optional<Config> parse_yaml(const std::string& text) {
 
 // JSON parser stub (implement when needed)
 static std::optional<Config> parse_json(const std::string& text) {
-  // TODO: Implement using nlohmann/json or jsoncpp
-  std::cerr << "JSON parsing not yet implemented" << std::endl;
-  return std::nullopt;
+  try {
+    auto root = nlohmann::json::parse(text);
+    Config cfg;
+
+    if (root.contains("version")) cfg.version = root["version"].get<int>();
+    if (root.contains("mode")) cfg.mode = root["mode"].get<std::string>();
+    if (root.contains("step_ms")) cfg.step_ms = root["step_ms"].get<size_t>();
+    if (root.contains("horizon_s")) cfg.horizon_s = root["horizon_s"].get<size_t>();
+
+    if (root.contains("signals")) {
+      for (const auto& sig : root["signals"]) {
+        SignalSpec s;
+        s.name = sig.value("name", "");
+        s.source = sig.value("source", "");
+        if (sig.contains("window_ms")) {
+          s.window_ms = sig["window_ms"].get<size_t>();
+        }
+        cfg.signals.push_back(std::move(s));
+      }
+    }
+
+    if (root.contains("metrics")) {
+      for (const auto& met : root["metrics"]) {
+        MetricSpec m;
+        m.name = met.value("name", "");
+        m.type = met.value("type", "");
+        if (met.contains("signals")) {
+          for (const auto& sig : met["signals"]) {
+            m.signals.push_back(sig.get<std::string>());
+          }
+        }
+        if (met.contains("window_ms")) {
+          m.window_ms = met["window_ms"].get<size_t>();
+        }
+        if (met.contains("stride_ms")) {
+          m.stride_ms = met["stride_ms"].get<size_t>();
+        }
+        cfg.metrics.push_back(std::move(m));
+      }
+    }
+
+    if (root.contains("policies")) {
+      for (const auto& pol : root["policies"]) {
+        PolicySpec p;
+        p.name = pol.value("name", "");
+        p.when = pol.value("when", "");
+
+        if (pol.contains("actions")) {
+          for (const auto& act : pol["actions"]) {
+            PolicyAction a;
+            a.type = act.value("type", "");
+
+            if (act.contains("args") && act["args"].is_object()) {
+              for (auto it = act["args"].begin(); it != act["args"].end(); ++it) {
+                if (it.value().is_string()) {
+                  a.args[it.key()] = it.value().get<std::string>();
+                } else {
+                  a.args[it.key()] = it.value().dump();
+                }
+              }
+            }
+
+            p.actions.push_back(std::move(a));
+          }
+        }
+
+        cfg.policies.push_back(std::move(p));
+      }
+    }
+
+    if (root.contains("pipelines")) {
+      for (const auto& pipe : root["pipelines"]) {
+        PipelineSpec ps;
+        ps.name = pipe.value("name", "");
+        ps.enabled = pipe.value("enabled", false);
+        cfg.pipelines.push_back(std::move(ps));
+      }
+    }
+
+    if (root.contains("outputs")) {
+      for (const auto& out : root["outputs"]) {
+        OutputSpec o;
+        o.type = out.value("type", "");
+        o.path = out.value("path", "");
+
+        if (out.contains("fields")) {
+          for (const auto& field : out["fields"]) {
+            o.fields.push_back(field.get<std::string>());
+          }
+        }
+
+        cfg.outputs.push_back(std::move(o));
+      }
+    }
+
+    return cfg;
+  } catch (const nlohmann::json::exception& e) {
+    std::cerr << "JSON parse error: " << e.what() << std::endl;
+    return std::nullopt;
+  } catch (const std::exception& e) {
+    std::cerr << "Parse error: " << e.what() << std::endl;
+    return std::nullopt;
+  }
 }
 
 // TOML parser stub (implement when needed)
 static std::optional<Config> parse_toml(const std::string& text) {
-  // TODO: Implement using toml++
-  std::cerr << "TOML parsing not yet implemented" << std::endl;
-  return std::nullopt;
+  try {
+    auto root = toml::parse(text);
+    Config cfg;
+
+    if (auto v = root["version"].value<int>()) cfg.version = *v;
+    if (auto v = root["mode"].value<std::string>()) cfg.mode = *v;
+    if (auto v = root["step_ms"].value<int64_t>()) cfg.step_ms = static_cast<size_t>(*v);
+    if (auto v = root["horizon_s"].value<int64_t>()) cfg.horizon_s = static_cast<size_t>(*v);
+
+    if (auto signals = root["signals"].as_array()) {
+      for (const auto& sigNode : *signals) {
+        const auto* sig = sigNode.as_table();
+        if (!sig) continue;
+        SignalSpec s;
+        if (auto v = sig->get_as<std::string>("name")) s.name = v->get();
+        if (auto v = sig->get_as<std::string>("source")) s.source = v->get();
+        if (auto v = sig->get_as<int64_t>("window_ms")) s.window_ms = static_cast<size_t>(v->get());
+        cfg.signals.push_back(std::move(s));
+      }
+    }
+
+    if (auto metrics = root["metrics"].as_array()) {
+      for (const auto& metNode : *metrics) {
+        const auto* met = metNode.as_table();
+        if (!met) continue;
+        MetricSpec m;
+        if (auto v = met->get_as<std::string>("name")) m.name = v->get();
+        if (auto v = met->get_as<std::string>("type")) m.type = v->get();
+        if (auto v = met->get_as<int64_t>("window_ms")) m.window_ms = static_cast<size_t>(v->get());
+        if (auto v = met->get_as<int64_t>("stride_ms")) m.stride_ms = static_cast<size_t>(v->get());
+        if (auto sigs = met->get("signals")) {
+          if (auto arr = sigs->as_array()) {
+            for (const auto& sig : *arr) {
+              if (auto v = sig.value<std::string>()) {
+                m.signals.push_back(*v);
+              }
+            }
+          }
+        }
+        cfg.metrics.push_back(std::move(m));
+      }
+    }
+
+    if (auto policies = root["policies"].as_array()) {
+      for (const auto& polNode : *policies) {
+        const auto* pol = polNode.as_table();
+        if (!pol) continue;
+        PolicySpec p;
+        if (auto v = pol->get_as<std::string>("name")) p.name = v->get();
+        if (auto v = pol->get_as<std::string>("when")) p.when = v->get();
+
+        if (auto actionsNode = pol->get("actions")) {
+          if (auto actions = actionsNode->as_array()) {
+            for (const auto& actNode : *actions) {
+              const auto* act = actNode.as_table();
+              if (!act) continue;
+              PolicyAction a;
+              if (auto v = act->get_as<std::string>("type")) a.type = v->get();
+              if (auto argsNode = act->get("args")) {
+                if (auto args = argsNode->as_table()) {
+                  for (const auto& [key, value] : *args) {
+                    if (auto v = value.value<std::string>()) {
+                      a.args[key.str()] = *v;
+                    } else {
+                      a.args[key.str()] = toml::format(value);
+                    }
+                  }
+                }
+              }
+              p.actions.push_back(std::move(a));
+            }
+          }
+        }
+
+        cfg.policies.push_back(std::move(p));
+      }
+    }
+
+    if (auto pipelines = root["pipelines"].as_array()) {
+      for (const auto& pipeNode : *pipelines) {
+        const auto* pipe = pipeNode.as_table();
+        if (!pipe) continue;
+        PipelineSpec ps;
+        if (auto v = pipe->get_as<std::string>("name")) ps.name = v->get();
+        if (auto v = pipe->get_as<bool>("enabled")) ps.enabled = v->get();
+        cfg.pipelines.push_back(std::move(ps));
+      }
+    }
+
+    if (auto outputs = root["outputs"].as_array()) {
+      for (const auto& outNode : *outputs) {
+        const auto* out = outNode.as_table();
+        if (!out) continue;
+        OutputSpec o;
+        if (auto v = out->get_as<std::string>("type")) o.type = v->get();
+        if (auto v = out->get_as<std::string>("path")) o.path = v->get();
+        if (auto fieldsNode = out->get("fields")) {
+          if (auto fields = fieldsNode->as_array()) {
+            for (const auto& field : *fields) {
+              if (auto v = field.value<std::string>()) {
+                o.fields.push_back(*v);
+              }
+            }
+          }
+        }
+        cfg.outputs.push_back(std::move(o));
+      }
+    }
+
+    return cfg;
+  } catch (const toml::parse_error& e) {
+    std::cerr << "TOML parse error: " << e.description() << std::endl;
+    return std::nullopt;
+  } catch (const std::exception& e) {
+    std::cerr << "Parse error: " << e.what() << std::endl;
+    return std::nullopt;
+  }
 }
 
 ConfigResult load_config(const std::string& file, ConfigFormat fmt) {

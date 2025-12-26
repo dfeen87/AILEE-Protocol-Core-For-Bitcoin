@@ -404,35 +404,192 @@ std::optional<Assignment> WeightedOrchestrator::findBackupWorker(
     return assignBestWorker(task, backupCandidates, 0.6, 0.3, 0.1);
 }
 
+namespace {
+
+std::vector<int> hungarianMinimize(const std::vector<std::vector<double>>& cost) {
+    if (cost.empty() || cost.front().empty()) {
+        return {};
+    }
+
+    const size_t n = cost.size();
+    const size_t m = cost.front().size();
+    const double inf = std::numeric_limits<double>::infinity();
+
+    std::vector<double> u(n + 1), v(m + 1);
+    std::vector<int> p(m + 1), way(m + 1);
+
+    for (size_t i = 1; i <= n; ++i) {
+        p[0] = static_cast<int>(i);
+        size_t j0 = 0;
+        std::vector<double> minv(m + 1, inf);
+        std::vector<bool> used(m + 1, false);
+
+        do {
+            used[j0] = true;
+            int i0 = p[j0];
+            double delta = inf;
+            size_t j1 = 0;
+
+            for (size_t j = 1; j <= m; ++j) {
+                if (used[j]) continue;
+                double cur = cost[i0 - 1][j - 1] - u[i0] - v[j];
+                if (cur < minv[j]) {
+                    minv[j] = cur;
+                    way[j] = static_cast<int>(j0);
+                }
+                if (minv[j] < delta) {
+                    delta = minv[j];
+                    j1 = j;
+                }
+            }
+
+            for (size_t j = 0; j <= m; ++j) {
+                if (used[j]) {
+                    u[p[j]] += delta;
+                    v[j] -= delta;
+                } else {
+                    minv[j] -= delta;
+                }
+            }
+            j0 = j1;
+        } while (p[j0] != 0);
+
+        do {
+            size_t j1 = static_cast<size_t>(way[j0]);
+            p[j0] = p[j1];
+            j0 = j1;
+        } while (j0 != 0);
+    }
+
+    std::vector<int> assignment(n, -1);
+    for (size_t j = 1; j <= m; ++j) {
+        if (p[j] != 0) {
+            assignment[p[j] - 1] = static_cast<int>(j - 1);
+        }
+    }
+
+    return assignment;
+}
+
+} // namespace
+
 std::vector<Assignment> WeightedOrchestrator::scheduleBatch(
     const std::vector<TaskPayload>& tasks,
     const std::vector<NodeMetrics>& candidates) const
 {
     std::vector<Assignment> assignments;
     
-    // Simple greedy batch scheduling
-    // TODO: Implement global optimization (e.g., Hungarian algorithm)
-    
-    std::vector<NodeMetrics> availableNodes = candidates;
-    
-    for (const auto& task : tasks) {
-        auto assignment = assignBestWorker(task, availableNodes, 0.6, 0.3, 0.1);
-        assignments.push_back(assignment);
-        
-        if (assignment.assigned) {
-            // Mark node as having one more active task
-            auto it = std::find_if(availableNodes.begin(), availableNodes.end(),
-                [&](const NodeMetrics& n) { return n.peerId == assignment.workerPeerId; });
-            
-            if (it != availableNodes.end()) {
-                it->activeTaskCount++;
-                
-                // Remove if at capacity
-                if (it->activeTaskCount >= it->maxConcurrentTasks) {
-                    availableNodes.erase(it);
-                }
+    if (tasks.empty()) {
+        return assignments;
+    }
+
+    auto start = std::chrono::steady_clock::now();
+    constexpr double kUnassignedCost = 1e12;
+
+    struct Slot {
+        const NodeMetrics* node;
+    };
+    std::vector<Slot> slots;
+
+    for (const auto& node : candidates) {
+        uint32_t capacity = 0;
+        if (node.maxConcurrentTasks > node.activeTaskCount) {
+            capacity = node.maxConcurrentTasks - node.activeTaskCount;
+        }
+        for (uint32_t i = 0; i < capacity; ++i) {
+            slots.push_back(Slot{&node});
+        }
+    }
+
+    std::vector<std::unordered_set<std::string>> allowed(tasks.size());
+    std::vector<std::vector<NodeMetrics>> filteredPerTask;
+    filteredPerTask.reserve(tasks.size());
+
+    for (size_t i = 0; i < tasks.size(); ++i) {
+        auto filtered = filterCandidates(candidates, tasks[i]);
+        for (const auto& node : filtered) {
+            allowed[i].insert(node.peerId);
+        }
+        filteredPerTask.push_back(std::move(filtered));
+    }
+
+    size_t columns = slots.size() + tasks.size();
+    std::vector<std::vector<double>> cost(tasks.size(),
+                                          std::vector<double>(columns, kUnassignedCost));
+
+    for (size_t i = 0; i < tasks.size(); ++i) {
+        for (size_t j = 0; j < slots.size(); ++j) {
+            const auto& node = *slots[j].node;
+            if (allowed[i].count(node.peerId) == 0) {
+                cost[i][j] = kUnassignedCost;
+                continue;
+            }
+            double score = scoreNode(node, tasks[i], 0.6, 0.3, 0.1);
+            if (!std::isfinite(score)) {
+                cost[i][j] = kUnassignedCost;
+            } else {
+                cost[i][j] = -score;
             }
         }
+    }
+
+    auto assignmentIdx = hungarianMinimize(cost);
+    
+    assignments.reserve(tasks.size());
+
+    for (size_t i = 0; i < tasks.size(); ++i) {
+        Assignment assignment;
+        assignment.assignedAt = std::chrono::system_clock::now();
+        assignment.assignmentId = tasks[i].taskId + "-batch-" + std::to_string(i);
+
+        int col = (i < assignmentIdx.size()) ? assignmentIdx[i] : -1;
+        if (col < 0 || static_cast<size_t>(col) >= slots.size() ||
+            cost[i][col] >= kUnassignedCost / 2) {
+            assignment.assigned = false;
+            assignment.reason = "No feasible assignment after global optimization";
+            assignments.push_back(assignment);
+            continue;
+        }
+
+        const auto& node = *slots[static_cast<size_t>(col)].node;
+        assignment.assigned = true;
+        assignment.workerPeerId = node.peerId;
+        assignment.workerRegion = node.region;
+        assignment.finalScore = -cost[i][col];
+
+        auto reputation = rep_.get(node.peerId);
+        assignment.reputationScore = reputation.score();
+        auto latency = lat_.getLatencyMs(node.peerId);
+        assignment.expectedLatencyMs = latency.value_or(std::numeric_limits<double>::infinity());
+        assignment.latencyScore = 0.3 * (latency.has_value() ? (1.0 / (1.0 + latency.value() / 1000.0)) : 0.0);
+        assignment.capacityScore = 0.1 * node.capacityScore;
+        assignment.costScore = node.costPerHour > 0 ? (1.0 / node.costPerHour) : 1.0;
+        assignment.expectedCostTokens = estimateCost(tasks[i], node);
+        assignment.estimatedCompletionTime = utils::estimateCompletionTime(tasks[i], node);
+
+        auto backup = findBackupWorker(tasks[i], filteredPerTask[i], node.peerId);
+        if (backup.has_value() && backup->assigned) {
+            assignment.backupWorkerPeerId = backup->workerPeerId;
+        }
+
+        assignments.push_back(assignment);
+    }
+
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - start);
+    auto perAssignment = std::chrono::milliseconds(
+        duration.count() / std::max<size_t>(1, tasks.size()));
+
+    for (const auto& assignment : assignments) {
+        if (!assignment.assigned) {
+            continue;
+        }
+        metrics_.totalAssignments++;
+        metrics_.successfulAssignments++;
+        metrics_.assignmentsByWorker[assignment.workerPeerId]++;
+        metrics_.avgAssignmentTime = std::chrono::milliseconds(
+            (metrics_.avgAssignmentTime.count() * (metrics_.totalAssignments - 1) +
+             perAssignment.count()) / metrics_.totalAssignments);
     }
     
     return assignments;
