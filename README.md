@@ -48,6 +48,13 @@ At present, this repository should be viewed as:
 
 Some components compile, some simulate behavior, and others exist primarily as architectural scaffolding.
 
+Recent updates include:
+
+* Multi-chain adapter RPC wiring for Ethereum, Polygon, Avalanche, Solana, Litecoin, and Dogecoin (JSON-RPC integration for basic height, lookup, and broadcast flows).
+* Batch scheduling improvements in the orchestration layer using a global optimizer for task-to-node assignments.
+* Config loader support for YAML, JSON, and TOML inputs using the same validation rules.
+
+
 If you are looking for:
 
 * A deployable Layer-2
@@ -150,6 +157,18 @@ This project welcomes:
 * Honest questioning
 
 Even identifying flaws or impossibilities is considered a contribution.
+
+---
+
+## ⚙️ Configuration Formats (Policy System)
+
+The policy system config loader supports three formats:
+
+* **YAML** (via `yaml-cpp`)
+* **JSON** (via `nlohmann/json`)
+* **TOML** (via `toml++`)
+
+All formats feed the same validation rules for `signals`, `metrics`, `policies`, `pipelines`, and `outputs`.
 
 ---
 
