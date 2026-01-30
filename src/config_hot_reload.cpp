@@ -4,7 +4,6 @@
 #include <string>
 #include <chrono>
 #include <thread>
-#include <fstream>
 #include <openssl/sha.h> // or any hash; keep deterministic
 
 static std::string sha256(const std::string& s) {
@@ -17,21 +16,6 @@ static std::string sha256(const std::string& s) {
 }
 
 extern ConfigResult load_config(const std::string&, ConfigFormat);
-
-static std::string read_file_text(const std::string& path) {
-  std::ifstream in(path, std::ios::in | std::ios::binary);
-  if (!in) {
-    return {};
-  }
-  std::string contents;
-  in.seekg(0, std::ios::end);
-  contents.resize(static_cast<size_t>(in.tellg()));
-  in.seekg(0, std::ios::beg);
-  if (!contents.empty()) {
-    in.read(&contents[0], static_cast<std::streamsize>(contents.size()));
-  }
-  return contents;
-}
 
 ConfigReloader::ConfigReloader(ReloadOptions opt, ApplyFn apply, LogFn log)
   : opt_(opt), apply_(apply), log_(log) {
@@ -57,10 +41,8 @@ void ConfigReloader::tick() {
     return;
   }
 
-  // Compute hash for content change detection.
-  // In production, pass the raw text through loader to avoid re-read.
-  const std::string raw_text = read_file_text(opt_.file);
-  std::string new_hash = sha256(raw_text);
+  // Compute hash for content change detection using the parsed raw text.
+  std::string new_hash = sha256(res.raw_text);
   if (new_hash == last_hash_) { next_try_ = now + std::chrono::seconds(1); return; }
 
   // Apply atomically
