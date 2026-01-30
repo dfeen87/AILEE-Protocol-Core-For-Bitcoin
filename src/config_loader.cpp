@@ -331,6 +331,7 @@ ConfigResult load_config(const std::string& file, ConfigFormat fmt) {
     r.errors.push_back({"Config file not found or empty", file});
     return r;
   }
+  r.raw_text = text;
   std::optional<Config> parsed;
   switch (fmt) {
     case ConfigFormat::YAML: parsed = parse_yaml(text); break;

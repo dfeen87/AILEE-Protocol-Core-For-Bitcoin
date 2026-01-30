@@ -20,6 +20,7 @@ struct ConfigError {
 struct ConfigResult {
   std::optional<Config> cfg;
   std::vector<ConfigError> errors;
+  std::string raw_text;
 };
 
 ConfigResult load_config(const std::string& file, ConfigFormat fmt);
