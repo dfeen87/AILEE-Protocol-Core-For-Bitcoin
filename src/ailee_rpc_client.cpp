@@ -35,6 +35,13 @@ bool BitcoinRPCClient::broadcastCheckpoint(const std::string& hexTx) {
 
     curl_easy_setopt(curl, CURLOPT_URL, rpcUrl_.c_str());
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payloadStr.c_str());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, static_cast<long>(payloadStr.size()));
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
+
+    struct curl_slist* headers = nullptr;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
     // Basic auth
     std::string auth = rpcUser_ + ":" + rpcPassword_;
@@ -50,10 +57,17 @@ bool BitcoinRPCClient::broadcastCheckpoint(const std::string& hexTx) {
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBuffer);
 
     CURLcode res = curl_easy_perform(curl);
+    long httpCode = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+    curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
 
     if (res != CURLE_OK) {
         std::cerr << "[Error] CURL failed: " << curl_easy_strerror(res) << std::endl;
+        return false;
+    }
+    if (httpCode < 200 || httpCode >= 300) {
+        std::cerr << "[Error] RPC HTTP status: " << httpCode << std::endl;
         return false;
     }
 
