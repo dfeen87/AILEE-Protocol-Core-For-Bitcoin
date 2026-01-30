@@ -1,7 +1,11 @@
 // config_loader.cpp
 #include "config_loader.h"
 #include <fstream>
+#include <iostream>
+#include <nlohmann/json.hpp>
 #include <sstream>
+#include <toml++/toml.h>
+#include <yaml-cpp/yaml.h>
 
 static std::string slurp(const std::string& file) {
   std::ifstream in(file, std::ios::binary);
@@ -10,10 +14,315 @@ static std::string slurp(const std::string& file) {
   return ss.str();
 }
 
-// Stub parse functions; wire to your chosen lib (yaml-cpp, nlohmann/json, toml++)
-static std::optional<Config> parse_yaml(const std::string& text);
-static std::optional<Config> parse_json(const std::string& text);
-static std::optional<Config> parse_toml(const std::string& text);
+static std::optional<Config> parse_yaml(const std::string& text) {
+  try {
+    YAML::Node root = YAML::Load(text);
+    Config cfg;
+
+    if (root["version"]) cfg.version = root["version"].as<int>();
+    if (root["mode"]) cfg.mode = root["mode"].as<std::string>();
+    if (root["step_ms"]) cfg.step_ms = root["step_ms"].as<size_t>();
+    if (root["horizon_s"]) cfg.horizon_s = root["horizon_s"].as<size_t>();
+
+    if (root["signals"]) {
+      for (const auto& sig : root["signals"]) {
+        SignalSpec s;
+        s.name = sig["name"].as<std::string>();
+        s.source = sig["source"].as<std::string>();
+        s.window_ms = sig["window_ms"].as<size_t>();
+        cfg.signals.push_back(s);
+      }
+    }
+
+    if (root["metrics"]) {
+      for (const auto& met : root["metrics"]) {
+        MetricSpec m;
+        m.name = met["name"].as<std::string>();
+        m.type = met["type"].as<std::string>();
+        if (met["signals"]) {
+          for (const auto& sig : met["signals"]) {
+            m.signals.push_back(sig.as<std::string>());
+          }
+        }
+        m.window_ms = met["window_ms"].as<size_t>();
+        m.stride_ms = met["stride_ms"].as<size_t>();
+        cfg.metrics.push_back(m);
+      }
+    }
+
+    if (root["policies"]) {
+      for (const auto& pol : root["policies"]) {
+        PolicySpec p;
+        p.name = pol["name"].as<std::string>();
+        p.when = pol["when"].as<std::string>();
+        if (pol["actions"]) {
+          for (const auto& act : pol["actions"]) {
+            PolicyAction a;
+            a.type = act["type"].as<std::string>();
+            if (act["args"]) {
+              for (const auto& arg : act["args"]) {
+                a.args[arg.first.as<std::string>()] = arg.second.as<std::string>();
+              }
+            }
+            p.actions.push_back(a);
+          }
+        }
+        cfg.policies.push_back(p);
+      }
+    }
+
+    if (root["pipelines"]) {
+      for (const auto& pipe : root["pipelines"]) {
+        PipelineSpec ps;
+        ps.name = pipe["name"].as<std::string>();
+        ps.enabled = pipe["enabled"].as<bool>();
+        cfg.pipelines.push_back(ps);
+      }
+    }
+
+    if (root["outputs"]) {
+      for (const auto& out : root["outputs"]) {
+        OutputSpec o;
+        o.type = out["type"].as<std::string>();
+        o.path = out["path"].as<std::string>();
+        if (out["fields"]) {
+          for (const auto& field : out["fields"]) {
+            o.fields.push_back(field.as<std::string>());
+          }
+        }
+        cfg.outputs.push_back(o);
+      }
+    }
+
+    return cfg;
+  } catch (const YAML::Exception& e) {
+    std::cerr << "YAML parse error: " << e.what() << std::endl;
+    return std::nullopt;
+  } catch (const std::exception& e) {
+    std::cerr << "Parse error: " << e.what() << std::endl;
+    return std::nullopt;
+  }
+}
+
+static std::optional<Config> parse_json(const std::string& text) {
+  try {
+    auto root = nlohmann::json::parse(text);
+    Config cfg;
+
+    if (root.contains("version")) cfg.version = root["version"].get<int>();
+    if (root.contains("mode")) cfg.mode = root["mode"].get<std::string>();
+    if (root.contains("step_ms")) cfg.step_ms = root["step_ms"].get<size_t>();
+    if (root.contains("horizon_s")) cfg.horizon_s = root["horizon_s"].get<size_t>();
+
+    if (root.contains("signals")) {
+      for (const auto& sig : root["signals"]) {
+        SignalSpec s;
+        s.name = sig.value("name", "");
+        s.source = sig.value("source", "");
+        if (sig.contains("window_ms")) {
+          s.window_ms = sig["window_ms"].get<size_t>();
+        }
+        cfg.signals.push_back(std::move(s));
+      }
+    }
+
+    if (root.contains("metrics")) {
+      for (const auto& met : root["metrics"]) {
+        MetricSpec m;
+        m.name = met.value("name", "");
+        m.type = met.value("type", "");
+        if (met.contains("signals")) {
+          for (const auto& sig : met["signals"]) {
+            m.signals.push_back(sig.get<std::string>());
+          }
+        }
+        if (met.contains("window_ms")) {
+          m.window_ms = met["window_ms"].get<size_t>();
+        }
+        if (met.contains("stride_ms")) {
+          m.stride_ms = met["stride_ms"].get<size_t>();
+        }
+        cfg.metrics.push_back(std::move(m));
+      }
+    }
+
+    if (root.contains("policies")) {
+      for (const auto& pol : root["policies"]) {
+        PolicySpec p;
+        p.name = pol.value("name", "");
+        p.when = pol.value("when", "");
+        if (pol.contains("actions")) {
+          for (const auto& act : pol["actions"]) {
+            PolicyAction a;
+            a.type = act.value("type", "");
+            if (act.contains("args") && act["args"].is_object()) {
+              for (auto it = act["args"].begin(); it != act["args"].end(); ++it) {
+                if (it.value().is_string()) {
+                  a.args[it.key()] = it.value().get<std::string>();
+                } else {
+                  a.args[it.key()] = it.value().dump();
+                }
+              }
+            }
+            p.actions.push_back(std::move(a));
+          }
+        }
+        cfg.policies.push_back(std::move(p));
+      }
+    }
+
+    if (root.contains("pipelines")) {
+      for (const auto& pipe : root["pipelines"]) {
+        PipelineSpec ps;
+        ps.name = pipe.value("name", "");
+        ps.enabled = pipe.value("enabled", false);
+        cfg.pipelines.push_back(std::move(ps));
+      }
+    }
+
+    if (root.contains("outputs")) {
+      for (const auto& out : root["outputs"]) {
+        OutputSpec o;
+        o.type = out.value("type", "");
+        o.path = out.value("path", "");
+        if (out.contains("fields")) {
+          for (const auto& field : out["fields"]) {
+            o.fields.push_back(field.get<std::string>());
+          }
+        }
+        cfg.outputs.push_back(std::move(o));
+      }
+    }
+
+    return cfg;
+  } catch (const nlohmann::json::exception& e) {
+    std::cerr << "JSON parse error: " << e.what() << std::endl;
+    return std::nullopt;
+  } catch (const std::exception& e) {
+    std::cerr << "Parse error: " << e.what() << std::endl;
+    return std::nullopt;
+  }
+}
+
+static std::optional<Config> parse_toml(const std::string& text) {
+  try {
+    auto root = toml::parse(text);
+    Config cfg;
+
+    if (auto v = root["version"].value<int>()) cfg.version = *v;
+    if (auto v = root["mode"].value<std::string>()) cfg.mode = *v;
+    if (auto v = root["step_ms"].value<int64_t>()) cfg.step_ms = static_cast<size_t>(*v);
+    if (auto v = root["horizon_s"].value<int64_t>()) cfg.horizon_s = static_cast<size_t>(*v);
+
+    if (auto signals = root["signals"].as_array()) {
+      for (const auto& sigNode : *signals) {
+        const auto* sig = sigNode.as_table();
+        if (!sig) continue;
+        SignalSpec s;
+        if (auto v = sig->get_as<std::string>("name")) s.name = v->get();
+        if (auto v = sig->get_as<std::string>("source")) s.source = v->get();
+        if (auto v = sig->get_as<int64_t>("window_ms")) s.window_ms = static_cast<size_t>(v->get());
+        cfg.signals.push_back(std::move(s));
+      }
+    }
+
+    if (auto metrics = root["metrics"].as_array()) {
+      for (const auto& metNode : *metrics) {
+        const auto* met = metNode.as_table();
+        if (!met) continue;
+        MetricSpec m;
+        if (auto v = met->get_as<std::string>("name")) m.name = v->get();
+        if (auto v = met->get_as<std::string>("type")) m.type = v->get();
+        if (auto v = met->get_as<int64_t>("window_ms")) m.window_ms = static_cast<size_t>(v->get());
+        if (auto v = met->get_as<int64_t>("stride_ms")) m.stride_ms = static_cast<size_t>(v->get());
+        if (auto sigs = met->get("signals")) {
+          if (auto arr = sigs->as_array()) {
+            for (const auto& sig : *arr) {
+              if (auto v = sig.value<std::string>()) {
+                m.signals.push_back(*v);
+              }
+            }
+          }
+        }
+        cfg.metrics.push_back(std::move(m));
+      }
+    }
+
+    if (auto policies = root["policies"].as_array()) {
+      for (const auto& polNode : *policies) {
+        const auto* pol = polNode.as_table();
+        if (!pol) continue;
+        PolicySpec p;
+        if (auto v = pol->get_as<std::string>("name")) p.name = v->get();
+        if (auto v = pol->get_as<std::string>("when")) p.when = v->get();
+
+        if (auto actionsNode = pol->get("actions")) {
+          if (auto actions = actionsNode->as_array()) {
+            for (const auto& actNode : *actions) {
+              const auto* act = actNode.as_table();
+              if (!act) continue;
+              PolicyAction a;
+              if (auto v = act->get_as<std::string>("type")) a.type = v->get();
+              if (auto argsNode = act->get("args")) {
+                if (auto args = argsNode->as_table()) {
+                  for (const auto& [key, value] : *args) {
+                    if (auto v = value.value<std::string>()) {
+                      a.args[key.str()] = *v;
+                    } else {
+                      a.args[key.str()] = toml::format(value);
+                    }
+                  }
+                }
+              }
+              p.actions.push_back(std::move(a));
+            }
+          }
+        }
+
+        cfg.policies.push_back(std::move(p));
+      }
+    }
+
+    if (auto pipelines = root["pipelines"].as_array()) {
+      for (const auto& pipeNode : *pipelines) {
+        const auto* pipe = pipeNode.as_table();
+        if (!pipe) continue;
+        PipelineSpec ps;
+        if (auto v = pipe->get_as<std::string>("name")) ps.name = v->get();
+        if (auto v = pipe->get_as<bool>("enabled")) ps.enabled = v->get();
+        cfg.pipelines.push_back(std::move(ps));
+      }
+    }
+
+    if (auto outputs = root["outputs"].as_array()) {
+      for (const auto& outNode : *outputs) {
+        const auto* out = outNode.as_table();
+        if (!out) continue;
+        OutputSpec o;
+        if (auto v = out->get_as<std::string>("type")) o.type = v->get();
+        if (auto v = out->get_as<std::string>("path")) o.path = v->get();
+        if (auto fieldsNode = out->get("fields")) {
+          if (auto fields = fieldsNode->as_array()) {
+            for (const auto& field : *fields) {
+              if (auto v = field.value<std::string>()) {
+                o.fields.push_back(*v);
+              }
+            }
+          }
+        }
+        cfg.outputs.push_back(std::move(o));
+      }
+    }
+
+    return cfg;
+  } catch (const toml::parse_error& e) {
+    std::cerr << "TOML parse error: " << e.description() << std::endl;
+    return std::nullopt;
+  } catch (const std::exception& e) {
+    std::cerr << "Parse error: " << e.what() << std::endl;
+    return std::nullopt;
+  }
+}
 
 ConfigResult load_config(const std::string& file, ConfigFormat fmt) {
   ConfigResult r;
