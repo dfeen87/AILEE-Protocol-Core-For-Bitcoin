@@ -11,10 +11,40 @@
 #include <algorithm>
 #include <chrono>
 #include <stdexcept>
-#include <random>
 #include <iostream>
+#include <openssl/sha.h>
 
 namespace ambient {
+
+namespace {
+
+std::string sha256Hex(const std::string& input) {
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256(reinterpret_cast<const unsigned char*>(input.data()), input.size(), hash);
+    std::string out;
+    out.reserve(2 * SHA256_DIGEST_LENGTH);
+    static const char* kHex = "0123456789abcdef";
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
+        out.push_back(kHex[hash[i] >> 4]);
+        out.push_back(kHex[hash[i] & 0x0F]);
+    }
+    return out;
+}
+
+std::string sha256Hex(const std::vector<uint8_t>& input) {
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256(reinterpret_cast<const unsigned char*>(input.data()), input.size(), hash);
+    std::string out;
+    out.reserve(2 * SHA256_DIGEST_LENGTH);
+    static const char* kHex = "0123456789abcdef";
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
+        out.push_back(kHex[hash[i] >> 4]);
+        out.push_back(kHex[hash[i] & 0x0F]);
+    }
+    return out;
+}
+
+} // namespace
 
 // ============================================================================
 // SERIALIZATION & STRING CONVERSION
@@ -80,8 +110,8 @@ std::string to_string(const TelemetrySample& s) {
 std::string computeVerificationHash(const TelemetrySample& sample) {
     ailee::zk::ZKEngine zkEngine;
     auto proof = zkEngine.generateProof(sample.node.pubkey,
-                                        std::to_string(sample.timestamp.time_since_epoch().count()) +
-                                        std::to_string(sample.energy.inputPowerW));
+                                        sha256Hex(std::to_string(sample.timestamp.time_since_epoch().count()) +
+                                                  std::to_string(sample.energy.inputPowerW)));
     return proof.proofData;
 }
 
@@ -89,10 +119,49 @@ bool verifyComputationProof(const TelemetrySample& sample) {
     if (sample.privacy.zeroKnowledgeProofEnabled == false) return true;
     ailee::zk::ZKEngine zkEngine;
     if (sample.cryptographicVerificationHash.empty()) return false;
-    ailee::zk::ZKProof proof{sample.cryptographicVerificationHash, 
-                              std::chrono::duration_cast<std::chrono::milliseconds>(
-                                  sample.timestamp.time_since_epoch()).count()};
+    const std::string inputHash = sha256Hex(std::to_string(sample.timestamp.time_since_epoch().count()) +
+                                            std::to_string(sample.energy.inputPowerW));
+    ailee::zk::Proof proof{sample.cryptographicVerificationHash,
+                           sample.node.pubkey + ":" + inputHash,
+                           false,
+                           static_cast<uint64_t>(
+                               std::chrono::duration_cast<std::chrono::milliseconds>(
+                                   sample.timestamp.time_since_epoch()).count())};
     return zkEngine.verifyProof(proof);
+}
+
+FederatedUpdate AmbientNode::runLocalTraining(const ailee::fl::FLTask& task,
+                                              const std::vector<uint8_t>& deltaBytes,
+                                              std::size_t numSamplesTrained,
+                                              double trainingLoss,
+                                              std::chrono::milliseconds computeTime) {
+    std::lock_guard<std::mutex> lock(mu_);
+    FederatedUpdate update;
+    update.workerId = id_.pubkey;
+    update.taskId = task.taskId;
+    update.roundNumber = task.currentRound;
+    update.modelHash = task.globalModelHash;
+    update.deltaBytes = deltaBytes;
+    update.compression = ailee::fl::CompressionMethod::NONE;
+    update.numSamplesTrained = numSamplesTrained;
+    update.numEpochs = task.localEpochs;
+    update.trainingLoss = trainingLoss;
+    if (lastSample_.has_value()) {
+        update.epsilonSpent = lastSample_->privacy.epsilon;
+        update.deltaSpent = lastSample_->privacy.delta;
+        update.isDPNoisyUpdate = lastSample_->privacy.epsilon < 1.0;
+    }
+    update.submissionTime = std::chrono::system_clock::now();
+    update.computeTime = computeTime;
+
+    const std::string deltaHash = sha256Hex(deltaBytes);
+    ailee::zk::ZKEngine zkEngine;
+    auto proof = zkEngine.generateProof(task.taskId, deltaHash);
+    update.proofBytes.assign(proof.proofData.begin(), proof.proofData.end());
+    update.proofHash = proof.proofData;
+    update.proofVerified = zkEngine.verifyProof(proof);
+
+    return update;
 }
 
 // ============================================================================
@@ -121,33 +190,6 @@ double calculateNashEquilibriumThreshold(const std::vector<AmbientNode*>& networ
         totalEnergy += s.energy.inputPowerW;
     }
     return totalEnergy > 0 ? totalCompute / totalEnergy : 0.0;
-}
-
-// ============================================================================
-// FEDERATED LEARNING
-// ============================================================================
-
-std::vector<float> computeLocalGradient(const AmbientNode& node, const std::vector<float>& localData) {
-    auto sampleOpt = node.last();
-    if (!sampleOpt.has_value()) return {};
-    const auto& s = sampleOpt.value();
-    std::vector<float> grad;
-    std::default_random_engine rng(std::chrono::system_clock::now().time_since_epoch().count());
-    std::uniform_real_distribution<float> noise(-0.01f, 0.01f);
-    for (auto v : localData) {
-        grad.push_back(v * 0.1f + noise(rng)/static_cast<float>(s.privacy.epsilon));
-    }
-    return grad;
-}
-
-std::vector<float> aggregateModelUpdates(const std::vector<std::vector<float>>& updates) {
-    if (updates.empty()) return {};
-    size_t size = updates[0].size();
-    std::vector<float> agg(size,0.0f);
-    for (const auto& u : updates)
-        for (size_t i=0;i<size;++i) agg[i]+=u[i];
-    for (auto& v : agg) v/=updates.size();
-    return agg;
 }
 
 // ============================================================================
@@ -245,4 +287,3 @@ void validateTelemetrySample(const TelemetrySample& s){
 }
 
 } // namespace ambient
-

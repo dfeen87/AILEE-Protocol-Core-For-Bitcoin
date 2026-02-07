@@ -15,9 +15,9 @@
 #include <mutex>
 #include <cmath>
 #include <algorithm>
-#include <numeric>
 #include <iostream>
 
+#include "FederatedLearning.h"
 #include "zk_proofs.h" // ZK proof module
 
 namespace ambient {
@@ -63,15 +63,12 @@ struct TelemetrySample {
     ComputeProfile compute;
     std::chrono::system_clock::time_point timestamp;
     PrivacyBudget privacy;
+    std::string cryptographicVerificationHash;
 };
 
 // ================= Federated Learning =================
 
-struct FederatedUpdate {
-    std::string modelId;
-    std::vector<float> gradient;  // Placeholder for quantized gradients
-    PrivacyBudget privacy;
-};
+using FederatedUpdate = ailee::fl::LocalDelta;
 
 // ================= ZK Proof Integration =================
 
@@ -145,17 +142,11 @@ public:
                        zkEngine.verifyProof(proof), proof.timestampMs };
     }
 
-    FederatedUpdate runLocalTraining(const std::string& modelId,
-                                     const std::vector<float>& miniBatch) {
-        std::lock_guard<std::mutex> lock(mu_);
-        FederatedUpdate up;
-        up.modelId = modelId;
-        up.privacy = lastSample_->privacy;
-
-        float sum = std::accumulate(miniBatch.begin(), miniBatch.end(), 0.0f);
-        up.gradient = {sum};
-        return up;
-    }
+    FederatedUpdate runLocalTraining(const ailee::fl::FLTask& task,
+                                     const std::vector<uint8_t>& deltaBytes,
+                                     std::size_t numSamplesTrained,
+                                     double trainingLoss,
+                                     std::chrono::milliseconds computeTime);
 
     ZKProofStub verifyComputation(const std::string& taskId,
                                   const std::string& circuitId,
