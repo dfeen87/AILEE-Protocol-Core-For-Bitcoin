@@ -112,6 +112,7 @@ set(AILEE_HEADERS
     include/ailee_dao_governance.h
     include/Global_Seven.h
     include/AmbientAI.h
+    include/L2State.h
 )
 
 # Policy System Headers (new files)
@@ -168,6 +169,9 @@ set(POLICY_SOURCES
 set(CORE_SOURCES
     src/main.cpp
     src/security/ailee_circuit_breaker.cpp
+    src/security/zk_proofs.cpp
+    src/l1/AnchorCommitment.cpp
+    src/l2/L2State.cpp
     ${ADAPTER_SOURCES}
     ${AMBIENT_SOURCES}
     ${POLICY_SOURCES}
@@ -189,6 +193,20 @@ target_link_libraries(ailee_node
     ${CURL_LIBRARIES}
     ${JSONCPP_LIBRARIES}
     Threads::Threads
+)
+
+# --- 2. L2 Verification Tool ---
+add_executable(ailee_l2_verify
+    src/tools/ailee_l2_verify.cpp
+    src/security/zk_proofs.cpp
+    src/l1/AnchorCommitment.cpp
+    src/l2/L2State.cpp
+)
+
+target_link_libraries(ailee_l2_verify
+    PRIVATE
+    OpenSSL::SSL
+    OpenSSL::Crypto
 )
 
 if(JSONCPP_FOUND OR jsoncpp_FOUND)

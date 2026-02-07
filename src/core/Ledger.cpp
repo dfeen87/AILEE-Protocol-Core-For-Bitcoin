@@ -321,6 +321,30 @@ std::uint64_t InMemoryLedger::getTotalEscrow() const {
     return total;
 }
 
+ailee::l2::LedgerSnapshot InMemoryLedger::snapshot() const {
+    ailee::l2::LedgerSnapshot snapshot;
+    {
+        std::shared_lock balancesLock(balances_mutex_);
+        snapshot.balances.reserve(balances_.size());
+        for (const auto& [peerId, balance] : balances_) {
+            snapshot.balances.push_back({peerId, balance});
+        }
+    }
+    {
+        std::shared_lock escrowsLock(escrows_mutex_);
+        snapshot.escrows.reserve(escrows_.size());
+        for (const auto& [_, escrow] : escrows_) {
+            snapshot.escrows.push_back(
+                {escrow.taskId, escrow.clientPeerId, escrow.amount, escrow.locked, escrow.createdAt});
+        }
+    }
+    std::sort(snapshot.balances.begin(), snapshot.balances.end(),
+              [](const auto& lhs, const auto& rhs) { return lhs.peerId < rhs.peerId; });
+    std::sort(snapshot.escrows.begin(), snapshot.escrows.end(),
+              [](const auto& lhs, const auto& rhs) { return lhs.taskId < rhs.taskId; });
+    return snapshot;
+}
+
 void InMemoryLedger::clear() {
     std::unique_lock balancesLock(balances_mutex_);
     std::unique_lock escrowsLock(escrows_mutex_);
