@@ -2,7 +2,7 @@
 #include "config_loader.h"
 #include <fstream>
 #include <iostream>
-#include <nlohmann/json.hpp>
+#include "third_party/nlohmann/json.hpp"
 #include <sstream>
 #if __has_include(<toml++/toml.h>)
 #include <toml++/toml.h>
