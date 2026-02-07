@@ -1,165 +1,173 @@
-# 🌐 AILEE-Core: Post-Consensus Bitcoin Evolution
+# 🌐 AILEE-Core: Bitcoin Layer-2 Orchestration & Verification Framework
 
-### *(Research & Work in Progress)*
+### *(Research-Driven, Actively Developed)*
 
-> **“We build not to replace Bitcoin — but to evolve it.”**
+> **"We build not to replace Bitcoin — but to evolve around it."**
 
 ---
 
 ## ⚠️ Project Status (Important)
 
-**AILEE-Core is an active research project and work in progress.**
+**AILEE-Core is an active research-driven Layer-2 implementation under ongoing development.**
 
 This repository contains:
 
-* Architectural prototypes
-* Experimental modules
-* Simulations and partial implementations
-* Forward-looking system designs
+- Implemented Layer-2 boundaries and interfaces
+- Deterministic verification and anchoring primitives
+- Buildable orchestration, recovery, and telemetry components
+- Experimental and forward-looking modules still under iteration
 
-It **does not yet implement** a complete, production-ready Layer-2 protocol, nor does it currently deliver the full performance characteristics described in the long-term vision.
+While the system already defines and implements a **Bitcoin-anchored Layer-2 architecture**, it should not yet be considered a finished, production-hardened protocol.
 
-All performance figures, mechanisms, and capabilities described below should be understood as **research targets and design goals**, not guaranteed outcomes.
+Some components are production-quality; others remain experimental.
+
+Claims in this repository are intentionally conservative and limited to what is explicitly implemented and verifiable.
 
 ---
 
-## What AILEE-Core Is Exploring
+## What AILEE-Core Is
 
-AILEE-Core investigates whether a **post-consensus soft layer** can operate *alongside* Bitcoin — without modifying its consensus rules — to improve usability, adaptability, and sustainability.
+**AILEE-Core is a Bitcoin Layer-2 orchestration and verification framework** that operates *alongside* Bitcoin without modifying Bitcoin's consensus rules.
 
-The project explores the integration of:
+It provides:
 
-* 🤖 **AI-assisted optimization** for transaction throughput and network efficiency
-* 🔒 **Zero-Knowledge Proof systems** for ownership verification and recovery research
-* 🪙 **Proof-of-burn mechanisms** for Bitcoin-anchored asset conversion concepts
-* 🌱 **Energy telemetry** for verifiable sustainability signaling
+- An **off-chain execution and coordination layer**
+- A **canonical Layer-2 state boundary**
+- **Deterministic, auditable Bitcoin anchoring interfaces**
+- **Recovery-first design** with explicit trust and failure semantics
 
-Together, these ideas form a **long-term research vision** for a Bitcoin-anchored Layer-2 ecosystem.
+Bitcoin remains the immutable settlement layer.  
+AILEE-Core lives *around* it — never above it.
+
+---
+
+## What "Layer-2" Means Here
+
+In AILEE-Core, *Layer-2* is defined precisely and conservatively:
+
+### Canonical L2 State Boundary
+
+The Layer-2 state consists of:
+- Ledger state and balances
+- Orchestration and task scheduling state
+- Telemetry commitments and verification artifacts
+
+### Canonical L1 Anchoring Boundary
+
+Bitcoin is used as:
+- A **verifiable anchoring and recovery reference**
+- A source of immutable timestamps and commitments
+- A safety layer — not a compute engine
+
+AILEE-Core generates **deterministic, verifiable anchor payloads** for Bitcoin via the Bitcoin adapter.  
+These payloads are **not automatically broadcast** and introduce no new consensus rules.
+
+This model is explicitly documented in:
+- `docs/L1_TO_L2_Infrastructure.md`
+- `docs/VERIFICATION.md`
 
 ---
 
 ## 🚧 Current State of the Repository
 
-At present, this repository should be viewed as:
+Today, this repository should be viewed as:
 
-* A **research sandbox**
-* A **systems-level design exploration**
-* A **codebase under active iteration**
+- A **real, buildable Layer-2 system**
+- A **research-guided implementation**
+- A **platform for verification, recovery, and orchestration experiments**
 
-Some components compile, some simulate behavior, and others exist primarily as architectural scaffolding.
+### What already works:
 
-Recent updates include:
+- Deterministic cryptographic commitments and verification
+- Bitcoin adapter anchoring payload generation
+- Recovery claim flows referencing anchor hashes
+- Multi-node orchestration and task scheduling
+- Federated learning–ready execution paths
+- Energy and telemetry instrumentation
+- Multi-chain adapter abstractions (Bitcoin-first, others exploratory)
 
-* Multi-chain adapter RPC wiring for Ethereum, Polygon, Avalanche, Solana, Litecoin, and Dogecoin (JSON-RPC integration for basic height, lookup, and broadcast flows).
-* Batch scheduling improvements in the orchestration layer using a global optimizer for task-to-node assignments.
-* Config loader support for YAML, JSON, and TOML inputs using the same validation rules.
+### What is still evolving:
 
+- Full adversarial modeling
+- End-to-end automated test coverage
+- External cryptographic audits
+- Operational tooling and deployment hardening
+
+---
+
+## ❌ What This Is *Not*
+
+AILEE-Core is **not**:
+
+- A replacement for Bitcoin
+- A consensus-changing protocol
+- A finished rollup or sidechain product
+- A marketing demo with unverified claims
 
 If you are looking for:
+- A turnkey Bitcoin scaling solution
+- Guaranteed throughput numbers
+- Immediate mainnet deployment
 
-* A deployable Layer-2
-* A production Bitcoin scaling solution
-* A drop-in performance upgrade
-
-👉 This repository is **not there yet**.
-
----
-
-## ✅ What “Production-Grade Layer-2” Would Require
-
-To materially move toward a true Layer‑2, the project would need to deliver
-capabilities that go beyond the current research sandbox scope:
-
-* **Working consensus and settlement mechanics** (verifiable, deterministic, and safe under adversarial conditions)
-* **Production‑grade cryptography** (audited implementations, secure key management, and threat‑modeled protocols)
-* **Real bridging/settlement logic** (finality, fraud/validity handling, and Bitcoin‑anchored safety proofs)
-* **End‑to‑end test coverage** (integration, regression, and fault‑injection across the full stack)
-* **Independent security audits** (formal verification or third‑party reviews for core cryptography and protocol logic)
-* **Operational tooling** (monitoring, rollout/rollback procedures, observability, and incident response playbooks)
-
-These are explicit requirements for production readiness and are not yet fully
-implemented or validated in this repository.
+👉 This repository is **not promising that today**.
 
 ---
 
-## 📍 Start Here (Conceptual)
+## 🧠 What Is AILEE?
 
-To understand intent and boundaries:
+**AILEE (AI-Load Energy Efficiency)** is a framework for applying adaptive intelligence to distributed systems under strict safety constraints.
 
-1. `VISION.md` — long-term goals and research direction
-2. `ARCHITECTURE.md` — proposed system structure and interfaces
-3. `VERIFICATION.md` — assumptions, limits, and falsifiability
+Within AILEE-Core, AI is used only for:
+- Scheduling and orchestration
+- Resource-aware optimization
+- Conservative, reversible decision support
 
-These documents describe **where the system is going**, not what is already complete.
-
----
-
-## 🧠 What Is AILEE? (Conceptual)
-
-AILEE (**AI-Load Energy Efficiency**) is a proposed framework for applying adaptive intelligence to distributed systems in a safety-constrained way.
-
-In the context of Bitcoin, AILEE explores whether AI could assist with:
-
-* Transaction flow optimization
-* Network-aware parameter tuning
-* Latency and congestion mitigation
-* Conservative, reversible optimization strategies
-
-**Key principle:**
-Bitcoin itself remains the immutable settlement layer.
-All intelligence lives *around* it — never above it.
+**AI never controls settlement.  
+AI never overrides verification.  
+AI always yields to deterministic safety rules.**
 
 ---
 
-## 🏗️ High-Level Architecture (Target Design)
+## 🏗️ High-Level Architecture (Implemented Boundaries)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                  AILEE SOFT-LAYER (Conceptual)              │
+│                   AILEE LAYER-2 (Off-Chain)                 │
 │─────────────────────────────────────────────────────────────│
-│ AI Optimization   Recovery Research   Asset Bridge Concepts │
+│   Orchestration · Verification · Recovery · Telemetry      │
+│   Federated Learning Primitives · Safety Policies          │
 │─────────────────────────────────────────────────────────────│
-│ Governance & Safety (Fail-Safe, Reversion, Telemetry)       │
-│─────────────────────────────────────────────────────────────│
-│ Multi-Chain Adapters (Exploratory)                           │
+│ Deterministic Bitcoin Anchor Commitments (No Auto-Broadcast)│
 └─────────────────────────────────────────────────────────────┘
-                ↓ Anchored Settlement ↓
-         BITCOIN MAINNET (Unmodified)
+                ↓ Immutable Reference ↓
+              BITCOIN MAINNET (Unmodified)
 ```
 
-This diagram represents a **design target**, not a completed implementation.
+This diagram reflects **implemented architectural boundaries**, not speculative consensus changes.
 
 ---
 
-## 🔬 Research Areas Under Exploration
+## 🔬 Active Research & Development Areas
 
-### • AI-Driven Throughput Optimization
-
-Exploring whether closed-loop optimization can improve effective throughput without consensus changes.
-
-### • Dormant Bitcoin Recovery (Research Only)
-
-Investigating cryptographic approaches to ownership proof and time-delayed recovery mechanisms.
-
-### • Bitcoin ↔ Gold Conversion Concepts
-
-Studying proof-of-burn–anchored asset mapping and supply-deflation mechanics.
-
-### • Multi-Chain Interoperability
-
-Designing adapter models that preserve security boundaries between chains.
-
-### • Safety & Circuit Breakers
-
-Ensuring any optimization pathway remains conservative, reversible, and bounded.
+- **Layer-2 orchestration and scheduling**
+- **Deterministic verification and anchoring**
+- **Recovery-first protocol design**
+- **Federated learning coordination**
+- **Energy and sustainability telemetry**
+- **Multi-chain adapter safety boundaries**
+- **Circuit breakers and fail-safe design**
 
 ---
 
-## 📊 Performance Figures
+## 📊 Performance & Metrics
 
-Any throughput, latency, cost, or energy metrics referenced in this repository represent **theoretical targets, simulations, or aspirational benchmarks**.
+Any throughput, latency, or energy figures referenced in this repository represent:
 
-They are **not measured production results**.
+- Simulations
+- Benchmarks under controlled conditions
+- Research targets
+
+They are **not claimed production guarantees**.
 
 ---
 
@@ -167,38 +175,41 @@ They are **not measured production results**.
 
 This project welcomes:
 
-* Cryptographic critique
-* Systems engineering feedback
-* Performance skepticism
-* Architectural review
-* Honest questioning
+- Cryptographic review
+- Protocol skepticism
+- Systems engineering critique
+- Adversarial thinking
+- Documentation improvements
 
-Even identifying flaws or impossibilities is considered a contribution.
+Finding flaws or limits is considered a contribution.
 
 ---
 
-## ⚙️ Configuration Formats (Policy System)
+## ⚙️ Configuration & Policy System
 
-The policy system config loader supports three formats:
+The configuration system supports:
 
-* **YAML** (via `yaml-cpp`)
-* **JSON** (via `nlohmann/json`)
-* **TOML** (via `toml++`)
+- **YAML** (`yaml-cpp`)
+- **JSON** (`nlohmann/json`)
+- **TOML** (`toml++`)
 
-All formats feed the same validation rules for `signals`, `metrics`, `policies`, `pipelines`, and `outputs`.
+All formats share a common validation pipeline for:
+`signals`, `metrics`, `policies`, `pipelines`, and `outputs`.
 
 ---
 
 ## 📄 License
 
-MIT License — free to use, modify, and explore.
+MIT License — free to use, modify, and study.
 
 ---
 
 ## Closing Note
 
-AILEE-Core exists because Bitcoin is too important to leave unexplored questions unanswered.
+Bitcoin's strength comes from restraint.
 
-This repository is an **open research effort**, shared early and transparently, with the understanding that correctness matters more than speed.
+AILEE-Core exists to explore how far *careful, verifiable, and reversible* systems can extend Bitcoin's usefulness **without weakening its foundations**.
 
-If you are here to learn, question, or help shape the future — welcome.
+This repository is shared openly, early, and honestly — because correctness matters more than speed.
+
+If you are here to learn, challenge assumptions, or help shape what a responsible Layer-2 can be — welcome.
