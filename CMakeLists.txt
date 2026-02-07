@@ -168,6 +168,7 @@ set(POLICY_SOURCES
 # Main Executable Sources
 set(CORE_SOURCES
     src/main.cpp
+    src/orchestration/Orchestrator.cpp
     src/security/ailee_circuit_breaker.cpp
     src/security/zk_proofs.cpp
     src/l1/AnchorCommitment.cpp
@@ -238,6 +239,7 @@ add_library(ailee_adapters STATIC
     ${ADAPTER_SOURCES}
     ${AMBIENT_SOURCES}
     ${POLICY_SOURCES}
+    src/security/zk_proofs.cpp
 )
 
 target_link_libraries(ailee_adapters
@@ -275,13 +277,20 @@ option(BUILD_TESTS "Build unit tests" OFF)
 if(BUILD_TESTS)
     find_package(GTest QUIET)
     if(NOT GTest_FOUND)
-        include(FetchContent)
-        FetchContent_Declare(
-            googletest
-            URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+        add_library(minigtest STATIC
+            tests/minigtest/minigtest.cpp
         )
-        set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-        FetchContent_MakeAvailable(googletest)
+        target_include_directories(minigtest PUBLIC
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/minigtest
+        )
+
+        add_library(minigtest_main STATIC
+            tests/minigtest/minigtest_main.cpp
+        )
+        target_link_libraries(minigtest_main PUBLIC minigtest)
+
+        add_library(GTest::gtest ALIAS minigtest)
+        add_library(GTest::gtest_main ALIAS minigtest_main)
     endif()
     enable_testing()
 

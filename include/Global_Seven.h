@@ -21,12 +21,17 @@
 #include <atomic>
 #include <cmath>
 
+namespace ailee::l1 {
 class AILEEMempoolAdapter;
 class AILEENetworkAdapter;
 class AILEEEnergyAdapter;
+} // namespace ailee::l1
 
 namespace ailee {
 namespace global_seven {
+using ::ailee::l1::AILEEEnergyAdapter;
+using ::ailee::l1::AILEEMempoolAdapter;
+using ::ailee::l1::AILEENetworkAdapter;
 
 struct ETHState;
 struct BTCState;
@@ -296,19 +301,9 @@ public:
 
 class AdapterRegistry {
 public:
-    static AdapterRegistry& instance() {
-        static AdapterRegistry reg;
-        return reg;
-    }
-
-    void registerAdapter(Chain chain, std::unique_ptr<IChainAdapter> adapter) {
-        adapters_[chain] = std::move(adapter);
-    }
-
-    IChainAdapter* get(Chain chain) const {
-        auto it = adapters_.find(chain);
-        return (it != adapters_.end()) ? it->second.get() : nullptr;
-    }
+    static AdapterRegistry& instance();
+    void registerAdapter(Chain chain, std::unique_ptr<IChainAdapter> adapter);
+    IChainAdapter* get(Chain chain) const;
 
 private:
     AdapterRegistry() = default;
@@ -453,6 +448,46 @@ public:
 
 private:
     std::shared_ptr<ETHState> state_;
+};
+
+class LitecoinAdapter final : public IChainAdapter {
+public:
+    bool init(const AdapterConfig&, ErrorCallback) override;
+    bool start(TxCallback, BlockCallback, EnergyCallback) override;
+    void stop() override;
+    bool broadcastTransaction(const std::vector<TxOut>&,
+                              const std::unordered_map<std::string, std::string>&,
+                              std::string&) override;
+    std::optional<NormalizedTx> getTransaction(const std::string& chainTxId) override;
+    std::optional<BlockHeader>  getBlockHeader(const std::string& blockHash) override;
+    std::optional<uint64_t>     getBlockHeight() override;
+    Chain chain() const override { return Chain::Litecoin; }
+    AdapterTraits traits() const override {
+        return AdapterTraits{
+            true, true, false, true, false,
+            UnitSpec{8, "litoshi", "LTC"}, "LitecoinAdapter", "1.0.0", false
+        };
+    }
+};
+
+class DogecoinAdapter final : public IChainAdapter {
+public:
+    bool init(const AdapterConfig&, ErrorCallback) override;
+    bool start(TxCallback, BlockCallback, EnergyCallback) override;
+    void stop() override;
+    bool broadcastTransaction(const std::vector<TxOut>&,
+                              const std::unordered_map<std::string, std::string>&,
+                              std::string&) override;
+    std::optional<NormalizedTx> getTransaction(const std::string& chainTxId) override;
+    std::optional<BlockHeader>  getBlockHeader(const std::string& blockHash) override;
+    std::optional<uint64_t>     getBlockHeight() override;
+    Chain chain() const override { return Chain::Dogecoin; }
+    AdapterTraits traits() const override {
+        return AdapterTraits{
+            true, true, false, true, false,
+            UnitSpec{8, "koinu", "DOGE"}, "DogecoinAdapter", "1.0.0", false
+        };
+    }
 };
 
 class PolygonAdapter final : public IChainAdapter {

@@ -595,7 +595,7 @@ private:
     IReputationLedger& rep_;
     ILatencyMap& lat_;
     SchedulingStrategy strategy_{SchedulingStrategy::WEIGHTED_SCORE};
-    OrchestratorMetrics metrics_{};
+    mutable OrchestratorMetrics metrics_{};
     std::optional<ScorerFn> customScorer_;
 };
 

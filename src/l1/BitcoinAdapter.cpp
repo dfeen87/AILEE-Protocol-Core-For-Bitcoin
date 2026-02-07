@@ -10,6 +10,9 @@
 // - Optional AILEE observational adapters (mempool, network, energy)
 
 #include "Global_Seven.h"
+#include "AILEEEnergyAdapter.h"
+#include "AILEEMempoolAdapter.h"
+#include "AILEENetworkAdapter.h"
 #include <curl/curl.h>
 #if defined(AILEE_HAS_ZMQ)
 #include <zmq.hpp>
@@ -25,11 +28,6 @@
 #include <iomanip>
 #include <iostream>
 #include "zk_proofs.h"
-
-// Forward declarations for AILEE adapters
-class AILEEMempoolAdapter;
-class AILEENetworkAdapter;
-class AILEEEnergyAdapter;
 
 namespace ailee {
 namespace global_seven {
@@ -68,6 +66,12 @@ std::optional<BlockHeader> BitcoinAdapter::getBlockHeader(const std::string&) {
 std::optional<uint64_t> BitcoinAdapter::getBlockHeight() {
     return std::nullopt;
 }
+
+void BitcoinAdapter::attachMempoolAdapter(std::unique_ptr<AILEEMempoolAdapter>) {}
+
+void BitcoinAdapter::attachNetworkAdapter(std::unique_ptr<AILEENetworkAdapter>) {}
+
+void BitcoinAdapter::attachEnergyAdapter(std::unique_ptr<AILEEEnergyAdapter>) {}
 
 AnchorCommitment BitcoinAdapter::buildAnchorCommitment(const std::string& l2StateRoot,
                                                        uint64_t timestampMs,
