@@ -135,6 +135,89 @@ This repository should be viewed as:
 
 ---
 
+## 🔍 What You Get When You Clone This Repo (Code-Based Analysis)
+
+### High-Level System Scope
+
+This codebase implements an **AILEE-Core Node** in C++: a single process that integrates multiple subsystems—**task orchestration**, **Ambient telemetry + verification**, **Layer-2 bridge state + anchoring**, **federated learning primitives**, and **Bitcoin Core connectivity**—wired through a central runtime/entrypoint.
+
+### Core Runtime Entrypoint & Configuration
+
+The main node runtime sets up:
+- Structured logging + signal handling
+- A configurable node profile (TPS simulation knobs, circuit breaker thresholds, NetFlow settings, orchestration settings, metrics)
+- Integration points for orchestration, FL, AmbientAI, L2/bridge logic, and Bitcoin adapters
+
+This reflects an intended deployment model where these components run together in one coordinated node process.
+
+### Distributed Task Orchestration
+
+The orchestration layer provides:
+- Scheduling strategies (weighted, round-robin, least-loaded, lowest-latency, etc.)
+- Task/resource definitions, node metrics, latency/reputation interfaces
+- Concrete scoring/assignment logic factoring: reputation, latency, capacity, cost, region preference, and "green energy" bonuses
+- Assignment records including expected latency/cost and backup-worker selection
+
+### Ambient Telemetry + Deterministic Verification + FL Update Plumbing
+
+The Ambient subsystem includes:
+- Telemetry serialization and integrity checks
+- Deterministic proof/commitment wiring for telemetry verification (hash-based commitments rather than real ZK rollup proofs)
+- Local federated update generation with proof bytes/hash fields and verification flags
+- Node-utility / game-theory style scoring and basic byzantine detection heuristics (outlier-based)
+
+### Federated Learning Primitives
+
+The federated learning layer defines:
+- Privacy budgeting (DP accounting), aggregation strategies (FedAvg, FedProx, Krum, etc.), and compression options
+- Job/task structures (incentives, deadlines, proof requirements)
+- Local update payloads (proof bytes/hash, DP accounting, optional encrypted delta hooks)
+- Aggregator interfaces and aggregation result structures
+
+### L2 State Snapshots + Offline Verification Tooling
+
+The repo includes an **audit-friendly snapshot mechanism** so third parties can verify state without trusting a running node:
+- Deterministic canonicalization and **reproducible L2StateRoot** computation
+- Append-only snapshot persistence + latest snapshot loading
+- An offline verifier tool (`ailee_l2_verify`) that recomputes roots and checks anchor/binding rules locally
+
+### Bitcoin-Friendly Anchoring Primitives (Off-Chain Payload Generation)
+
+Anchoring is implemented as **deterministic commitment construction** (no auto-broadcast):
+- Anchor payload builders that emit either:
+  - **OP_RETURN script payloads (≤80 bytes)**, or
+  - A **Taproot commitment script fragment**
+- Payloads bind `L2StateRoot` + timestamp + recovery metadata into a Bitcoin-consumable commitment
+- Anchor hashes can be threaded through orchestration and recovery structures for traceability
+
+### Bridge / Exit Authorization Model (Federated, Explicit)
+
+Bridge/peg logic exists with explicit lifecycle structures. Exits are **not trustless**:
+- Peg-outs are enforced to reference a **registered anchorCommitmentHash**
+- Code rejects peg-outs that reference unknown anchors or anchors mismatching the authorizing state root
+- The custody model remains **federated multisig quorum** (sidechain-class trust model), not rollup-style L1-enforced exits
+
+### L2 NetFlow Relay (Bandwidth Relay Mesh)
+
+The NetFlow subsystem models:
+- Relay nodes, tunnels, and a mesh coordinator for node registration and relay selection
+- Bandwidth distribution and accounting, including reward attribution (with a proof-hash field)
+- Hybrid tunneling concepts (WireGuard/onion/hybrid) and active tunnel tracking
+
+### Bitcoin Core RPC Integration
+
+The repo contains a production-oriented Bitcoin Core JSON-RPC client:
+- Raw transaction broadcast + block count fetching
+- libcurl-based networking with retries, timeouts, and basic auth support
+
+### What This Does *Not* Give You (By Code Inspection)
+
+- No rollup-style fraud proofs or validity proofs enforced by Bitcoin L1
+- No trustless exits / L1-enforced dispute resolution
+- No demonstrated distributed consensus layer for the L2 ledger (beyond deterministic snapshots + verification tooling)
+
+---
+
 ## ❌ What This Project Is Not
 
 AILEE-Core is **not**:
