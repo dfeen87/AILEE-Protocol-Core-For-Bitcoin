@@ -10,6 +10,9 @@
 // - Optional AILEE observational adapters (mempool, network, energy)
 
 #include "Global_Seven.h"
+#include "AILEEEnergyAdapter.h"
+#include "AILEEMempoolAdapter.h"
+#include "AILEENetworkAdapter.h"
 #include <curl/curl.h>
 #if defined(AILEE_HAS_ZMQ)
 #include <zmq.hpp>
@@ -25,11 +28,6 @@
 #include <iomanip>
 #include <iostream>
 #include "zk_proofs.h"
-
-// Forward declarations for AILEE adapters
-class AILEEMempoolAdapter;
-class AILEENetworkAdapter;
-class AILEEEnergyAdapter;
 
 namespace ailee {
 namespace global_seven {
