@@ -4,8 +4,14 @@
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <sstream>
+#if __has_include(<toml++/toml.h>)
 #include <toml++/toml.h>
+#define AILEE_HAS_TOML 1
+#endif
+#if __has_include(<yaml-cpp/yaml.h>)
 #include <yaml-cpp/yaml.h>
+#define AILEE_HAS_YAML 1
+#endif
 
 static std::string slurp(const std::string& file) {
   std::ifstream in(file, std::ios::binary);
@@ -15,6 +21,10 @@ static std::string slurp(const std::string& file) {
 }
 
 static std::optional<Config> parse_yaml(const std::string& text) {
+#if !defined(AILEE_HAS_YAML)
+  (void)text;
+  return std::nullopt;
+#else
   try {
     YAML::Node root = YAML::Load(text);
     Config cfg;
@@ -102,6 +112,7 @@ static std::optional<Config> parse_yaml(const std::string& text) {
     std::cerr << "Parse error: " << e.what() << std::endl;
     return std::nullopt;
   }
+#endif
 }
 
 static std::optional<Config> parse_json(const std::string& text) {
@@ -205,6 +216,10 @@ static std::optional<Config> parse_json(const std::string& text) {
 }
 
 static std::optional<Config> parse_toml(const std::string& text) {
+#if !defined(AILEE_HAS_TOML)
+  (void)text;
+  return std::nullopt;
+#else
   try {
     auto root = toml::parse(text);
     Config cfg;
@@ -322,6 +337,7 @@ static std::optional<Config> parse_toml(const std::string& text) {
     std::cerr << "Parse error: " << e.what() << std::endl;
     return std::nullopt;
   }
+#endif
 }
 
 ConfigResult load_config(const std::string& file, ConfigFormat fmt) {

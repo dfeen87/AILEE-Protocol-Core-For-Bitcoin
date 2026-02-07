@@ -1,5 +1,6 @@
 // expr.cpp
 #include "expr.h"
+#include <cmath>
 #include <cctype>
 #include <vector>
 #include <string>
@@ -43,6 +44,8 @@ static std::optional<bool> cmp(const std::string& op, double a, double b){
   if (op=="!=") return a!=b;
   return std::nullopt;
 }
+
+static std::optional<bool> parse_or(const std::vector<Token>& toks, size_t& i, const EvalContext& ctx);
 
 static std::optional<bool> parse_comparison(const std::vector<Token>& toks, size_t& i, const EvalContext& ctx){
   if (i>=toks.size()) return std::nullopt;
