@@ -1,268 +1,231 @@
 # Contributing to AILEE-Core
 
-First off, thank you for considering contributing to **AILEE-Core (AI-Load Energy Efficiency)**.  
-This project is not just code; it is a **call to action** to evolve Bitcoin into a dynamic global financial powerhouse. AILEE-Core is currently a **research and
-prototype codebase**, and many components are experimental or incomplete. We actively welcome skeptics, cryptographers, mathematicians, systems engineers, and
-builders to challenge, extend, and refine this framework.
+Thank you for considering a contribution to **AILEE-Core (AI-Load Energy Efficiency)**.
+
+AILEE-Core is a **Bitcoin-anchored Layer-2 orchestration, verification, and recovery framework**.  
+It implements security-relevant infrastructure, including deterministic state snapshots,
+Bitcoin-consumable anchor commitments, federated exit authorization, and offline verification tooling.
+
+Contributions are welcome — but they are expected to meet the standards appropriate for
+**distributed systems and Bitcoin-adjacent infrastructure**.
 
 ---
 
-## 🤝 Our Philosophy
+## Project Philosophy
 
-Faith is what drives this project. We operate on principles of **truth, respect, and constructive collaboration**.
+AILEE-Core is built on a few non-negotiable principles:
 
-* **Skepticism is Welcome:** Challenge the throughput models, recovery logic, or coherence assumptions.  
-* **Respect is Mandatory:** We attack ideas, not people.  
-* **Open Source is Vital:** Innovation thrives when shared. We are building this in the public domain to ensure transparency.
+- **Explicit trust assumptions**  
+  No hidden security guarantees. No implied trustlessness.
 
----
+- **Determinism over convenience**  
+  Serialization, hashing, and state transitions are consensus-sensitive.
 
-## 🤔 Open Questions & RFC (Request for Comments)
+- **Auditability over opacity**  
+  Third parties must be able to verify behavior without trusting a running node.
 
-We're actively seeking community input on critical design decisions. **Your expertise matters** - even if you're new to the project:
+- **Bitcoin-native conservatism**  
+  We prefer clarity, restraint, and recoverability over aggressive optimization.
 
-### **Architecture & Implementation:**
-- **Issue TBD**: Optimal zk-SNARK library for production deployment (bellman vs snarkjs vs Halo2)?
-- **Issue TBD**: Should we support WASM execution in addition to native C++/Rust?
-- **Issue TBD**: Mesh networking for IoT: Thread 2.0+ vs Bluetooth Mesh vs Wi-Fi HaLow?
-- **Issue TBD**: Federated learning framework choice - TensorFlow Federated vs PySyft?
-
-### **Economic & Game Theory:**
-- **Issue TBD**: Tokenomics parameter tuning - what should base reward rate be?
-- **Issue TBD**: How do we prevent Sybil attacks while maintaining permissionless access?
-- **Issue TBD**: Nash equilibrium modeling - what weights for compute/energy/latency?
-
-### **Integration & Ecosystem:**
-- **Issue TBD**: Which L2 blockchain for smart contracts? (Polygon, Arbitrum, Optimism, Base?)
-- **Issue TBD**: Privacy budget defaults - is ε=1.0 too conservative for edge AI?
-
-**👉 These aren't rhetorical questions** - we genuinely need your input. Comment on any of these, or open a discussion thread.
+We welcome skepticism, critique, and adversarial thinking.
+We do **not** welcome hand-waving, hype, or security theater.
 
 ---
 
-## 💭 Questions, Confusions, or Just Curious?
+## Who Should Contribute
 
-### **"I Don't Understand X" is Valuable Feedback**
+We welcome contributors with backgrounds in:
 
-If you cloned this repo and something is unclear, **that's a documentation bug** - and we want to know:
+- Distributed systems engineering
+- Bitcoin protocol and infrastructure
+- Cryptography and applied verification
+- Systems programming (C++ / Rust)
+- Security review and threat modeling
+- Documentation and technical writing
 
-- **"I don't understand how Byzantine fault tolerance works here"** → Legitimate issue, we need better docs
-- **"How do I integrate this with my existing system?"** → We need integration tutorials
-- **"Why did you choose homomorphic encryption over secure enclaves?"** → We need architectural rationale docs
-- **"The white paper mentions sub-10ms latency - how?"** → We need performance deep-dive
-
-**File an issue, start a discussion, or just comment.** There are no stupid questions - only opportunities to improve the project.
-
----
-
-## 🎯 How You Can Help
-
-We are now in the **Deployment & Extension Phase**. Contributions can make impact in the following areas:
-
-### 1. Performance & Verification
-* Review `ailee_tps_engine.h` and validate throughput under real-world conditions
-* Benchmark closed-loop feedback logic against live network latency
-* Extend error modeling to capture entropy in diverse environments
-* **[Good First Issue]** Add unit tests for Nash equilibrium calculations in `AmbientAI.cpp`
-
-### 2. Cryptography (Zero-Knowledge & VDFs)
-* Audit `ailee_recovery_protocol.h` for resilience against parallel bypass
-* Help migrate ZK-proof logic into Circom/Halo2 circuits for production-grade verification
-* Strengthen trustless recovery and proof-of-reserve mechanisms
-* **[Good First Issue]** Document cryptographic assumptions and threat model
-
-### 3. Systems Engineering (C++ / Rust)
-* Extend `main.cpp` into full node integration
-* Harden the **Gold Bridge** oracle aggregation (`ailee_gold_bridge.h`) for fault tolerance
-* Optimize thread safety, structured logging, and adaptive throttling for large-scale deployments
-* **[Good First Issue]** Add structured logging with severity levels
-
-### 4. Ambient AI Infrastructure
-* Implement federated learning aggregation logic
-* Build privacy-preserving telemetry collection
-* Develop mesh networking proof-of-concept
-* **[Good First Issue]** Create architecture diagram for the 5-layer Ambient AI stack
-
-### 5. Documentation & Education
-* Write tutorials: "Your First Ambient AI Node in 5 Minutes"
-* Create comparison tables: Centralized vs Decentralized AI
-* Develop case studies for specific use cases (DeFi, IoT, Smart Cities)
-* **[Good First Issue]** Add inline code comments explaining complex algorithms
-
-### 6. Middleware & Integrations
-* Build adapters for other chains or financial systems
-* Develop monitoring dashboards and developer tooling
-* Explore integrations with AI edge compute or green mining telemetry
+You do **not** need to agree with every design decision — but you must engage with them honestly.
 
 ---
 
-## 📊 Quick Poll: What Brought You Here?
+## Contribution Areas
 
-Help us understand the community by reacting to this (we'll create a pinned issue):
+### 1. Layer-2 State & Verification
 
-- 👍 **Academic research** - studying the architecture
-- 🚀 **Building a production system** - planning deployment  
-- ❤️ **Exploring decentralized AI** - learning the concepts
-- 👀 **Evaluating for work/client** - technical assessment
-- 🎓 **Learning** - expanding knowledge
-- 🔧 **Contributing** - ready to submit PRs
-- 💰 **Investment/Business** - exploring opportunities
+- Review deterministic snapshot logic and canonical serialization
+- Improve state-root reproducibility guarantees
+- Add regression vectors for `L2StateRoot` computation
+- Extend offline verification tooling (`ailee_l2_verify`)
 
-*(We'll create a dedicated poll issue - watch for it in the Issues tab)*
-
----
-
-## 🗣️ Show & Tell: What Are You Building?
-
-**This is the most valuable contribution you can make right now.**
-
-If you've cloned AILEE-Core and are:
-- Researching applications
-- Building a proof-of-concept
-- Evaluating for production
-- Writing a paper or thesis
-- Teaching a course
-- Integrating with another system
-
-**Please open an issue tagged `[Show & Tell]`** and share:
-- What you're working on (as much as you're comfortable sharing)
-- What challenges you've encountered
-- What documentation would help you most
-
-This creates a virtuous cycle: your use case helps us prioritize development, and you get the features/docs you need faster.
+**Good first issues**
+- Add golden-vector tests for snapshot hashing
+- Document state canonicalization rules
 
 ---
 
-## 🛠 Development Workflow
+### 2. Bitcoin Anchoring & Bridge Logic
+
+- Review anchor commitment construction (OP_RETURN / Taproot fragments)
+- Improve peg-in / peg-out lifecycle enforcement
+- Strengthen anchor-bound exit checks
+- Improve error handling and operator diagnostics
+
+**Good first issues**
+- Add anchor-verification failure test cases
+- Improve anchor payload documentation
+
+---
+
+### 3. Security & Cryptography
+
+- Review cryptographic assumptions and threat models
+- Audit deterministic hashing and proof wiring
+- Improve misuse resistance and failure modes
+- Identify edge cases that could compromise verification
+
+> ⚠️ **Do not introduce cryptographic primitives without justification and review.**
+
+**Good first issues**
+- Document cryptographic boundaries and non-goals
+- Add explicit threat-model notes to verification paths
+
+---
+
+### 4. Systems Engineering (C++)
+
+- Improve thread safety and lifecycle management
+- Harden structured logging and diagnostics
+- Improve error propagation and shutdown semantics
+- Reduce nondeterminism in runtime behavior
+
+**Good first issues**
+- Improve structured logging severity levels
+- Add deterministic ordering where implicit iteration exists
+
+---
+
+### 5. Documentation
+
+Documentation is considered **production-critical**.
+
+- Clarify security model and trust assumptions
+- Improve operator-facing documentation
+- Add diagrams that reflect implemented (not aspirational) architecture
+- Improve build and verification instructions
+
+**Good first issues**
+- Add “How to Verify a Snapshot” walkthrough
+- Improve `VERIFICATION.md` clarity
+
+---
+
+## Questions Are Contributions
+
+If something is unclear, that is a documentation bug.
+
+Examples of valid issues:
+- “I don’t understand how peg-out authorization is enforced.”
+- “What breaks if serialization order changes here?”
+- “What security property does this anchor guarantee — and what doesn’t it?”
+
+Clarity is a feature.
+
+---
+
+## Development Workflow
 
 ### Prerequisites
-Ensure you have the following installed:
-* **C++17 Compiler** (GCC 7+, Clang 5+, MSVC 2017+)
-* **CMake 3.10+**
-* **OpenSSL Development Libraries** (libssl-dev)
 
-### Quick Start
+- C++17 compiler (GCC 7+, Clang 5+, MSVC 2017+)
+- CMake 3.10+
+- OpenSSL development libraries
+
+### Build
+
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/AILEE-Core.git
+git clone https://github.com/dfeen87/AILEE-Core-For-Bitcoin.git
 cd AILEE-Core
-
-# Build
 mkdir build && cd build
 cmake ..
 make
+````
 
-# Run tests (if available)
+### Tests
+
+Some test coverage exists; additional tests are welcome.
+
+```bash
 ctest
-
-# Run basic simulation
-./ailee_core
 ```
 
-### Pull Request Process
+---
 
-1. **Fork the Repository** to your own GitHub account
+## Pull Request Guidelines
 
-2. **Create a Branch** for your feature or fix:
+1. Fork the repository
+2. Create a feature branch:
+
    ```bash
-   git checkout -b feature/optimize-mempool-sorting
+   git checkout -b feature/descriptive-name
    ```
+3. Commit with **clear, technical messages**:
 
-3. **Commit your changes** with clear, descriptive messages:
-   - ❌ *Bad:* "Fixed code"
-   - ✅ *Good:* "Implemented M/M/1 queuing theory in mempool logic"
-   - ✅ *Better:* "Implemented M/M/1 queuing theory in mempool logic - reduces avg latency by 15%"
+   * ❌ `Fixed stuff`
+   * ✅ `Bind peg-out authorization to anchorCommitmentHash`
+4. Include tests where behavior or determinism is affected
+5. Update documentation if behavior or assumptions change
+6. Open a PR against `main` and explain:
 
-4. **Write tests** (if applicable) and ensure existing tests pass
+   * What changed
+   * Why it matters
+   * Any security or compatibility impact
 
-5. **Update documentation** if you've changed APIs or added features
-
-6. **Push to the Branch**:
-   ```bash
-   git push origin feature/optimize-mempool-sorting
-   ```
-
-7. **Open a Pull Request (PR)** against the `main` branch:
-   - Explain **why** you made the change (context, problem, solution)
-   - Reference issues when applicable (e.g., `Fixes #42`, `Addresses #17`)
-   - Include before/after benchmarks if relevant
-   - Add screenshots/diagrams for UI/architecture changes
-
-### Code Style Guidelines
-
-- **C++**: Follow [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html) with exceptions noted in `.clang-format`
-- **Comments**: Explain *why*, not *what* - the code shows what
-- **Naming**: 
-  - `camelCase` for functions/methods
-  - `snake_case` for variables
-  - `PascalCase` for classes/structs
-- **Headers**: Include guards using `#pragma once`
+PRs that weaken determinism, blur trust assumptions, or overclaim security will be rejected.
 
 ---
 
-## 🐛 Reporting Issues
+## Reporting Issues
 
-If you find a bug, inconsistency, or vulnerability:
+Please tag issues appropriately:
 
-1. **Check the Issues tab** to see if it has already been reported
-2. **Search closed issues** - it might have been fixed
-3. **Open a new Issue** with:
-   - Clear, descriptive title
-   - Steps to reproduce (if it's a bug)
-   - Expected vs actual behavior
-   - Your environment (OS, compiler version, dependencies)
-   - Relevant logs or error messages
+* `[BUG]` – crashes, incorrect behavior
+* `[SECURITY]` – vulnerabilities or misuse risks
+* `[VERIFICATION]` – determinism, state roots, anchors
+* `[DOCS]` – missing or unclear documentation
+* `[ENHANCEMENT]` – scoped, justified improvements
+* `[QUESTION]` – clarification requests
+* `[DISCUSSION]` – design or architectural topics
 
-### Issue Tags
-Please tag appropriately:
-- `[BUG]` - Code errors, crashes, unexpected behavior
-- `[MATH]` - Theoretical challenges, algorithm correctness
-- `[SECURITY]` - Vulnerabilities in recovery, cryptography, or consensus
-- `[DOCUMENTATION]` - Missing, unclear, or incorrect docs
-- `[ENHANCEMENT]` - Feature requests or improvements
-- `[QUESTION]` - Need help understanding something
-- `[DISCUSSION]` - Open-ended design discussions
-- `[Show & Tell]` - Sharing your implementation/research
+Security issues should follow the instructions in `SECURITY.md`.
 
 ---
 
-## 🌟 Recognition
+## Forks & Downstream Use
 
-Contributors will be:
-- Listed in **CONTRIBUTORS.md**
-- Credited in release notes
-- Acknowledged in academic papers (if applicable)
-- Eligible for future token airdrops (if/when tokenomics are implemented)
+Forks are welcome.
 
-Significant contributions may result in co-authorship on white papers or research publications.
+However, operating a fork of AILEE-Core implies **real responsibility**, including:
 
----
+* Custodial risk (federated exits)
+* Correctness of state and verification
+* Honest disclosure of trust assumptions
 
-## 📜 License
-
-By contributing to AILEE-Core, you agree that your contributions will be licensed under the project's **MIT License**.
-
-All contributions must be your original work or properly attributed open-source code compatible with MIT.
+If you operate a fork, please do not misrepresent the security model.
 
 ---
 
-## 🚀 Getting Started Checklist
+## License
 
-New contributor? Start here:
+By contributing, you agree that your contributions are licensed under the **MIT License**.
 
-- [ ] Read the main [README.md]
-- [ ] Review the [white paper]
-- [ ] Join discussions in the [Issues]
-- [ ] Introduce yourself in a discussion thread
-- [ ] Star ⭐ the repo if you support this vision
+You must have the right to contribute the code you submit.
 
 ---
 
-## 💬 Communication Channels
+## Final Note
 
-- **GitHub Issues**: Bug reports, feature requests
-- **GitHub Discussions**: Design conversations, Q&A, show & tell
-- **Pull Requests**: Code contributions
-- *(Coming soon: Discord/Telegram for real-time chat)*
+AILEE-Core is not a demo.
 
----
+It is infrastructure that enforces correctness, exposes failure, and demands clarity.
+Contributions should strengthen those properties — not dilute them.
+
+If that excites you, welcome.
