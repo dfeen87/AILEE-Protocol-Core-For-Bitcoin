@@ -31,7 +31,7 @@ Instead, report it privately so it can be responsibly assessed and addressed.
 
 Email the maintainers at:
 
-**security@ailee.example**
+**dfeen87@gmail.com**
 
 Please include:
 - A clear description of the vulnerability
