@@ -21,10 +21,15 @@
 #include <atomic>
 #include <cmath>
 
+class AILEEMempoolAdapter;
+class AILEENetworkAdapter;
+class AILEEEnergyAdapter;
+
 namespace ailee {
 namespace global_seven {
 
 struct ETHState;
+struct BTCState;
 
 // ---------- Canonical chain set (extensible) ----------
 
@@ -418,6 +423,13 @@ public:
             UnitSpec{8, "sats", "BTC"}, "BitcoinAdapter", "1.0.0", /*audited*/true
         };
     }
+
+    void attachMempoolAdapter(std::unique_ptr<AILEEMempoolAdapter> adapter);
+    void attachNetworkAdapter(std::unique_ptr<AILEENetworkAdapter> adapter);
+    void attachEnergyAdapter(std::unique_ptr<AILEEEnergyAdapter> adapter);
+
+private:
+    static std::shared_ptr<BTCState> state_;
 };
 
 class EthereumAdapter final : public IChainAdapter {
