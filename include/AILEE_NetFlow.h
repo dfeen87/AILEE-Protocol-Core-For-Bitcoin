@@ -173,6 +173,8 @@ public:
     }
 
 private:
+    void markNodeOnline(const RelayNode& /*node*/) const {}
+
     std::unordered_map<std::string, RelayNode> nodes_;
     mutable std::mutex mu_;
 };
