@@ -122,6 +122,15 @@ struct NormalizedTx {
     std::unordered_map<std::string, std::string> metadata; // hints: vaultId, pegTag, oracleStamp
 };
 
+// ---------- Deterministic L2 anchor commitment ----------
+struct AnchorCommitment {
+    std::string l2StateRoot;
+    uint64_t timestampMs{0};
+    std::string recoveryMetadata;
+    std::string payload;
+    std::string hash;
+};
+
 struct BlockHeader {
     std::string  hash;
     uint64_t     height{0};
@@ -390,6 +399,9 @@ public:
     std::optional<NormalizedTx> getTransaction(const std::string& chainTxId) override;
     std::optional<BlockHeader>  getBlockHeader(const std::string& blockHash) override;
     std::optional<uint64_t>     getBlockHeight() override;
+    AnchorCommitment buildAnchorCommitment(const std::string& l2StateRoot,
+                                           uint64_t timestampMs,
+                                           const std::string& recoveryMetadata) const;
     Chain chain() const override { return Chain::Bitcoin; }
     AdapterTraits traits() const override {
         return AdapterTraits{

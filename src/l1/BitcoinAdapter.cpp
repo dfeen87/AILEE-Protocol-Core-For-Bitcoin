@@ -24,6 +24,7 @@
 #include <sstream>
 #include <iomanip>
 #include <iostream>
+#include "zk_proofs.h"
 
 // Forward declarations for AILEE adapters
 class AILEEMempoolAdapter;
@@ -66,6 +67,18 @@ std::optional<BlockHeader> BitcoinAdapter::getBlockHeader(const std::string&) {
 
 std::optional<uint64_t> BitcoinAdapter::getBlockHeight() {
     return std::nullopt;
+}
+
+AnchorCommitment BitcoinAdapter::buildAnchorCommitment(const std::string& l2StateRoot,
+                                                       uint64_t timestampMs,
+                                                       const std::string& recoveryMetadata) const {
+    AnchorCommitment commitment;
+    commitment.l2StateRoot = l2StateRoot;
+    commitment.timestampMs = timestampMs;
+    commitment.recoveryMetadata = recoveryMetadata;
+    commitment.payload = l2StateRoot + ":" + std::to_string(timestampMs) + ":" + recoveryMetadata;
+    commitment.hash = ailee::zk::sha256Hex(commitment.payload);
+    return commitment;
 }
 
 #else
@@ -852,6 +865,18 @@ std::optional<BlockHeader> BitcoinAdapter::getBlockHeader(const std::string& blo
 std::optional<uint64_t> BitcoinAdapter::getBlockHeight() {
     if (!state_) return std::nullopt;
     return state_->internal.height(state_->onError);
+}
+
+AnchorCommitment BitcoinAdapter::buildAnchorCommitment(const std::string& l2StateRoot,
+                                                       uint64_t timestampMs,
+                                                       const std::string& recoveryMetadata) const {
+    AnchorCommitment commitment;
+    commitment.l2StateRoot = l2StateRoot;
+    commitment.timestampMs = timestampMs;
+    commitment.recoveryMetadata = recoveryMetadata;
+    commitment.payload = l2StateRoot + ":" + std::to_string(timestampMs) + ":" + recoveryMetadata;
+    commitment.hash = ailee::zk::sha256Hex(commitment.payload);
+    return commitment;
 }
 
 // Static member initialization

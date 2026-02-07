@@ -381,6 +381,7 @@ public:
         uint64_t inactivityTimestamp;
         uint64_t claimTimestamp;
         uint64_t challengeEndTime;
+        std::optional<std::string> anchorCommitmentHash;
         ZeroKnowledgeProof::Proof zkProof;
         VerifiableDelayFunction::VDFOutput vdfOutput;
         Status status;
@@ -406,7 +407,8 @@ public:
         const std::string& claimantAddr,
         uint64_t inactivityTime,
         const ZeroKnowledgeProof::Proof& zkProof,
-        const VerifiableDelayFunction::VDFOutput& vdfOutput
+        const VerifiableDelayFunction::VDFOutput& vdfOutput,
+        const std::optional<std::string>& anchorCommitmentHash = std::nullopt
     ) {
         uint64_t currentTime = static_cast<uint64_t>(
             std::chrono::system_clock::now().time_since_epoch().count()
@@ -425,6 +427,7 @@ public:
         data_.inactivityTimestamp = inactivityTime;
         data_.claimTimestamp = currentTime;
         data_.challengeEndTime = currentTime + (CHALLENGE_PERIOD_DAYS * 24 * 3600);
+        data_.anchorCommitmentHash = anchorCommitmentHash;
         data_.zkProof = zkProof;
         data_.vdfOutput = vdfOutput;
         data_.status = Status::CHALLENGE_PERIOD;

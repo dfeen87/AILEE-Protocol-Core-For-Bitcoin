@@ -101,6 +101,7 @@ struct TaskPayload {
     uint64_t maxCostTokens = 0;
     double minReputationScore = 0.0;
     std::optional<std::string> preferredRegion;
+    std::optional<std::string> anchorCommitmentHash; // Optional L2 anchor reference
     bool preferGreenEnergy = false;
     std::vector<std::string> blacklistedNodes;
     std::vector<std::uint8_t> payloadBytes;
