@@ -1119,6 +1119,8 @@ std::vector<std::string> selectDiverseNodes(
     
     std::vector<std::string> selected;
     selected.reserve(count);
+    std::unordered_set<std::string> selectedIds;
+    selectedIds.reserve(count);
     
     // Track regions to ensure diversity
     std::unordered_map<std::string, size_t> regionCounts;
@@ -1130,6 +1132,7 @@ std::vector<std::string> selectDiverseNodes(
         
         if (seenRegions.find(node.region) == seenRegions.end()) {
             selected.push_back(node.peerId);
+            selectedIds.insert(node.peerId);
             seenRegions.insert(node.region);
             regionCounts[node.region]++;
         }
@@ -1138,7 +1141,7 @@ std::vector<std::string> selectDiverseNodes(
     // Second pass: fill remaining slots with best nodes
     std::vector<NodeMetrics> remaining;
     for (const auto& node : candidates) {
-        if (std::find(selected.begin(), selected.end(), node.peerId) == selected.end()) {
+        if (selectedIds.find(node.peerId) == selectedIds.end()) {
             remaining.push_back(node);
         }
     }
@@ -1155,10 +1158,12 @@ std::vector<std::string> selectDiverseNodes(
         
         // Prefer regions with fewer nodes
         size_t currentCount = regionCounts[node.region];
-        size_t maxPerRegion = (count / seenRegions.size()) + 1;
+        size_t regionBucketCount = std::max<size_t>(1, seenRegions.size());
+        size_t maxPerRegion = (count / regionBucketCount) + 1;
         
         if (currentCount < maxPerRegion) {
             selected.push_back(node.peerId);
+            selectedIds.insert(node.peerId);
             regionCounts[node.region]++;
         }
     }
@@ -1167,8 +1172,9 @@ std::vector<std::string> selectDiverseNodes(
     for (const auto& node : remaining) {
         if (selected.size() >= count) break;
         
-        if (std::find(selected.begin(), selected.end(), node.peerId) == selected.end()) {
+        if (selectedIds.find(node.peerId) == selectedIds.end()) {
             selected.push_back(node.peerId);
+            selectedIds.insert(node.peerId);
         }
     }
     
