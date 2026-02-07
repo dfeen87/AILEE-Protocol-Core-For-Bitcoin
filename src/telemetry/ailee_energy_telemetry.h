@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <algorithm>
 #include <openssl/sha.h>
 
 namespace ailee {
@@ -149,4 +150,3 @@ public:
 } // namespace ailee
 
 #endif // AILEE_ENERGY_TELEMETRY_H
-
