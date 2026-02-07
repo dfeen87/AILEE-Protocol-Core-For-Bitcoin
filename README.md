@@ -7,7 +7,7 @@
 
 ---
 
-## ⚠️ Project Status (Read First)
+## ⚠️ Project Status
 
 **AILEE-Core is an actively developed, research-driven Bitcoin Layer-2 implementation.**
 
