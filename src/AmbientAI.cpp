@@ -109,12 +109,9 @@ std::string to_string(const TelemetrySample& s) {
 
 std::string computeVerificationHash(const TelemetrySample& sample) {
     ailee::zk::ZKEngine zkEngine;
-    const auto timestampMs = static_cast<uint64_t>(
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            sample.timestamp.time_since_epoch()).count());
-    const std::string inputHash = sha256Hex(std::to_string(sample.timestamp.time_since_epoch().count()) +
-                                            std::to_string(sample.energy.inputPowerW));
-    auto proof = zkEngine.generateProofWithTimestamp(sample.node.pubkey, inputHash, timestampMs);
+    auto proof = zkEngine.generateProof(sample.node.pubkey,
+                                        sha256Hex(std::to_string(sample.timestamp.time_since_epoch().count()) +
+                                                  std::to_string(sample.energy.inputPowerW)));
     return proof.proofData;
 }
 
