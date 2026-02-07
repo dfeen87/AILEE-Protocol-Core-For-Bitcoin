@@ -233,7 +233,6 @@ private:
 
 class MeshCoordinator {
 public:
-    template<typename TaskFn>
     explicit MeshCoordinator(std::string clusterId)
         : clusterId_(std::move(clusterId)) {}
 
