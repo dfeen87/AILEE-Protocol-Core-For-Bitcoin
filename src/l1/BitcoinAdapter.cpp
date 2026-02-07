@@ -25,6 +25,9 @@
 #include <iomanip>
 #include <iostream>
 #include "zk_proofs.h"
+#include "AILEEEnergyAdapter.h"
+#include "AILEEMempoolAdapter.h"
+#include "AILEENetworkAdapter.h"
 
 // Forward declarations for AILEE adapters
 class AILEEMempoolAdapter;
