@@ -13,8 +13,6 @@
 
 namespace ailee::zk {
 
-namespace {
-
 std::string sha256Hex(const std::string& input) {
     unsigned char hash[SHA256_DIGEST_LENGTH];
     SHA256(reinterpret_cast<const unsigned char*>(input.data()), input.size(), hash);
@@ -27,8 +25,6 @@ std::string sha256Hex(const std::string& input) {
     }
     return out;
 }
-
-} // namespace
 
 // -----------------------------
 // Utility: get current timestamp

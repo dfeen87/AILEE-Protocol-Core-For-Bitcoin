@@ -21,17 +21,20 @@
 
 ## Overview
 
-AILEE implements a **trustless two-way peg** between Bitcoin Layer-1 (mainnet) and AILEE Layer-2 (sidechain), enabling:
+AILEE implements a two-way peg mechanism between Bitcoin Layer-1 (mainnet) and
+AILEE Layer-2 (sidechain), enabling:
 
-- **Seamless asset transfers** between layers
-- **6,500x throughput increase** (7 TPS → 46,000 TPS)
-- **No consensus changes** to Bitcoin protocol
-- **Cryptographic security guarantees** via SPV proofs
-- **Byzantine fault tolerance** through federated multi-sig
+- Asset transfers between layers through federated multi-sig
+- Off-chain execution with deterministic commitments
+- No consensus changes to the Bitcoin protocol
+- SPV-based verification for peg-in proofs
+- Recovery workflows that can reference Bitcoin-anchored commitments
 
 ### Why Layer-2?
 
-Bitcoin's base layer prioritizes **security and decentralization** over speed. AILEE Layer-2 provides:
+Bitcoin's base layer prioritizes **security and decentralization** over execution speed.
+AILEE Layer-2 provides off-chain execution and deterministic commitments while preserving
+Bitcoin's consensus rules.
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -44,15 +47,33 @@ Bitcoin's base layer prioritizes **security and decentralization** over speed. A
                     │ Two-Way Peg Bridge
                     │
 ┌───────────────────▼──────────────────────────────────────┐
-│  AILEE L2: High Performance & Smart Features             │
-│  • AI-optimized transaction ordering                     │
-│  • 46,000+ TPS throughput                               │
-│  • Sub-second finality                                   │
-│  • Advanced smart contracts                              │
+│  AILEE L2: Off-Chain Execution & Commitments             │
+│  • Deterministic L2 state commitments                    │
+│  • Orchestration and telemetry execution                 │
+│  • Recovery hooks tied to Bitcoin anchoring              │
+│  • L2 execution without L1 consensus changes             │
 └──────────────────────────────────────────────────────────┘
 ```
 
-**Key Principle:** Layer-1 provides **final settlement**, Layer-2 provides **speed and features**.
+**Key Principle:** Layer-1 provides **final settlement**; Layer-2 provides off-chain execution
+with deterministic commitments.
+
+### Canonical L2 State Boundary
+
+The canonical L2 state boundary is limited to:
+
+- **Ledger state:** balances, peg-in/out accounting, and validator-facing transitions.
+- **Orchestration state:** task scheduling assignments, reputation/latency tracking, and
+  orchestration metrics produced by the scheduling engine.
+- **Telemetry commitments:** hashes or proofs derived from telemetry samples and ZK proof outputs.
+
+### L1 Anchoring Boundary
+
+Bitcoin anchoring is limited to deterministic commitments that can be verified externally:
+
+- **Bitcoin adapter commitments:** anchor hashes derived from
+  `(L2 state root || timestamp || recovery metadata)` with no broadcast side effects.
+- **Recovery hooks:** recovery claims may reference anchor hashes for auditability.
 
 ---
 
@@ -130,8 +151,8 @@ Bitcoin's base layer prioritizes **security and decentralization** over speed. A
 |-------|-----------------|-------------|-------|
 | **Bitcoin L1** | Final settlement, immutability | Trustless (PoW) | ~10 min/block |
 | **Bridge** | Asset transfer, peg security | Federated multi-sig | ~1 hour (6 conf) |
-| **AILEE L2** | High throughput, AI optimization | Validator consensus | ~1 sec/block |
-| **Applications** | User features, recovery, swaps | Smart contract logic | Instant |
+| **AILEE L2** | Off-chain execution, deterministic commitments | Validator consensus | L2-defined |
+| **Applications** | User features, recovery, swaps | Smart contract logic | L2-defined |
 
 ---
 

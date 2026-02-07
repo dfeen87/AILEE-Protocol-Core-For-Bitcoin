@@ -11,14 +11,19 @@
  */
 
 #pragma once
+#include <optional>
 #include <string>
 #include <vector>
 
 namespace ailee::zk {
 
+// Shared SHA-256 utility for deterministic commitments.
+std::string sha256Hex(const std::string& input);
+
 struct Proof {
     std::string proofData;    // Serialized zk-proof
     std::string publicInput;  // Hash of computation or telemetry
+    std::optional<std::string> anchorCommitmentHash; // Optional L2 anchor hash for verification
     bool verified = false;
     uint64_t timestampMs = 0;
 };

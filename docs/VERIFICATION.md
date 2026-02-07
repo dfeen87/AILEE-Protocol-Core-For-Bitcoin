@@ -45,23 +45,46 @@ Any optimization that violates these constraints is **out of scope by definition
 
 ---
 
-## 3. Measurable Metrics
+## 3. Layer-2 Boundary & Anchoring
+
+This repository treats AILEE-Core as a Bitcoin-adjacent Layer-2 with **off-chain execution**
+and **deterministic commitments**. The canonical boundaries are:
+
+### 3.1 Canonical L2 State
+- **Ledger state:** balances, peg-in/out accounting, and validator-facing state transitions
+  produced by L2 execution.
+- **Orchestration state:** task assignments, scheduler outputs, and reputation/latency maps
+  used by the orchestration engine.
+- **Telemetry commitments:** hashes/proofs derived from telemetry samples and ZK proof outputs.
+
+### 3.2 L1 Anchoring Boundary
+- **Bitcoin adapter commitments:** deterministic anchor hashes produced from
+  `(L2 state root || timestamp || recovery metadata)` and exposed as verifiable payloads.
+- **Recovery hooks:** recovery claims and dispute artifacts may reference the anchor hash,
+  but do not broadcast on-chain transactions from within the L2 runtime.
+
+These boundaries define what is considered verifiable L2 state and what is only
+anchored to Bitcoin via deterministic commitments.
+
+---
+
+## 4. Measurable Metrics
 
 AILEE-CORE-BITCOIN evaluates system behavior using measurable and falsifiable metrics:
 
-### 3.1 Throughput Modeling
+### 4.1 Throughput Modeling
 - Transactions per second (TPS) as a function of:
   - Network latency distribution
   - Mempool congestion
   - Transaction batching strategies
   - Geographic node distribution
 
-### 3.2 Latency Behavior
+### 4.2 Latency Behavior
 - End-to-end transaction confirmation latency
 - Block propagation delays
 - Queueing effects under burst load
 
-### 3.3 Energy Efficiency (AILEE η)
+### 4.3 Energy Efficiency (AILEE η)
 - Energy cost per confirmed transaction
 - Load-adjusted efficiency under variable demand
 - Comparative analysis across routing and batching strategies
@@ -70,7 +93,7 @@ All metrics are expressed as **relative improvements or bounded efficiencies**, 
 
 ---
 
-## 4. Simulation vs. Real-World Deployment
+## 5. Simulation vs. Real-World Deployment
 
 The framework distinguishes clearly between levels of maturity:
 
@@ -97,7 +120,7 @@ Claims never cross these boundaries without explicit labeling.
 
 ---
 
-## 5. Failure Modes & Limitations
+## 6. Failure Modes & Limitations
 
 AILEE-CORE-BITCOIN provides **no benefit** under certain conditions, including but not limited to:
 
@@ -111,7 +134,7 @@ Optimization gains degrade gracefully and do not introduce failure amplification
 
 ---
 
-## 6. Falsifiability Conditions
+## 7. Falsifiability Conditions
 
 The framework is considered falsified if:
 
@@ -124,7 +147,7 @@ Each claim is intentionally framed to allow independent challenge.
 
 ---
 
-## 7. Reproducibility & Independent Evaluation
+## 8. Reproducibility & Independent Evaluation
 
 To reproduce or challenge AILEE-CORE-BITCOIN claims, an evaluator requires:
 
@@ -137,7 +160,7 @@ No proprietary data or privileged network access is assumed.
 
 ---
 
-## 8. Design Philosophy
+## 9. Design Philosophy
 
 AILEE-CORE-BITCOIN prioritizes:
 - Constraint-respecting optimization
@@ -149,7 +172,7 @@ This repository is intended as a **reference framework**, not a mandate.
 
 ---
 
-## 9. Non-Goals
+## 10. Non-Goals
 
 This project explicitly does not:
 - modify Bitcoin consensus rules
@@ -163,7 +186,7 @@ observation, and optimization within existing constraints.
 
 ---
 
-## 10. Status
+## 11. Status
 
 This document reflects the current state of the framework and will evolve only when:
 - New measurable claims are introduced
