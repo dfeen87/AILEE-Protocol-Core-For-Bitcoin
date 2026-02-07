@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+title: "AILEE-Core: Bitcoin-Anchored Layer-2 Orchestration and Verification Framework"
+message: "If you use or build upon this work, please cite it as below."
+type: software
+authors:
+  - family-names: Feeney
+    given-names: Don Michael
+repository-code: https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin
+license: MIT
+abstract: >
+  AILEE-Core is a Bitcoin-anchored Layer-2 orchestration and execution framework
+  implementing deterministic state verification, federated security models,
+  anchor-bound exits, and offline third-party verification tooling. The project
+  explores explicit trust, recovery-first design, and conservative Layer-2
+  architectures aligned with Bitcoin’s consensus model.
+keywords:
+  - Bitcoin
+  - Layer-2
+  - Sidechain
+  - Federated Security
+  - Deterministic Verification
+  - Blockchain Infrastructure
