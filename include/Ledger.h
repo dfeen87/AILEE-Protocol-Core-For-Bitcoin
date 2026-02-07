@@ -9,6 +9,8 @@
 #include <vector>
 #include <stdexcept>
 
+#include "L2State.h"
+
 namespace ailee::econ {
 
 // Custom exception types for better error handling
@@ -95,6 +97,8 @@ public:
     // Atomic transfer operation
     virtual bool transfer(const std::string& fromPeerId, const std::string& toPeerId, 
                          std::uint64_t amount) = 0;
+
+    virtual ailee::l2::LedgerSnapshot snapshot() const = 0;
     
     // Observability
     virtual void registerEventCallback(LedgerEventCallback callback) = 0;
@@ -129,6 +133,8 @@ public:
     // Atomic transfer
     bool transfer(const std::string& fromPeerId, const std::string& toPeerId, 
                  std::uint64_t amount) override;
+
+    ailee::l2::LedgerSnapshot snapshot() const override;
     
     // Observability
     void registerEventCallback(LedgerEventCallback callback) override;

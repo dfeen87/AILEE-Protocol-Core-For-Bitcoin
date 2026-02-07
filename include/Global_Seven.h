@@ -129,6 +129,14 @@ struct AnchorCommitment {
     std::string recoveryMetadata;
     std::string payload;
     std::string hash;
+
+    struct AnchorPayload {
+        std::vector<uint8_t> scriptBytes;
+        std::string description;
+    };
+
+    AnchorPayload buildOpReturnPayload() const;
+    AnchorPayload buildTaprootCommitment() const;
 };
 
 struct BlockHeader {

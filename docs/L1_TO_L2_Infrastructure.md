@@ -843,7 +843,7 @@ Use circuit breaker logs to audit unusual activity.
 
 Notes
 
-All peg-in and peg-out operations are cryptographically trustless; the federation only coordinates multisig signing.
+Peg-in and peg-out operations are federated with multisig security; exits are not trustless and require signer approval.
 
 Collateralization must remain ≥95% for safe operation; <90% triggers emergency protocols.
 

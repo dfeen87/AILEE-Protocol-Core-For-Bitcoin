@@ -51,17 +51,31 @@ This repository treats AILEE-Core as a Bitcoin-adjacent Layer-2 with **off-chain
 and **deterministic commitments**. The canonical boundaries are:
 
 ### 3.1 Canonical L2 State
-- **Ledger state:** balances, peg-in/out accounting, and validator-facing state transitions
-  produced by L2 execution.
-- **Orchestration state:** task assignments, scheduler outputs, and reputation/latency maps
-  used by the orchestration engine.
-- **Telemetry commitments:** hashes/proofs derived from telemetry samples and ZK proof outputs.
+The canonical L2 state is summarized as a deterministic **L2StateRoot** computed from:
+- **Ledger balances:** sorted account balances and escrows from the L2 ledger.
+- **Pending bridge state:** peg-in and peg-out records (including anchor references).
+- **Orchestration task state:** queued tasks with stable identifiers and payload hashes.
+
+The L2StateRoot is computed by canonicalizing the above data in a stable order and
+hashing the result. This ensures reproducibility across nodes given identical inputs.
 
 ### 3.2 L1 Anchoring Boundary
 - **Bitcoin adapter commitments:** deterministic anchor hashes produced from
-  `(L2 state root || timestamp || recovery metadata)` and exposed as verifiable payloads.
+  `(L2StateRoot || timestamp || recovery metadata)` and exposed as verifiable payloads.
+  Payloads are encoded as either:
+  - an **OP_RETURN** payload (≤ 80 bytes), or
+  - a **Taproot commitment script fragment**.
 - **Recovery hooks:** recovery claims and dispute artifacts may reference the anchor hash,
   but do not broadcast on-chain transactions from within the L2 runtime.
+
+Anchors are purely commitment artifacts: they bind L2 state to Bitcoin-friendly script
+payloads without asserting on-chain finality or fraud/validity proofs.
+
+### 3.3 Anchor-Bound Exit Authorization
+Peg-out requests are required to reference an **AnchorCommitmentHash**. The bridge
+enforces that the referenced anchor matches the L2StateRoot that authorizes the exit.
+Federation signers still approve peg-outs, but the anchor check is enforced prior to
+signing and completion.
 
 These boundaries define what is considered verifiable L2 state and what is only
 anchored to Bitcoin via deterministic commitments.
@@ -158,6 +172,16 @@ To reproduce or challenge AILEE-CORE-BITCOIN claims, an evaluator requires:
 
 No proprietary data or privileged network access is assumed.
 
+Independent verification is performed locally using persisted L2 state snapshots.
+The verification flow is:
+1. Load a snapshot from disk.
+2. Recompute the L2StateRoot from ledger, bridge, and orchestration state.
+3. Verify the anchor commitment hash against the recomputed root.
+4. Verify that all peg-outs reference the anchor commitment that matches the root.
+
+These checks are deterministic and require **no Bitcoin RPC access**.
+Use `ailee_l2_verify --snapshot <path>` for a local, offline verification pass.
+
 ---
 
 ## 9. Design Philosophy
@@ -183,6 +207,8 @@ This project explicitly does not:
 
 AILEE-Core-Bitcoin focuses on systems-level modeling,
 observation, and optimization within existing constraints.
+
+It does **not** claim trustless exits; peg-out approvals remain federated.
 
 ---
 

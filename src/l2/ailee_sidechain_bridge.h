@@ -29,6 +29,10 @@
 #include <cmath>
 #include <chrono>
 #include <algorithm>
+#include <cctype>
+#include "Global_Seven.h"
+#include "L2State.h"
+#include "zk_proofs.h"
 #include <openssl/sha.h>
 #include <openssl/ripemd.h>
 
@@ -392,6 +396,7 @@ public:
         uint64_t aileeBurnTxHeight;
         uint64_t aileeConfirmations;
         std::string btcReleaseTxId;
+        std::string anchorCommitmentHash;
         uint64_t initiatedTime;
         uint64_t completedTime;
         PegStatus status;
@@ -401,7 +406,8 @@ public:
     PegOutTransaction(
         const std::string& aileeSource,
         const std::string& btcDest,
-        uint64_t amount
+        uint64_t amount,
+        const std::string& anchorCommitmentHash
     ) {
         data_.pegId = generatePegId(aileeSource, amount);
         data_.aileeSourceAddress = aileeSource;
@@ -413,6 +419,7 @@ public:
         data_.initiatedTime = getCurrentTimestamp();
         data_.completedTime = 0;
         data_.status = PegStatus::BURN_INITIATED;
+        data_.anchorCommitmentHash = anchorCommitmentHash;
     }
 
     bool updateConfirmations(uint64_t burnHeight, uint64_t currentHeight) {
@@ -760,10 +767,14 @@ public:
     std::string initiatePegOut(
         const std::string& aileeSource,
         const std::string& btcDest,
-        uint64_t amount
+        uint64_t amount,
+        const std::string& anchorCommitmentHash
     ) {
+        if (anchorCommitmentHash.empty()) return "";
+        if (anchorCommitments_.find(anchorCommitmentHash) == anchorCommitments_.end()) return "";
+
         auto pegout = std::make_shared<PegOutTransaction>(
-            aileeSource, btcDest, amount
+            aileeSource, btcDest, amount, anchorCommitmentHash
         );
 
         std::string pegId = pegout->getData().pegId;
@@ -790,6 +801,7 @@ public:
     ) {
         auto pegoutIt = pegouts_.find(pegId);
         if (pegoutIt == pegouts_.end()) return false;
+        if (!isPegOutAnchorAuthorized(*pegoutIt->second)) return false;
 
         auto signer = federation_->getSigner(signerId);
         if (!signer || !signer->isActive()) return false;
@@ -805,6 +817,7 @@ public:
     bool completePegOut(const std::string& pegId, const std::string& btcTxId) {
         auto it = pegouts_.find(pegId);
         if (it == pegouts_.end()) return false;
+        if (!isPegOutAnchorAuthorized(*it->second)) return false;
 
         size_t threshold = federation_->getRequiredSignatures();
         if (!it->second->hasRequiredSignatures(threshold)) return false;
@@ -914,18 +927,73 @@ public:
 
     FederationManager* getFederation() { return federation_.get(); }
 
+    bool registerAnchorCommitment(const ailee::global_seven::AnchorCommitment& anchor,
+                                  const std::string& expectedStateRoot) {
+        if (anchor.l2StateRoot != expectedStateRoot) return false;
+        auto normalize = [](std::string value) {
+            std::transform(value.begin(), value.end(), value.begin(),
+                           [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            return value;
+        };
+        if (normalize(ailee::zk::sha256Hex(anchor.payload)) != normalize(anchor.hash)) return false;
+        anchorCommitments_[anchor.hash] = anchor;
+        return true;
+    }
+
+    ailee::l2::BridgeSnapshot snapshotBridgeState() const {
+        ailee::l2::BridgeSnapshot snapshot;
+        snapshot.pegins.reserve(pegins_.size());
+        for (const auto& [pegId, pegin] : pegins_) {
+            const auto& data = pegin->getData();
+            snapshot.pegins.push_back(ailee::l2::PegInSnapshot{
+                pegId,
+                data.btcTxId,
+                data.btcVout,
+                data.btcAmount,
+                data.btcSourceAddress,
+                data.aileeDestAddress,
+                data.btcConfirmations,
+                data.initiatedTime,
+                data.completedTime,
+                static_cast<int>(data.status)
+            });
+        }
+        snapshot.pegouts.reserve(pegouts_.size());
+        for (const auto& [pegId, pegout] : pegouts_) {
+            const auto& data = pegout->getData();
+            snapshot.pegouts.push_back(ailee::l2::PegOutSnapshot{
+                pegId,
+                data.aileeSourceAddress,
+                data.btcDestAddress,
+                data.aileeBurnAmount,
+                data.btcReleaseAmount,
+                data.initiatedTime,
+                data.completedTime,
+                static_cast<int>(data.status),
+                data.anchorCommitmentHash
+            });
+        }
+        return snapshot;
+    }
+
 private:
     std::unique_ptr<FederationManager> federation_;
     std::unique_ptr<BridgeStatistics> statistics_;
     std::map<std::string, std::shared_ptr<PegInTransaction>> pegins_;
     std::map<std::string, std::shared_ptr<PegOutTransaction>> pegouts_;
     std::map<std::string, std::shared_ptr<AtomicSwap>> atomicSwaps_;
+    std::map<std::string, ailee::global_seven::AnchorCommitment> anchorCommitments_;
     bool emergencyMode_;
 
     static uint64_t getCurrentTimestamp() {
         return static_cast<uint64_t>(
             std::chrono::system_clock::now().time_since_epoch().count() / 1000000000
         );
+    }
+
+    bool isPegOutAnchorAuthorized(const PegOutTransaction& pegout) const {
+        const auto& anchorHash = pegout.getData().anchorCommitmentHash;
+        return !anchorHash.empty() && anchorCommitments_.find(anchorHash) != anchorCommitments_.end();
     }
 };
 

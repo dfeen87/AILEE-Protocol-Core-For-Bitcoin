@@ -655,6 +655,24 @@ public:
         return criticalQueue_.size() + highQueue_.size() + 
                normalQueue_.size() + lowQueue_.size();
     }
+
+    std::vector<TaskPayload> snapshot() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        std::vector<TaskPayload> tasks;
+        tasks.reserve(criticalQueue_.size() + highQueue_.size() +
+                      normalQueue_.size() + lowQueue_.size());
+        auto collect = [&tasks](std::queue<TaskPayload> queueCopy) {
+            while (!queueCopy.empty()) {
+                tasks.push_back(queueCopy.front());
+                queueCopy.pop();
+            }
+        };
+        collect(criticalQueue_);
+        collect(highQueue_);
+        collect(normalQueue_);
+        collect(lowQueue_);
+        return tasks;
+    }
     
     void shutdown() {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -848,6 +866,7 @@ public:
     IReputationLedger& getReputationLedger() { return repLedger_; }
     ILatencyMap& getLatencyMap() { return latencyMap_; }
     IOrchestrator& getOrchestrator() { return orchestrator_; }
+    std::vector<TaskPayload> getQueuedTasks() const { return taskQueue_.snapshot(); }
     
 private:
     Config config_;
