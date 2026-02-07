@@ -65,6 +65,23 @@ If you are looking for:
 
 ---
 
+## ✅ What “Production-Grade Layer-2” Would Require
+
+To materially move toward a true Layer‑2, the project would need to deliver
+capabilities that go beyond the current research sandbox scope:
+
+* **Working consensus and settlement mechanics** (verifiable, deterministic, and safe under adversarial conditions)
+* **Production‑grade cryptography** (audited implementations, secure key management, and threat‑modeled protocols)
+* **Real bridging/settlement logic** (finality, fraud/validity handling, and Bitcoin‑anchored safety proofs)
+* **End‑to‑end test coverage** (integration, regression, and fault‑injection across the full stack)
+* **Independent security audits** (formal verification or third‑party reviews for core cryptography and protocol logic)
+* **Operational tooling** (monitoring, rollout/rollback procedures, observability, and incident response playbooks)
+
+These are explicit requirements for production readiness and are not yet fully
+implemented or validated in this repository.
+
+---
+
 ## 📍 Start Here (Conceptual)
 
 To understand intent and boundaries:
