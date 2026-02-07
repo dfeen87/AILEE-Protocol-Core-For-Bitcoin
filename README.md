@@ -18,6 +18,8 @@ AILEE-Core **does not modify Bitcoin consensus**, does **not claim trustless exi
 
 All trust assumptions are explicit.
 
+**Cloning AILEE-Core means inheriting the obligation to operate a deterministic, auditable, federated Bitcoin Layer-2 — including custody risk, verification correctness, explicit trust disclosure, and real incident accountability.**
+
 ---
 
 ## What AILEE-Core Is
