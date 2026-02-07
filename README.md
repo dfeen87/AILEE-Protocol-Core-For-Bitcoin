@@ -20,6 +20,8 @@ All trust assumptions are explicit.
 
 **Cloning AILEE-Core means inheriting the obligation to operate a deterministic, auditable, federated Bitcoin Layer-2 — including custody risk, verification correctness, explicit trust disclosure, and real incident accountability.**
 
+Yes — cloning AILEE-Core gives you legitimate Bitcoin Layer-2 infrastructure, and running it means accepting real operational, security, and custodial responsibility.
+
 ---
 
 ## What AILEE-Core Is
