@@ -21,12 +21,17 @@
 #include <atomic>
 #include <cmath>
 
+namespace ailee::l1 {
 class AILEEMempoolAdapter;
 class AILEENetworkAdapter;
 class AILEEEnergyAdapter;
+} // namespace ailee::l1
 
 namespace ailee {
 namespace global_seven {
+using ailee::l1::AILEEEnergyAdapter;
+using ailee::l1::AILEEMempoolAdapter;
+using ailee::l1::AILEENetworkAdapter;
 
 struct ETHState;
 struct BTCState;
