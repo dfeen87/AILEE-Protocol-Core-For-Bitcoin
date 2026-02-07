@@ -33,6 +33,8 @@ It provides:
 - Recovery-first protocol design
 - Federated security (not trustless rollup security)
 
+AILEE-Core supports offline third-party verification of Layer-2 state via deterministic snapshots, Bitcoin-valid anchor payload construction, and anchor-bound peg-out authorization under an explicit federated trust model.
+
 Bitcoin remains the immutable settlement layer.  
 AILEE-Core lives *around* it — never above it.
 
