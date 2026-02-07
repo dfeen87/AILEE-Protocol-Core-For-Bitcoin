@@ -35,6 +35,14 @@ public:
     Proof generateProof(const std::string& taskId, const std::string& computationHash);
 
     /**
+     * Generate a deterministic zk-proof using a supplied timestamp.
+     * This supports reproducible proof validation when the timestamp is known.
+     */
+    Proof generateProofWithTimestamp(const std::string& taskId,
+                                     const std::string& computationHash,
+                                     uint64_t timestampMs);
+
+    /**
      * Verify a zk-proof
      * Returns true if the proof is valid
      */

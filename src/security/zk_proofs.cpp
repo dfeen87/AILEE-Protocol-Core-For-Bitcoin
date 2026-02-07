@@ -59,6 +59,21 @@ Proof ZKEngine::generateProof(const std::string& taskId, const std::string& comp
     return proof;
 }
 
+Proof ZKEngine::generateProofWithTimestamp(const std::string& taskId,
+                                           const std::string& computationHash,
+                                           uint64_t timestampMs) {
+    Proof proof;
+    proof.publicInput = taskId + ":" + computationHash;
+    proof.timestampMs = timestampMs;
+    proof.proofData = sha256Hex(proof.publicInput + ":" + std::to_string(proof.timestampMs));
+    proof.verified = true;
+
+    std::cout << "[ZK] Generated proof for task " << taskId
+              << " @ " << proof.timestampMs << ": " << proof.proofData << std::endl;
+
+    return proof;
+}
+
 // -----------------------------
 // Verify Proof (stub)
 // -----------------------------
