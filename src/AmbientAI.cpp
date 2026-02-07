@@ -10,6 +10,7 @@
 #include <cmath>
 #include <algorithm>
 #include <chrono>
+#include <optional>
 #include <stdexcept>
 #include <iostream>
 #include <openssl/sha.h>
@@ -123,6 +124,7 @@ bool verifyComputationProof(const TelemetrySample& sample) {
                                             std::to_string(sample.energy.inputPowerW));
     ailee::zk::Proof proof{sample.cryptographicVerificationHash,
                            sample.node.pubkey + ":" + inputHash,
+                           std::nullopt,
                            false,
                            static_cast<uint64_t>(
                                std::chrono::duration_cast<std::chrono::milliseconds>(

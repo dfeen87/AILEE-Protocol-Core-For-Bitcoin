@@ -781,10 +781,9 @@ private:
     std::map<std::string, std::shared_ptr<RecoveryClaim>> claims_;
     std::unique_ptr<ValidatorNetwork> validatorNetwork_;
     std::unique_ptr<SupplyDynamicsModel> supplyModel_;
-    static std::mutex incidentMutex_;
+    inline static std::mutex incidentMutex_;
 };
 
-std::mutex RecoveryProtocol::incidentMutex_;
 
 } // namespace ailee
 

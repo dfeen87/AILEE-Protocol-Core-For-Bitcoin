@@ -28,6 +28,11 @@ static std::mutex g_registryMutex;
 
 // ---- AdapterRegistry methods ----
 
+AdapterRegistry& AdapterRegistry::instance() {
+    static AdapterRegistry reg;
+    return reg;
+}
+
 void AdapterRegistry::registerAdapter(
     Chain chain,
     std::unique_ptr<IChainAdapter> adapter
@@ -57,15 +62,15 @@ void register_default_adapters() {
 
         // Attach AILEE observational adapters
         btc->attachMempoolAdapter(
-            std::make_unique<AILEEMempoolAdapter>()
+            std::make_unique<AILEEMempoolAdapter>("")
         );
 
         btc->attachNetworkAdapter(
-            std::make_unique<AILEENetworkAdapter>()
+            std::make_unique<AILEENetworkAdapter>(std::vector<std::string>{})
         );
 
         btc->attachEnergyAdapter(
-            std::make_unique<AILEEEnergyAdapter>()
+            std::make_unique<AILEEEnergyAdapter>(0.0)
         );
 
         AdapterRegistry::instance().registerAdapter(

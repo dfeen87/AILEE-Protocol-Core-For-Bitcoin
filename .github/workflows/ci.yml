@@ -23,6 +23,7 @@ jobs:
             libcurl4-openssl-dev \
             libzmq3-dev \
             libjsoncpp-dev \
+            libnlohmann-json-dev \
             libyaml-cpp-dev
 
       - name: Configure
