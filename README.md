@@ -1,5 +1,5 @@
 # 🌐 AILEE-Core  
-## Bitcoin Layer-2 Orchestration, Verification, and Recovery Framework
+## Ambient AI + Bitcoin Layer-2 Orchestration, Verification, and Recovery Framework
 
 ### *(Research-Driven • Buildable • Explicit Trust Model)*
 
@@ -28,9 +28,12 @@ Yes — cloning AILEE-Core gives you a real Bitcoin Layer-2 implementation, with
 
 **AILEE-Core is a Bitcoin-anchored Layer-2 orchestration and verification framework** designed to operate *alongside* Bitcoin without altering its consensus rules.
 
+It treats **Ambient AI orchestration** as a first-class subsystem: telemetry-aware nodes coordinate distributed AI workloads, produce deterministic verification artifacts, and feed those commitments into the L2 state boundary.
+
 It provides:
 
 - Off-chain execution and coordination
+- Ambient AI telemetry, verification, and orchestration primitives
 - A canonical Layer-2 state boundary
 - Deterministic Bitcoin anchoring primitives
 - Explicit peg-in / peg-out lifecycle modeling
