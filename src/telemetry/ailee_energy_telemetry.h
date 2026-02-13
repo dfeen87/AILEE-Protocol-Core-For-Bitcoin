@@ -140,7 +140,7 @@ public:
 
         char hex[SHA256_DIGEST_LENGTH * 2 + 1];
         for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
-            sprintf(hex + (i * 2), "%02x", hash[i]);
+            snprintf(hex + (i * 2), 3, "%02x", hash[i]);
         hex[SHA256_DIGEST_LENGTH * 2] = '\0';
 
         return std::string(hex);

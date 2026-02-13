@@ -368,8 +368,9 @@ private:
                combined.size(), hash);
         
         char hexStr[65];
+        hexStr[64] = '\0';  // Ensure null termination
         for (size_t i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
-            sprintf(hexStr + (i * 2), "%02x", hash[i]);
+            snprintf(hexStr + (i * 2), 3, "%02x", hash[i]);
         }
         return std::string(hexStr, 64);
     }
@@ -480,8 +481,9 @@ private:
                combined.size(), hash);
         
         char hexStr[65];
+        hexStr[64] = '\0';  // Ensure null termination
         for (size_t i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
-            sprintf(hexStr + (i * 2), "%02x", hash[i]);
+            snprintf(hexStr + (i * 2), 3, "%02x", hash[i]);
         }
         return std::string(hexStr, 64);
     }
@@ -541,8 +543,9 @@ public:
                secret.size(), hash);
         
         char hexStr[65];
+        hexStr[64] = '\0';  // Ensure null termination
         for (size_t i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
-            sprintf(hexStr + (i * 2), "%02x", hash[i]);
+            snprintf(hexStr + (i * 2), 3, "%02x", hash[i]);
         }
         std::string secretHash(hexStr, 64);
         
@@ -595,8 +598,9 @@ private:
                combined.size(), hash);
         
         char hexStr[65];
+        hexStr[64] = '\0';  // Ensure null termination
         for (size_t i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
-            sprintf(hexStr + (i * 2), "%02x", hash[i]);
+            snprintf(hexStr + (i * 2), 3, "%02x", hash[i]);
         }
         return std::string(hexStr, 64);
     }
