@@ -30,27 +30,36 @@ static double corr_avg_metric(const MetricContext& ctx, const std::vector<std::s
   if (N < 2) return 0.0;
   double sum = 0.0;
   size_t pairs = 0;
-  for (size_t i=0;i<N;++i){
-    auto xi = ctx.signals.at(names[i])->window;
-    for (size_t j=0;j<N;++j){
-      if (i==j) continue;
-      auto xj = ctx.signals.at(names[j])->window;
-      sum += pearson(xi,xj);
-      ++pairs;
+  try {
+    for (size_t i=0;i<N;++i){
+      auto xi = ctx.signals.at(names[i])->window;
+      for (size_t j=0;j<N;++j){
+        if (i==j) continue;
+        auto xj = ctx.signals.at(names[j])->window;
+        sum += pearson(xi,xj);
+        ++pairs;
+      }
     }
+  } catch (const std::exception& ex) {
+    return 0.0; // Signal not found
   }
+  if (pairs == 0) return 0.0;
   return sum / static_cast<double>(pairs);
 }
 
 // Example EWMA metric
 static double ewma_metric(const MetricContext& ctx, const std::vector<std::string>& names) {
   if (names.size() != 1) return 0.0;
-  const auto& w = ctx.signals.at(names[0])->window;
-  if (w.empty()) return 0.0;
-  double alpha = 0.2; // tune or from config
-  double s = w.front();
-  for (size_t i=1;i<w.size();++i) s = alpha*w[i] + (1.0-alpha)*s;
-  return s;
+  try {
+    const auto& w = ctx.signals.at(names[0])->window;
+    if (w.empty()) return 0.0;
+    double alpha = 0.2; // tune or from config
+    double s = w.front();
+    for (size_t i=1;i<w.size();++i) s = alpha*w[i] + (1.0-alpha)*s;
+    return s;
+  } catch (const std::exception& ex) {
+    return 0.0; // Signal not found
+  }
 }
 
 // Register at startup

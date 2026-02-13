@@ -369,7 +369,7 @@ private:
         
         char hexStr[65];
         for (size_t i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
-            sprintf(hexStr + (i * 2), "%02x", hash[i]);
+            snprintf(hexStr + (i * 2), 3, "%02x", hash[i]);
         }
         return std::string(hexStr, 64);
     }
@@ -481,7 +481,7 @@ private:
         
         char hexStr[65];
         for (size_t i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
-            sprintf(hexStr + (i * 2), "%02x", hash[i]);
+            snprintf(hexStr + (i * 2), 3, "%02x", hash[i]);
         }
         return std::string(hexStr, 64);
     }
@@ -542,7 +542,7 @@ public:
         
         char hexStr[65];
         for (size_t i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
-            sprintf(hexStr + (i * 2), "%02x", hash[i]);
+            snprintf(hexStr + (i * 2), 3, "%02x", hash[i]);
         }
         std::string secretHash(hexStr, 64);
         
@@ -596,7 +596,7 @@ private:
         
         char hexStr[65];
         for (size_t i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
-            sprintf(hexStr + (i * 2), "%02x", hash[i]);
+            snprintf(hexStr + (i * 2), 3, "%02x", hash[i]);
         }
         return std::string(hexStr, 64);
     }

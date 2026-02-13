@@ -26,6 +26,7 @@ std::string quoted(const std::string& value) {
 }
 
 bool readQuoted(std::istringstream& iss, std::string* out) {
+    if (!out) return false;  // Validate output pointer
     std::string value;
     if (!(iss >> std::quoted(value))) {
         return false;

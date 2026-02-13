@@ -17,13 +17,17 @@ void PolicyRunner::step(const std::unordered_map<std::string,double>& vars) {
 
     // Execute actions with idempotency guards
     for (const auto& a : p.actions) {
-      if (a.type == "adjust_propagation_delay") {
-        int delta = std::stoi(a.args.at("delta_ms"));
-        fns_.adjust_propagation_delay(delta);
-      } else if (a.type == "switch_route") {
-        fns_.switch_route(a.args.at("route"));
-      } else {
-        log_("policy '"+p.name+"' unknown action: "+a.type);
+      try {
+        if (a.type == "adjust_propagation_delay") {
+          int delta = std::stoi(a.args.at("delta_ms"));
+          fns_.adjust_propagation_delay(delta);
+        } else if (a.type == "switch_route") {
+          fns_.switch_route(a.args.at("route"));
+        } else {
+          log_("policy '"+p.name+"' unknown action: "+a.type);
+        }
+      } catch (const std::exception& ex) {
+        log_("policy '"+p.name+"' error executing action '"+a.type+"': "+ex.what());
       }
     }
 

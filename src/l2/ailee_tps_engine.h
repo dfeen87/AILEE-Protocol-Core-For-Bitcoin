@@ -724,8 +724,14 @@ public:
         
         auto history = engine.runOptimization(metrics, cycles);
         
-        result.finalTPS = history.back().enhancedTPS;
-        result.improvementFactor = result.finalTPS / result.initialTPS;
+        // Check if history is not empty before accessing back()
+        if (!history.empty()) {
+            result.finalTPS = history.back().enhancedTPS;
+            result.improvementFactor = result.finalTPS / result.initialTPS;
+        } else {
+            result.finalTPS = result.initialTPS;
+            result.improvementFactor = 1.0;
+        }
         result.cycles = cycles;
         result.finalMAE = engine.getModelError();
         result.finalRMSE = engine.getModelRMSE();
