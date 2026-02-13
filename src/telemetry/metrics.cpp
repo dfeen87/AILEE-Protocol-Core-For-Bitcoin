@@ -40,7 +40,7 @@ static double corr_avg_metric(const MetricContext& ctx, const std::vector<std::s
         ++pairs;
       }
     }
-  } catch (const std::out_of_range&) {
+  } catch (const std::exception& ex) {
     return 0.0; // Signal not found
   }
   if (pairs == 0) return 0.0;
@@ -57,7 +57,7 @@ static double ewma_metric(const MetricContext& ctx, const std::vector<std::strin
     double s = w.front();
     for (size_t i=1;i<w.size();++i) s = alpha*w[i] + (1.0-alpha)*s;
     return s;
-  } catch (const std::out_of_range&) {
+  } catch (const std::exception& ex) {
     return 0.0; // Signal not found
   }
 }

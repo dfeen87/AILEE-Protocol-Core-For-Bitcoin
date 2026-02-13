@@ -26,10 +26,8 @@ void PolicyRunner::step(const std::unordered_map<std::string,double>& vars) {
         } else {
           log_("policy '"+p.name+"' unknown action: "+a.type);
         }
-      } catch (const std::out_of_range&) {
-        log_("policy '"+p.name+"' missing required argument for action: "+a.type);
-      } catch (const std::invalid_argument&) {
-        log_("policy '"+p.name+"' invalid argument value for action: "+a.type);
+      } catch (const std::exception& ex) {
+        log_("policy '"+p.name+"' error executing action '"+a.type+"': "+ex.what());
       }
     }
 
