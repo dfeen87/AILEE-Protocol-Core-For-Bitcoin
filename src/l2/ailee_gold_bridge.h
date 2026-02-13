@@ -426,7 +426,6 @@ private:
                combined.size(), hash.data());
         
         char hexStr[65];
-        hexStr[64] = '\0';  // Ensure null termination
         for (size_t i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
             snprintf(hexStr + (i * 2), 3, "%02x", hash[i]);
         }
@@ -566,7 +565,6 @@ private:
                combined.size(), hash.data());
         
         char hexStr[65];
-        hexStr[64] = '\0';  // Ensure null termination
         for (size_t i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
             snprintf(hexStr + (i * 2), 3, "%02x", hash[i]);
         }
