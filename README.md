@@ -432,9 +432,11 @@ AILEE-Core is **NOT**:
 - **[Quick Start](#-quick-start)**: Build and run guides
 - **[API Quick Start](API_QUICKSTART.md)**: REST API deployment
 - **[Build Guide](docs/BUILD.md)**: Detailed build instructions
+- **[Ambient AI + VCP Demo](examples/README.md)**: Working integration demonstration ⭐ NEW
 
 ### Architecture & Design
 - **[Architecture Overview](docs/ARCHITECTURE_CONCEPTUAL.md)**: System design
+- **[Ambient AI + VCP Integration](docs/AMBIENT_VCP_INTEGRATION.md)**: Complete integration guide ⭐ NEW
 - **[L1-L2 Infrastructure](docs/L1_TO_L2_Infrastructure.md)**: Bitcoin anchoring
 - **[Verification Model](docs/VERIFICATION.md)**: Security and trust
 - **[Vision Document](docs/VISION.md)**: Long-term research direction
@@ -445,9 +447,13 @@ AILEE-Core is **NOT**:
 - **[Recovery Guide](docs/RECOVERY_GUIDE.md)**: Recovery protocols
 - **[Security](docs/SECURITY_AND_POWER.md)**: Power model and safety
 
+### For Developers
+- **[New Repository Prompt](docs/NEW_REPO_PROMPT.md)**: Build a fresh implementation with AI ⭐ NEW
+- **[Examples Directory](examples/)**: Working code demonstrations
+- **[Whitepapers](docs/whitepapers/)**: Technical specifications (Ambient AI, VCP)
+
 ### Operations
 - **[Configuration](config/)**: YAML/JSON/TOML policy system
-- **[Examples](examples/)**: Demo applications
 - **[Changelog](CHANGELOG.md)**: Version history
 - **[Security Policy](SECURITY.md)**: Vulnerability reporting
 
