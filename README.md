@@ -364,6 +364,126 @@ All formats feed a shared validation pipeline for:
 
 ---
 
+## 🚀 Deploying AILEE-Core as a Public REST API
+
+AILEE-Core now includes a **production-ready REST API** built with FastAPI, designed for deployment on cloud platforms like Fly.io, Railway, and Render.
+
+### Features
+
+- **Deterministic Endpoints**: All computations are reproducible and safe
+- **Read-Only Operations**: No state mutation (except bounded internal tracking)
+- **OpenAPI Documentation**: Auto-generated API docs at `/docs`
+- **Health Checks**: Built-in monitoring endpoints
+- **Rate Limiting**: Lightweight request throttling
+- **CORS Support**: Browser-friendly configuration
+- **Optional JWT Auth**: Disabled by default for easy testing
+
+### API Endpoints
+
+- `GET /health` - Service health check
+- `GET /status` - Node metadata (version, uptime, config)
+- `POST /trust/score` - Compute trust score for input
+- `POST /trust/validate` - Validate model output with confidence
+- `GET /l2/state` - Current Layer-2 state snapshot
+- `GET /l2/anchors` - Bitcoin anchor history
+- `GET /metrics` - Node performance metrics
+
+### Building Locally
+
+```bash
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Run the API server
+uvicorn api.main:app --host 0.0.0.0 --port 8080 --reload
+
+# Access the API
+curl http://localhost:8080/health
+
+# View OpenAPI documentation
+open http://localhost:8080/docs
+```
+
+### Running with Docker
+
+```bash
+# Build the Docker image
+docker build -t ailee-core-api .
+
+# Run the container
+docker run -p 8080:8080 --env-file .env ailee-core-api
+
+# Test the API
+curl http://localhost:8080/status
+```
+
+### Deploying to Fly.io
+
+**Prerequisites**: Install the [Fly CLI](https://fly.io/docs/hands-on/install-flyctl/)
+
+```bash
+# Login to Fly.io
+fly auth login
+
+# Create a new app (first time only)
+fly apps create ailee-core-api
+
+# Set environment secrets
+fly secrets set AILEE_NODE_ID=your-node-id
+fly secrets set AILEE_JWT_SECRET=$(openssl rand -base64 32)
+
+# Deploy the application
+fly deploy
+
+# Check deployment status
+fly status
+
+# View logs
+fly logs
+
+# Scale the application
+fly scale count 2  # Run 2 instances
+fly scale vm shared-cpu-1x --memory 512  # Increase memory
+```
+
+### Configuration
+
+Copy `.env.example` to `.env` and configure:
+
+```bash
+cp .env.example .env
+```
+
+**Key Environment Variables:**
+
+- `AILEE_NODE_ID` - Unique node identifier
+- `AILEE_ENV` - Environment (production/staging/development)
+- `AILEE_LOG_LEVEL` - Logging verbosity (info/debug/warning)
+- `AILEE_JWT_SECRET` - JWT signing secret (if auth enabled)
+- `AILEE_JWT_ENABLED` - Enable JWT authentication (default: false)
+
+### Security Notes
+
+- JWT authentication is **disabled by default** for ease of deployment
+- Enable JWT in production by setting `AILEE_JWT_ENABLED=true`
+- Generate secure secrets: `python -c "import secrets; print(secrets.token_urlsafe(32))"`
+- Rate limiting is enabled by default (100 requests per 60 seconds)
+- All endpoints are read-only or bounded-write
+- No blockchain node connection required
+
+### Production Checklist
+
+- [ ] Set unique `AILEE_NODE_ID`
+- [ ] Enable and configure JWT auth for production
+- [ ] Review rate limiting settings
+- [ ] Configure CORS origins for your domain
+- [ ] Set up monitoring and alerting
+- [ ] Review logs regularly
+- [ ] Test health check endpoint
+- [ ] Verify OpenAPI documentation
+
+---
+
 ## 📄 License
 
 MIT License — free to use, modify, and study.
