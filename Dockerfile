@@ -1,7 +1,7 @@
 # Production-Ready Dockerfile for AILEE-Core REST API
 # Optimized for Fly.io, Railway, and Render deployments
 
-FROM python:3.11-slim as base
+FROM python:3.11-slim AS base
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \

@@ -4,7 +4,7 @@ Simple health check endpoint for load balancers and monitoring
 """
 
 from fastapi import APIRouter
-from datetime import datetime
+from datetime import datetime, timezone
 
 router = APIRouter()
 
@@ -23,5 +23,5 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "ailee-core-api",
-        "timestamp": datetime.utcnow().isoformat() + "Z"
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }

@@ -8,7 +8,7 @@ import logging
 import sys
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -131,7 +131,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={
             "error": "internal_server_error",
             "message": "An internal error occurred",
-            "timestamp": datetime.utcnow().isoformat() + "Z"
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
     )
 
@@ -194,7 +194,7 @@ async def root():
             "l2_anchors": "/l2/anchors",
             "metrics": "/metrics"
         },
-        "timestamp": datetime.utcnow().isoformat() + "Z"
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 

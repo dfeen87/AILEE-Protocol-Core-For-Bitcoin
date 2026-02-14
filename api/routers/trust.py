@@ -5,7 +5,7 @@ Deterministic, safe, read-only trust oracle operations
 """
 
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -135,7 +135,7 @@ async def trust_score(request: TrustScoreRequest):
             score=score,
             confidence=confidence,
             deterministic_hash=det_hash,
-            timestamp=datetime.utcnow().isoformat() + "Z"
+            timestamp=datetime.now(timezone.utc).isoformat()
         )
     except Exception as e:
         raise HTTPException(
@@ -186,7 +186,7 @@ async def validate_output(request: ValidationRequest):
             valid=valid,
             confidence=confidence,
             output_hash=output_hash,
-            timestamp=datetime.utcnow().isoformat() + "Z"
+            timestamp=datetime.now(timezone.utc).isoformat()
         )
     except Exception as e:
         raise HTTPException(

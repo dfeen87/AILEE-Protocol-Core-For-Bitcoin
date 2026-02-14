@@ -3,7 +3,7 @@ Metrics Router
 Node performance metrics and telemetry
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
@@ -71,7 +71,7 @@ def get_current_metrics() -> MetricsResponse:
         node_metrics=node_metrics,
         system_metrics=system_metrics,
         l2_metrics=l2_metrics,
-        timestamp=datetime.utcnow().isoformat() + "Z"
+        timestamp=datetime.now(timezone.utc).isoformat()
     )
 
 

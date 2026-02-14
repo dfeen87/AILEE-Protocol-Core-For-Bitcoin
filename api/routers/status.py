@@ -4,7 +4,7 @@ Node metadata, version, uptime, and configuration information
 """
 
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter
 
 from api.config import settings
@@ -56,5 +56,5 @@ async def get_status():
             "host": settings.host,
             "port": settings.port
         },
-        "timestamp": datetime.utcnow().isoformat() + "Z"
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }

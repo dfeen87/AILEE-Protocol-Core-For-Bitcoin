@@ -3,7 +3,7 @@ Layer-2 Router
 Layer-2 state snapshot and anchor history endpoints
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field
@@ -49,11 +49,11 @@ def generate_mock_state_root() -> str:
     In production, this would query the actual C++ AILEE-Core state
     """
     import hashlib
-    timestamp = datetime.utcnow().replace(microsecond=0).isoformat()
+    timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     return hashlib.sha256(f"L2STATE:{timestamp}".encode()).hexdigest()
 
 
-def generate_mock_anchors(limit: int = 10) -> List[AnchorRecord]:
+def generate_mock_anchors(limit: int = 10, offset: int = 0) -> List[AnchorRecord]:
     """
     Generate mock anchor history
     In production, this would query the actual anchor database
@@ -63,9 +63,12 @@ def generate_mock_anchors(limit: int = 10) -> List[AnchorRecord]:
     anchors = []
     current_bitcoin_height = 830000  # Mock current Bitcoin height
     
-    for i in range(limit):
+    # Generate enough anchors to satisfy limit + offset
+    total_to_generate = limit + offset
+    
+    for i in range(total_to_generate):
         height = current_bitcoin_height - (i * 144)  # One anchor per day approximately
-        timestamp = datetime.utcnow()
+        timestamp = datetime.now(timezone.utc)
         
         anchor_id = f"anchor-{height}"
         state_root = hashlib.sha256(f"STATE:{height}".encode()).hexdigest()
@@ -76,7 +79,7 @@ def generate_mock_anchors(limit: int = 10) -> List[AnchorRecord]:
             l2_state_root=state_root,
             bitcoin_height=height,
             anchor_hash=anchor_hash,
-            timestamp=timestamp.isoformat() + "Z",
+            timestamp=timestamp.isoformat(),
             tx_count=100 + (i * 10)
         ))
     
@@ -110,7 +113,7 @@ async def get_l2_state():
         block_height=12345,
         total_transactions=567890,
         last_anchor_height=830000,
-        timestamp=datetime.utcnow().isoformat() + "Z"
+        timestamp=datetime.now(timezone.utc).isoformat()
     )
     
     return L2StateResponse(
@@ -151,14 +154,17 @@ async def get_anchor_history(
     Returns:
         List of anchor records with pagination info
     """
-    # Get mock anchor history
-    all_anchors = generate_mock_anchors(limit)
+    # Get mock anchor history with proper pagination
+    all_anchors = generate_mock_anchors(limit, offset)
     
-    # Apply offset
+    # Apply offset (anchors are already generated with offset considered)
     anchors = all_anchors[offset:offset + limit] if offset < len(all_anchors) else []
+    
+    # Total count would come from database in production
+    total_count = 1000  # Mock total count
     
     return AnchorsResponse(
         anchors=anchors,
-        total_count=len(all_anchors),
+        total_count=total_count,
         latest_height=830000
     )

@@ -5,7 +5,7 @@ Safe, deterministic configuration loading with validation
 
 import os
 from typing import Optional
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -111,12 +111,12 @@ class Settings(BaseSettings):
             raise ValueError(f"env must be one of {allowed}")
         return v.lower()
     
-    @field_validator("jwt_secret")
-    def validate_jwt_secret(cls, v, info):
+    @model_validator(mode='after')
+    def validate_jwt_settings(self):
         """Validate JWT secret is set if JWT is enabled"""
-        if info.data.get("jwt_enabled") and not v:
+        if self.jwt_enabled and not self.jwt_secret:
             raise ValueError("jwt_secret must be set when jwt_enabled is True")
-        return v
+        return self
     
     class Config:
         env_prefix = "AILEE_"
