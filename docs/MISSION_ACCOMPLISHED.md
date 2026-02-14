@@ -88,35 +88,6 @@ The Ambient AI and VCP systems now have:
 - Troubleshooting guide
 - Scaling strategies
 
-#### Alternative Path: New Repository Prompt (19,000+ words)
-- Complete Rust implementation specification
-- Step-by-step build instructions
-- Technology stack recommendations
-- Production-grade architecture
-- For users who want to build fresh with modern tooling
-
-### 3. **Alternative: Elaborate Prompt for New Repo** 📝
-
-**File**: `docs/NEW_REPO_PROMPT.md`
-
-This is a **complete, production-ready prompt** you can use with any AI coding assistant to build a fresh implementation:
-
-**What it includes:**
-- System overview and architecture
-- Core component specifications (Rust)
-- Complete repository structure
-- Deliverables for 4-week timeline
-- Code examples for all components
-- Testing requirements
-- Documentation requirements
-- Success criteria
-
-**How to use it:**
-1. Copy the entire prompt from the file
-2. Paste into ChatGPT, Claude, Copilot, or Cursor
-3. The AI will generate a complete Rust implementation
-4. Expected timeline: 4 weeks to production MVP
-
 ---
 
 ## Current State: What Works Right Now
@@ -173,32 +144,6 @@ sudo apt-get install librocksdb-dev
 **Timeline**: 4-6 weeks with 2 engineers
 **Cost**: $700-1500/month infrastructure
 **Result**: Production C++ implementation on Bitcoin L2
-
-### Option B: Build Fresh Repo with Rust (Recommended for new projects)
-
-**Steps:**
-```bash
-# 1. Copy docs/NEW_REPO_PROMPT.md
-# 2. Paste into AI assistant (ChatGPT/Claude/Cursor)
-# 3. Follow AI-generated implementation
-# 4. Deploy with provided K8s manifests
-```
-
-**Timeline**: 3-4 weeks with AI assistance
-**Cost**: $700-1500/month infrastructure  
-**Result**: Modern Rust implementation with best-in-class tooling
-
-### Option C: Hybrid Approach
-
-**Keep the best of both:**
-- Use existing Bitcoin L2 integration (C++)
-- Build new Ambient AI + VCP in Rust
-- Communicate via gRPC/REST API
-- Deploy as microservices
-
-**Timeline**: 6-8 weeks
-**Cost**: $1000-2000/month initially
-**Result**: Production-grade microservices architecture
 
 ---
 
@@ -263,7 +208,7 @@ sudo apt-get install librocksdb-dev
 
 ---
 
-## Files Created (11 files, 3,500+ lines)
+## Files Created (10 files, 2,200+ lines)
 
 ### Core Demo
 - `examples/AmbientVCP_Demo.cpp` (350 lines) - Working demonstration
@@ -277,7 +222,6 @@ sudo apt-get install librocksdb-dev
 - `docs/AMBIENT_VCP_INTEGRATION.md` (500 lines) - Integration guide
 - `docs/PRODUCTION_ROADMAP.md` (400 lines) - 12-week plan
 - `docs/PRODUCTION_DEPLOYMENT.md` (350 lines) - Deployment guide
-- `docs/NEW_REPO_PROMPT.md` (550 lines) - Rust implementation prompt
 
 ### Updated
 - `CMakeLists.txt` - Added demo build target
@@ -297,15 +241,11 @@ Run it right now: `./build/ailee_ambient_vcp_demo`
 - Cost estimates ($700-1500/month)
 - Timeline (3 months to production)
 
-### ✅ **Two Paths Forward**
+### ✅ **Path Forward**
 
-**Path 1**: Implement production components in this repo (C++)
+**Implement production components in this repo (C++)**
 - Follow `docs/PRODUCTION_ROADMAP.md`
 - 4-8 weeks with 2-3 engineers
-
-**Path 2**: Build fresh with Rust using provided prompt
-- Use `docs/NEW_REPO_PROMPT.md`
-- 3-4 weeks with AI assistance
 
 ### ✅ **Real-Life Reality**
 
@@ -328,7 +268,6 @@ The infrastructure is:
 - **Technical**: See `docs/AMBIENT_VCP_INTEGRATION.md`
 - **Deployment**: See `docs/PRODUCTION_DEPLOYMENT.md`
 - **Timeline**: See `docs/PRODUCTION_ROADMAP.md`
-- **New Repo**: See `docs/NEW_REPO_PROMPT.md`
 
 **Want to get started?** The demo is running. The infrastructure is designed. The path is clear.
 

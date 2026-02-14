@@ -448,7 +448,6 @@ AILEE-Core is **NOT**:
 - **[Security](docs/SECURITY_AND_POWER.md)**: Power model and safety
 
 ### For Developers
-- **[New Repository Prompt](docs/NEW_REPO_PROMPT.md)**: Build a fresh implementation with AI ⭐ NEW
 - **[Examples Directory](examples/)**: Working code demonstrations
 - **[Whitepapers](docs/whitepapers/)**: Technical specifications (Ambient AI, VCP)
 
