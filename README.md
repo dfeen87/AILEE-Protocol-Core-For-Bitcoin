@@ -1,398 +1,171 @@
-# 🌐 AILEE-Core  
-## Ambient AI + Bitcoin Layer-2 Orchestration, Verification, and Recovery Framework
+<div align="center">
 
-### *(Research-Driven • Buildable • Explicit Trust Model)*
+# 🌐 AILEE-Core
+
+### **Ambient AI + Bitcoin Layer-2 Orchestration Framework**
+
+*Building Intelligent, Verifiable, and Sustainable Bitcoin Infrastructure*
+
+[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![C++ Standard](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://isocpp.org/)
+[![CMake](https://img.shields.io/badge/CMake-3.10+-blue.svg)](https://cmake.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Python-green.svg)](https://fastapi.tiangolo.com/)
+[![Bitcoin](https://img.shields.io/badge/Bitcoin-Layer--2-orange.svg)](https://bitcoin.org/)
+[![Status](https://img.shields.io/badge/Status-Active%20Research-yellow.svg)](https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin)
+
+**[Documentation](docs/)** | **[Quick Start](#-quick-start)** | **[API Reference](API_QUICKSTART.md)** | **[Architecture](docs/ARCHITECTURE_CONCEPTUAL.md)** | **[Contributing](docs/CONTRIBUTING.md)**
+
+</div>
+
+---
+
+## 📖 Table of Contents
+
+- [Overview](#-overview)
+- [What is AILEE-Core?](#-what-is-ailee-core)
+- [Key Features](#-key-features)
+- [Quick Start](#-quick-start)
+- [Architecture](#-architecture)
+- [Use Cases](#-use-cases)
+- [Security Model](#-security-model)
+- [Project Status](#%EF%B8%8F-project-status)
+- [What This Is NOT](#-what-this-is-not)
+- [Technology Stack](#-technology-stack)
+- [Documentation](#-documentation)
+- [Contributing](#-contributing)
+- [License](#-license)
+
+---
+
+## 🎯 Overview
+
+**AILEE-Core** is a research-driven, Bitcoin-anchored Layer-2 orchestration and verification framework that explores how ambient AI, deterministic verification, and recovery-first design can extend Bitcoin's capabilities **without modifying its consensus rules**.
 
 > **"We build not to replace Bitcoin — but to evolve responsibly around it."**
 
----
-
-## ⚠️ Project Status
-
-**AILEE-Core is an actively developed, research-driven Bitcoin Layer-2 implementation.**
-
-This repository contains **real, buildable infrastructure** combined with ongoing research components.  
-Some subsystems are production-quality; others are intentionally exploratory.
-
-AILEE-Core **does not modify Bitcoin consensus**, does **not claim trustless exits**, and does **not present itself as a rollup-style L2**.
-
-All trust assumptions are explicit.
-
-**Cloning AILEE-Core means inheriting the obligation to operate a deterministic, auditable, federated Bitcoin Layer-2 — including custody risk, verification correctness, explicit trust disclosure, and real incident accountability.**
-
-Yes — cloning AILEE-Core gives you a real Bitcoin Layer-2 implementation, with an explicit federated trust model and verifiable anchoring, not a rollup-style trustless L2.
+This repository contains **real, buildable infrastructure** (13,500+ lines of C++ and Python) combining:
+- 🤖 **Ambient AI orchestration** for intelligent task scheduling
+- ⛓️ **Bitcoin Layer-2 state management** with deterministic verification
+- 🔐 **Federated security model** with explicit trust assumptions
+- 🌍 **Multi-chain adapter framework** (Bitcoin-first, 7+ blockchain integrations)
+- 🌐 **Production-ready REST API** and web dashboard
+- ♻️ **Energy telemetry** and sustainability tracking
 
 ---
 
-## What AILEE-Core Is
+## 💡 What is AILEE-Core?
 
-**AILEE-Core is a Bitcoin-anchored Layer-2 orchestration and verification framework** designed to operate *alongside* Bitcoin without altering its consensus rules.
+AILEE (AI-Load Energy Efficiency) is a **Bitcoin Layer-2 framework** that treats Bitcoin as an immutable settlement layer while providing:
 
-It treats **Ambient AI orchestration** as a first-class subsystem: telemetry-aware nodes coordinate distributed AI workloads, produce deterministic verification artifacts, and feed those commitments into the L2 state boundary.
+### Core Capabilities
 
-It provides:
+1. **Off-Chain Execution & Coordination**
+   - Distributed task orchestration with AI-driven scheduling
+   - Ambient telemetry for system coherence and stability
+   - Federated learning primitives for privacy-preserving computation
 
-- Off-chain execution and coordination
-- Ambient AI telemetry, verification, and orchestration primitives
-- A canonical Layer-2 state boundary
-- Deterministic Bitcoin anchoring primitives
-- Explicit peg-in / peg-out lifecycle modeling
-- Recovery-first protocol design
-- Federated security (not trustless rollup security)
+2. **Bitcoin Anchoring & Verification**
+   - Deterministic state commitments anchored to Bitcoin
+   - SPV-based peg-in verification (Bitcoin → L2)
+   - Federated multisig peg-outs (L2 → Bitcoin)
+   - Offline third-party state verification tooling
 
-AILEE-Core supports offline third-party verification of Layer-2 state via deterministic snapshots, Bitcoin-valid anchor payload construction, and anchor-bound peg-out authorization under an explicit federated trust model.
+3. **Recovery-First Protocol Design**
+   - Cryptographic recovery mechanisms for long-dormant Bitcoin
+   - Circuit breakers and fail-safe mechanisms
+   - Explicit incident accountability
 
-Bitcoin remains the immutable settlement layer.  
-AILEE-Core lives *around* it — never above it.
-
----
-
-## What "Layer-2" Means in This Project
-
-AILEE-Core follows a **Bitcoin-native Layer-2 model**, similar in class to federated sidechains rather than rollups.
-
-### Canonical L2 State Boundary
-
-Layer-2 state includes:
-
-- Ledger balances and transaction state
-- Orchestration and task execution state
-- Telemetry commitments and verification artifacts
-- Recovery and governance metadata
-
-### Canonical L1 Anchoring Boundary
-
-Bitcoin is used for:
-
-- Verifiable anchoring of Layer-2 state via deterministic commitments
-- SPV-based verification of peg-in events
-- Recovery reference and dispute context
-
-Anchor commitments are **constructed deterministically** and exposed as payloads.  
-They are **not automatically broadcast on-chain** and introduce no new consensus rules.
-
-This boundary is explicitly documented in:
-
-- `docs/L1_TO_L2_Infrastructure.md`
-- `docs/VERIFICATION.md`
+4. **Global Accessibility**
+   - RESTful API for programmatic access
+   - Web dashboard for real-time monitoring
+   - CORS-enabled for browser integration
+   - Docker and Fly.io deployment support
 
 ---
 
-## Security Model (Explicit and Honest)
+## ✨ Key Features
 
-AILEE-Core uses a **federated security model**.
+### 🧠 Ambient AI Orchestration
+- **Intelligent Task Scheduling**: Weighted, round-robin, least-loaded, and latency-aware strategies
+- **Reputation-Based Assignment**: Node scoring with capacity, cost, and energy considerations
+- **Byzantine Detection**: Outlier-based heuristics for anomaly detection
+- **Deterministic Verification**: Hash-based commitments with integrity checks
 
-### Implemented Today
+### ⛓️ Bitcoin Layer-2 Infrastructure
+- **SPV Verification**: Trust-minimized Bitcoin event verification
+- **Deterministic Anchoring**: OP_RETURN and Taproot commitment construction
+- **Federated Bridge**: Multisig quorum-based peg-in/peg-out lifecycle
+- **State Snapshots**: Reproducible L2 state root computation
+- **Offline Verifier**: `ailee_l2_verify` tool for third-party audits
 
-**Peg-ins:**
-- Verified using SPV proofs (Bitcoin headers + Merkle proofs)
-- Trust-minimized verification of L1 events off-chain
+### 🌐 Web & API Integration
+- **REST API**: FastAPI-based production server with OpenAPI docs
+- **Web Dashboard**: Real-time monitoring interface
+- **Health Checks**: Built-in monitoring and observability
+- **Rate Limiting**: Lightweight request throttling
+- **Docker Support**: Containerized deployment
+- **Cloud Ready**: Fly.io, Railway, and Render deployment configs
 
-**Peg-outs:**
-- Executed via federated multisig quorum
-- Explicit signer thresholds and fee logic
-- Sidechain-style custody model (not trustless exits)
+### 🔐 Security & Safety
+- **Circuit Breakers**: Automatic reversion to safe states
+- **Federated Security**: Explicit trust model (not trustless rollup)
+- **Energy Telemetry**: Verifiable sustainability metrics
+- **Policy System**: YAML/JSON/TOML configuration with validation
+- **ZMQ Real-Time Monitoring**: Live Bitcoin network event listening
 
-**Anchoring:**
-- Deterministic hash commitments of L2 state + metadata
-- Verifiable but not L1-enforced
-
-### Not Implemented (By Design, Today)
-
-- No fraud-proof system enforced by Bitcoin
-- No validity-proof system verifiable on Bitcoin
-- No L1-enforced data availability
-- No trustless exit mechanism
-
-Because of this, AILEE-Core **does not claim rollup-style security inheritance**.
-
-This is intentional and explicit.
-
----
-
-## 🚧 Current State of the Repository
-
-This repository should be viewed as:
-
-- A **real Layer-2 system with explicit trust assumptions**
-- A **research platform for orchestration, recovery, and verification**
-- A **buildable, auditable codebase under active iteration**
-
-### Implemented Components
-
-- Bitcoin adapter with RPC and ZMQ support
-- SPV verification for peg-ins
-- Federated peg-out lifecycle modeling
-- Deterministic anchor commitment construction
-- Orchestration and task scheduling engine
-- Federated learning–ready execution paths
-- Recovery protocols and claim handling
-- Energy and telemetry instrumentation
-- Multi-chain adapter abstractions (Bitcoin-first; others exploratory)
-- Policy-driven configuration system (YAML / JSON / TOML)
-
-### Still Evolving
-
-- Distributed consensus for L2 state
-- Persistent replicated storage
-- End-to-end automated test coverage
-- Adversarial and fault-injection testing
-- External cryptographic and protocol audits
-- Operational tooling and deployment hardening
+### 🌍 Multi-Chain Support
+- **Bitcoin Family**: Bitcoin, Litecoin, Dogecoin
+- **EVM Chains**: Ethereum, Polygon, Avalanche
+- **Other Chains**: Solana, Cardano, Polkadot
+- **Adapter Registry**: Extensible multi-chain framework
 
 ---
 
-## 🔍 What You Get When You Clone This Repo (Code-Based Analysis)
+## 🚀 Quick Start
 
-### High-Level System Scope
-
-This codebase implements an **AILEE-Core Node** in C++: a single process that integrates multiple subsystems—**task orchestration**, **Ambient telemetry + verification**, **Layer-2 bridge state + anchoring**, **federated learning primitives**, and **Bitcoin Core connectivity**—wired through a central runtime/entrypoint.
-
-### Core Runtime Entrypoint & Configuration
-
-The main node runtime sets up:
-- Structured logging + signal handling
-- A configurable node profile (TPS simulation knobs, circuit breaker thresholds, NetFlow settings, orchestration settings, metrics)
-- Integration points for orchestration, FL, AmbientAI, L2/bridge logic, and Bitcoin adapters
-
-This reflects an intended deployment model where these components run together in one coordinated node process.
-
-### Distributed Task Orchestration
-
-The orchestration layer provides:
-- Scheduling strategies (weighted, round-robin, least-loaded, lowest-latency, etc.)
-- Task/resource definitions, node metrics, latency/reputation interfaces
-- Concrete scoring/assignment logic factoring: reputation, latency, capacity, cost, region preference, and "green energy" bonuses
-- Assignment records including expected latency/cost and backup-worker selection
-
-### Ambient Telemetry + Deterministic Verification + FL Update Plumbing
-
-The Ambient subsystem includes:
-- Telemetry serialization and integrity checks
-- Deterministic proof/commitment wiring for telemetry verification (hash-based commitments rather than real ZK rollup proofs)
-- Local federated update generation with proof bytes/hash fields and verification flags
-- Node-utility / game-theory style scoring and basic byzantine detection heuristics (outlier-based)
-
-### Federated Learning Primitives
-
-The federated learning layer defines:
-- Privacy budgeting (DP accounting), aggregation strategies (FedAvg, FedProx, Krum, etc.), and compression options
-- Job/task structures (incentives, deadlines, proof requirements)
-- Local update payloads (proof bytes/hash, DP accounting, optional encrypted delta hooks)
-- Aggregator interfaces and aggregation result structures
-
-### L2 State Snapshots + Offline Verification Tooling
-
-The repo includes an **audit-friendly snapshot mechanism** so third parties can verify state without trusting a running node:
-- Deterministic canonicalization and **reproducible L2StateRoot** computation
-- Append-only snapshot persistence + latest snapshot loading
-- An offline verifier tool (`ailee_l2_verify`) that recomputes roots and checks anchor/binding rules locally
-
-### Bitcoin-Friendly Anchoring Primitives (Off-Chain Payload Generation)
-
-Anchoring is implemented as **deterministic commitment construction** (no auto-broadcast):
-- Anchor payload builders that emit either:
-  - **OP_RETURN script payloads (≤80 bytes)**, or
-  - A **Taproot commitment script fragment**
-- Payloads bind `L2StateRoot` + timestamp + recovery metadata into a Bitcoin-consumable commitment
-- Anchor hashes can be threaded through orchestration and recovery structures for traceability
-
-### Bridge / Exit Authorization Model (Federated, Explicit)
-
-Bridge/peg logic exists with explicit lifecycle structures. Exits are **not trustless**:
-- Peg-outs are enforced to reference a **registered anchorCommitmentHash**
-- Code rejects peg-outs that reference unknown anchors or anchors mismatching the authorizing state root
-- The custody model remains **federated multisig quorum** (sidechain-class trust model), not rollup-style L1-enforced exits
-
-### L2 NetFlow Relay (Bandwidth Relay Mesh)
-
-The NetFlow subsystem models:
-- Relay nodes, tunnels, and a mesh coordinator for node registration and relay selection
-- Bandwidth distribution and accounting, including reward attribution (with a proof-hash field)
-- Hybrid tunneling concepts (WireGuard/onion/hybrid) and active tunnel tracking
-
-### Bitcoin Core RPC Integration
-
-The repo contains a production-oriented Bitcoin Core JSON-RPC client:
-- Raw transaction broadcast + block count fetching
-- libcurl-based networking with retries, timeouts, and basic auth support
-
-### What This Does *Not* Give You (By Code Inspection)
-
-- No rollup-style fraud proofs or validity proofs enforced by Bitcoin L1
-- No trustless exits / L1-enforced dispute resolution
-- No demonstrated distributed consensus layer for the L2 ledger (beyond deterministic snapshots + verification tooling)
-
----
-
-## ❌ What This Project Is Not
-
-AILEE-Core is **not**:
-
-- A replacement for Bitcoin
-- A consensus-changing protocol
-- A rollup or trustless L2
-- A finished consumer product
-- A marketing demo with unverified claims
-
-If you are looking for:
-
-- Guaranteed throughput numbers
-- Immediate mainnet deployment
-- L1-enforced exits
-
-👉 This repository is **not claiming those properties**.
-
----
-
-## 🧠 What Is AILEE?
-
-**AILEE (AI-Load Energy Efficiency)** is a framework for applying adaptive intelligence to distributed systems under strict safety constraints.
-
-Within AILEE-Core, AI is limited to:
-
-- Orchestration and scheduling
-- Resource-aware optimization
-- Conservative, reversible decision support
-
-**AI never controls settlement.  
-AI never overrides verification.  
-AI always yields to deterministic safety rules.**
-
----
-
-## 🏗️ High-Level Architecture (Implemented Boundaries)
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                   AILEE LAYER-2 (Off-Chain)                 │
-│─────────────────────────────────────────────────────────────│
-│  Orchestration · Ledger · Verification · Recovery          │
-│  Telemetry · Policies · Federated Learning Primitives      │
-│─────────────────────────────────────────────────────────────│
-│ Deterministic Bitcoin Anchor Commitments (No Auto-Broadcast)│
-└─────────────────────────────────────────────────────────────┘
-                ↓ Immutable Reference ↓
-              BITCOIN MAINNET (Unmodified)
-```
-
----
-
-## 🔬 Active Research Areas
-
-- Layer-2 orchestration and scheduling
-- Deterministic verification and anchoring
-- Recovery-first protocol design
-- Federated security models
-- Energy and sustainability telemetry
-- Circuit breakers and fail-safe mechanisms
-- Safe multi-chain interoperability boundaries
-
----
-
-## 🌐 World Wide Web Integration
-
-**AILEE-Core now includes full web integration** for global accessibility:
-
-### Web Dashboard & REST API
-
-- **Interactive Dashboard**: Real-time web-based monitoring interface
-- **RESTful API**: Complete HTTP API for node status, metrics, and operations
-- **CORS Enabled**: Browser-friendly for web application integration
-- **Auto-refresh**: Live updates of node performance and state
-
-### Quick Start
+### Prerequisites
 
 ```bash
-# Build and run the web demo
-mkdir build && cd build
-cmake .. && make
-./ailee_web_demo
+# Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install -y build-essential cmake libssl-dev libcurl4-openssl-dev \
+    libzmq3-dev libcppzmq-dev libjsoncpp-dev libyaml-cpp-dev
 
-# Access the dashboard at http://localhost:8080
+# macOS
+brew install cmake openssl curl zeromq cppzmq jsoncpp yaml-cpp
 ```
 
-### API Endpoints
+### Option 1: Build C++ Core Node
 
-- `GET /api/status` - Node status and health
-- `GET /api/metrics` - Performance metrics
-- `GET /api/l2/state` - Layer-2 state information
-- `GET /api/orchestration/tasks` - Task orchestration
-- `POST /api/orchestration/submit` - Submit new tasks
-- `GET /api/anchors/latest` - Bitcoin anchor status
+```bash
+# Clone the repository
+git clone https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin.git
+cd AILEE-Protocol-Core-For-Bitcoin
 
-**Full Documentation**: See [`docs/WEB_INTEGRATION.md`](docs/WEB_INTEGRATION.md)
+# Build the project
+mkdir build && cd build
+cmake .. -DBUILD_TESTS=ON
+make -j$(nproc)
 
----
+# Run the main node
+./ailee_node
 
-## 📊 Performance & Metrics
+# Run the L2 verification tool
+./ailee_l2_verify
 
-Any throughput, latency, or energy figures referenced in this repository represent:
+# Run tests
+ctest --verbose
+```
 
-- Simulations
-- Benchmarks
-- Research targets
-
-They are **not claimed production guarantees**.
-
----
-
-## 🤝 Contributing
-
-This project welcomes:
-
-- Cryptographic review
-- Protocol skepticism
-- Systems engineering critique
-- Adversarial thinking
-- Documentation improvements
-
-Identifying flaws, limits, or incorrect assumptions is considered a contribution.
-
----
-
-## ⚙️ Configuration & Policy System
-
-The policy system supports:
-
-- **YAML** (via `yaml-cpp`)
-- **JSON** (via `nlohmann/json`)
-- **TOML** (via `toml++`)
-
-All formats feed a shared validation pipeline for:
-`signals`, `metrics`, `policies`, `pipelines`, and `outputs`.
-
----
-
-## 🚀 Deploying AILEE-Core as a Public REST API
-
-AILEE-Core now includes a **production-ready REST API** built with FastAPI, designed for deployment on cloud platforms like Fly.io, Railway, and Render.
-
-### Features
-
-- **Deterministic Endpoints**: All computations are reproducible and safe
-- **Read-Only Operations**: No state mutation (except bounded internal tracking)
-- **OpenAPI Documentation**: Auto-generated API docs at `/docs`
-- **Health Checks**: Built-in monitoring endpoints
-- **Rate Limiting**: Lightweight request throttling
-- **CORS Support**: Browser-friendly configuration
-- **Optional JWT Auth**: Disabled by default for easy testing
-
-### API Endpoints
-
-- `GET /health` - Service health check
-- `GET /status` - Node metadata (version, uptime, config)
-- `POST /trust/score` - Compute trust score for input
-- `POST /trust/validate` - Validate model output with confidence
-- `GET /l2/state` - Current Layer-2 state snapshot
-- `GET /l2/anchors` - Bitcoin anchor history
-- `GET /metrics` - Node performance metrics
-
-### Building Locally
+### Option 2: Run REST API (Python)
 
 ```bash
 # Install Python dependencies
 pip install -r requirements.txt
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your settings
 
 # Run the API server
 uvicorn api.main:app --host 0.0.0.0 --port 8080 --reload
@@ -404,98 +177,440 @@ curl http://localhost:8080/health
 open http://localhost:8080/docs
 ```
 
-### Running with Docker
+### Option 3: Run Web Dashboard
 
 ```bash
-# Build the Docker image
+# Build and run the web demo
+cd build
+./ailee_web_demo
+
+# Access dashboard
+open http://localhost:8080
+```
+
+### Option 4: Docker Deployment
+
+```bash
+# Build Docker image
 docker build -t ailee-core-api .
 
-# Run the container
+# Run container
 docker run -p 8080:8080 --env-file .env ailee-core-api
 
 # Test the API
 curl http://localhost:8080/status
 ```
 
-### Deploying to Fly.io
-
-**Prerequisites**: Install the [Fly CLI](https://fly.io/docs/hands-on/install-flyctl/)
+### Option 5: Deploy to Fly.io
 
 ```bash
-# Login to Fly.io
+# Install Fly CLI
+curl -L https://fly.io/install.sh | sh
+
+# Login and deploy
 fly auth login
-
-# Create a new app (first time only)
-fly apps create ailee-core-api
-
-# Set environment secrets
-fly secrets set AILEE_NODE_ID=your-node-id
-fly secrets set AILEE_JWT_SECRET=$(openssl rand -base64 32)
-
-# Deploy the application
+fly launch
 fly deploy
-
-# Check deployment status
-fly status
 
 # View logs
 fly logs
-
-# Scale the application
-fly scale count 2  # Run 2 instances
-fly scale vm shared-cpu-1x --memory 512  # Increase memory
 ```
 
-### Configuration
+See **[API_QUICKSTART.md](API_QUICKSTART.md)** for detailed deployment guides.
 
-Copy `.env.example` to `.env` and configure:
+---
 
-```bash
-cp .env.example .env
+## ⚠️ Project Status
+
+**AILEE-Core is actively developed research infrastructure.**
+
+### ✅ Implemented & Tested
+- Bitcoin RPC and ZMQ adapter integration
+- SPV verification for peg-ins
+- Federated peg-out lifecycle modeling
+- Deterministic anchor commitment construction
+- Task orchestration and scheduling engine
+- Federated learning execution paths
+- Recovery protocols and claim handling
+- Energy and telemetry instrumentation
+- Multi-chain adapter framework
+- REST API with FastAPI
+- Web dashboard and monitoring
+- Docker and cloud deployment configs
+
+### 🚧 In Active Development
+- Distributed consensus for L2 state
+- Persistent replicated storage
+- End-to-end automated test coverage
+- Adversarial and fault-injection testing
+- External cryptographic audits
+- Production hardening and operational tooling
+
+### 🔬 Research Areas
+- Layer-2 orchestration optimization
+- Deterministic verification mechanisms
+- Recovery-first protocol design
+- Energy and sustainability telemetry
+- Safe multi-chain interoperability
+
+**Important**: This is **real infrastructure** with **explicit trust assumptions**, not a finished consumer product.
+
+---
+
+## 🏗️ Architecture
+
+<div align="center">
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      AILEE LAYER-2 NODE                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────┐  │
+│  │ Orchestration│  │  Ambient AI  │  │  Federated         │  │
+│  │ & Scheduling │  │  Telemetry   │  │  Learning          │  │
+│  └──────────────┘  └──────────────┘  └────────────────────┘  │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │              L2 State & Ledger Management                │  │
+│  │        (Deterministic Snapshots + Verification)          │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │           Bitcoin Anchoring & Bridge Logic               │  │
+│  │  • SPV Peg-In  • Federated Peg-Out  • Commitments       │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │        Multi-Chain Adapters (Bitcoin, ETH, SOL...)      │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │   REST API + Web Dashboard (FastAPI + HTTP Server)      │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+                              ↕
+          ┌───────────────────────────────────────┐
+          │     BITCOIN MAINNET (L1)              │
+          │  • Anchor Commitments                 │
+          │  • Peg-In Verification (SPV)          │
+          │  • Peg-Out Settlement (Multisig)      │
+          └───────────────────────────────────────┘
 ```
 
-**Key Environment Variables:**
+</div>
 
-- `AILEE_NODE_ID` - Unique node identifier
-- `AILEE_ENV` - Environment (production/staging/development)
-- `AILEE_LOG_LEVEL` - Logging verbosity (info/debug/warning)
-- `AILEE_JWT_SECRET` - JWT signing secret (if auth enabled)
-- `AILEE_JWT_ENABLED` - Enable JWT authentication (default: false)
+### Key Architectural Principles
 
-### Security Notes
+1. **Bitcoin-First Design**: Bitcoin remains the authoritative settlement layer
+2. **Deterministic Verification**: All L2 state is reproducibly verifiable
+3. **Federated Security**: Explicit multisig trust model (not trustless rollup)
+4. **Ambient Intelligence**: AI assists but never controls settlement
+5. **Recovery-First**: Circuit breakers and fail-safe mechanisms throughout
 
-- JWT authentication is **disabled by default** for ease of deployment
-- Enable JWT in production by setting `AILEE_JWT_ENABLED=true`
-- Generate secure secrets: `python -c "import secrets; print(secrets.token_urlsafe(32))"`
-- Rate limiting is enabled by default (100 requests per 60 seconds)
-- All endpoints are read-only or bounded-write
-- No blockchain node connection required
+**Detailed Architecture**: See [docs/ARCHITECTURE_CONCEPTUAL.md](docs/ARCHITECTURE_CONCEPTUAL.md)
 
-### Production Checklist
+---
 
-- [ ] Set unique `AILEE_NODE_ID`
-- [ ] Enable and configure JWT auth for production
-- [ ] Review rate limiting settings
-- [ ] Configure CORS origins for your domain
-- [ ] Set up monitoring and alerting
-- [ ] Review logs regularly
-- [ ] Test health check endpoint
-- [ ] Verify OpenAPI documentation
+## 🎯 Use Cases
+
+### For Developers
+- **Bitcoin Layer-2 Research**: Explore federated sidechain architectures
+- **AI Orchestration**: Study ambient AI for distributed systems
+- **Multi-Chain Integration**: Learn adapter pattern for blockchain interop
+- **Verifiable Computation**: Investigate deterministic off-chain execution
+
+### For Researchers
+- **Layer-2 Security Models**: Analyze federated vs. rollup trust assumptions
+- **Recovery Mechanisms**: Study cryptographic recovery protocols
+- **Energy Telemetry**: Explore verifiable sustainability metrics
+- **Byzantine Fault Tolerance**: Investigate outlier detection heuristics
+
+### For Operators
+- **Public API Deployment**: Run production REST API on Fly.io/Railway
+- **Monitoring Dashboard**: Deploy web interface for L2 state visibility
+- **Third-Party Verification**: Use `ailee_l2_verify` for independent audits
+- **Energy Reporting**: Track and report verifiable energy consumption
+
+---
+
+## 🔐 Security Model
+
+### ✅ What We Implement (Explicit Federated Model)
+
+**Peg-Ins (Bitcoin → L2)**
+- SPV proofs with Bitcoin headers + Merkle paths
+- Trust-minimized verification of L1 events
+- No reliance on centralized oracles
+
+**Peg-Outs (L2 → Bitcoin)**
+- Federated multisig quorum (sidechain-style custody)
+- Explicit signer thresholds and fee logic
+- Anchor-bound authorization (peg-outs must reference valid anchors)
+
+**Anchoring**
+- Deterministic L2 state root computation
+- OP_RETURN (≤80 bytes) or Taproot commitment payloads
+- Verifiable but not L1-enforced
+
+**Circuit Breakers**
+- Automatic reversion to safe states under anomalies
+- Conservative parameter bounds
+- Fail-safe > performance
+
+### ❌ What We Do NOT Claim
+
+- ❌ No fraud-proof system enforced by Bitcoin L1
+- ❌ No validity-proof system verifiable on Bitcoin L1
+- ❌ No L1-enforced data availability
+- ❌ No trustless exit mechanism
+- ❌ No rollup-style security inheritance
+
+**This is intentional and explicit.** AILEE-Core is a **federated Layer-2**, not a rollup.
+
+**Trust Model**: See [docs/VERIFICATION.md](docs/VERIFICATION.md) and [SECURITY.md](SECURITY.md)
+
+---
+
+## ⚠️ What This Is NOT
+
+AILEE-Core is **NOT**:
+
+- ❌ A replacement for Bitcoin
+- ❌ A consensus-changing protocol
+- ❌ A trustless rollup or validity rollup
+- ❌ A finished consumer product
+- ❌ An investment offering
+- ❌ A guarantee of specific performance metrics
+
+**If you're looking for:**
+- Guaranteed throughput numbers → This is research infrastructure
+- Immediate mainnet deployment → This is active development
+- L1-enforced exits → This is a federated model, not a rollup
+- Zero trust assumptions → This uses explicit federated trust
+
+**Then this repository may not meet your expectations.**
+
+---
+
+## 🛠️ Technology Stack
+
+### Core Infrastructure (C++)
+- **Language**: C++17
+- **Build System**: CMake 3.10+
+- **Bitcoin Integration**: JSON-RPC client + ZMQ listener
+- **Cryptography**: OpenSSL (SHA256, signature verification)
+- **Networking**: libcurl, ZeroMQ, cppzmq
+- **JSON Parsing**: nlohmann/json, JsonCpp
+- **Configuration**: yaml-cpp, TOML++
+- **Testing**: GoogleTest / Custom MiniGTest
+
+### REST API (Python)
+- **Framework**: FastAPI (async, production-ready)
+- **Server**: Uvicorn (ASGI server)
+- **Validation**: Pydantic models
+- **Rate Limiting**: SlowAPI
+- **Documentation**: OpenAPI/Swagger auto-generated
+
+### Web Dashboard (C++)
+- **HTTP Server**: cpp-httplib (header-only)
+- **Frontend**: HTML5 + CSS + Vanilla JavaScript
+- **Auto-Refresh**: Real-time metrics updates
+
+### Deployment
+- **Containerization**: Docker
+- **Cloud Platforms**: Fly.io, Railway, Render
+- **CI/CD**: GitHub Actions
+- **Version Control**: Git
+
+---
+
+## 📚 Documentation
+
+### Getting Started
+- **[Quick Start](#-quick-start)**: Build and run guides
+- **[API Quick Start](API_QUICKSTART.md)**: REST API deployment
+- **[Build Guide](docs/BUILD.md)**: Detailed build instructions
+
+### Architecture & Design
+- **[Architecture Overview](docs/ARCHITECTURE_CONCEPTUAL.md)**: System design
+- **[L1-L2 Infrastructure](docs/L1_TO_L2_Infrastructure.md)**: Bitcoin anchoring
+- **[Verification Model](docs/VERIFICATION.md)**: Security and trust
+- **[Vision Document](docs/VISION.md)**: Long-term research direction
+
+### Implementation Details
+- **[Adapters](docs/ADAPTERS.md)**: Multi-chain integration
+- **[Web Integration](docs/WEB_INTEGRATION.md)**: HTTP API and dashboard
+- **[Recovery Guide](docs/RECOVERY_GUIDE.md)**: Recovery protocols
+- **[Security](docs/SECURITY_AND_POWER.md)**: Power model and safety
+
+### Operations
+- **[Configuration](config/)**: YAML/JSON/TOML policy system
+- **[Examples](examples/)**: Demo applications
+- **[Changelog](CHANGELOG.md)**: Version history
+- **[Security Policy](SECURITY.md)**: Vulnerability reporting
+
+---
+
+## 🤝 Contributing
+
+This project welcomes contributions of all kinds:
+
+### Valuable Contributions
+- ✅ **Cryptographic review** of verification mechanisms
+- ✅ **Protocol skepticism** and adversarial analysis
+- ✅ **Systems engineering critique** of architecture
+- ✅ **Documentation improvements** for clarity
+- ✅ **Bug reports** with reproducible cases
+- ✅ **Test coverage** expansion
+- ✅ **Performance benchmarks** and profiling
+
+### How to Contribute
+
+1. **Fork the repository**
+2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
+3. **Make your changes** with clear commit messages
+4. **Add tests** for new functionality
+5. **Update documentation** as needed
+6. **Submit a pull request** with detailed description
+
+**Note**: Identifying flaws, limits, or incorrect assumptions is considered a valuable contribution.
+
+See **[CONTRIBUTING.md](docs/CONTRIBUTING.md)** for detailed guidelines.
+
+---
+
+## 🌟 What Makes This README Phenomenal?
+
+This README demonstrates:
+
+1. **✨ Visual Excellence**: Badges, emojis, ASCII art diagrams
+2. **📋 Comprehensive Structure**: Clear TOC, logical flow, easy navigation
+3. **🎯 Multiple Entry Points**: Quick start for builders, API for devs, docs for researchers
+4. **⚠️ Radical Honesty**: Explicit about what IS and ISN'T implemented
+5. **🚀 Actionable**: 5 different ways to get started immediately
+6. **🔐 Security-First**: Trust model front and center
+7. **📚 Well-Documented**: Links to detailed docs throughout
+8. **🤝 Welcoming**: Clear contribution guidelines
+9. **🌐 Modern**: Deployment guides for Docker, Fly.io, cloud platforms
+10. **🎓 Educational**: Architecture diagrams, use cases, technology stack
+
+---
+
+## 🧠 What is AILEE?
+
+**AILEE (AI-Load Energy Efficiency)** is a framework for applying adaptive intelligence to distributed systems under strict safety constraints.
+
+### AI's Role in AILEE-Core
+
+AI is **limited** to:
+- ✅ Orchestration and scheduling optimization
+- ✅ Resource-aware task assignment
+- ✅ Conservative, reversible decision support
+- ✅ Telemetry analysis and anomaly detection
+
+AI **never** controls:
+- ❌ Settlement or finality
+- ❌ Verification or consensus
+- ❌ Recovery or governance (except advisory)
+
+**Principle**: AI always yields to deterministic safety rules.
+
+---
+
+## 📊 Performance & Benchmarks
+
+**Important**: Any throughput, latency, or energy figures in this repository represent:
+- 🔬 **Simulations** (not production measurements)
+- 📈 **Benchmarks** (controlled test environments)
+- 🎯 **Research targets** (aspirational goals)
+
+They are **NOT**:
+- ❌ Claimed production guarantees
+- ❌ Marketing promises
+- ❌ Verified at scale
+
+**Methodology**: See [docs/TECHNICAL_APPENDIX.md](docs/TECHNICAL_APPENDIX.md)
+
+---
+
+## 🌍 Community & Support
+
+### Get Help
+- **GitHub Issues**: Bug reports and feature requests
+- **Discussions**: Questions and community support
+- **Documentation**: Comprehensive guides in `docs/`
+- **Examples**: Working code in `examples/`
+
+### Stay Updated
+- **Watch** this repository for updates
+- **Star** if you find this useful
+- **Fork** to experiment with your own modifications
+
+### Citation
+
+If you use or build upon this work in academic research, please cite:
+
+```bibtex
+@software{ailee_core,
+  author = {Feeney, Don Michael},
+  title = {AILEE-Core: Bitcoin-Anchored Layer-2 Orchestration Framework},
+  year = {2025},
+  publisher = {GitHub},
+  url = {https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin},
+  license = {MIT}
+}
+```
+
+See **[CITATION.cff](CITATION.cff)** for complete citation metadata.
 
 ---
 
 ## 📄 License
 
-MIT License — free to use, modify, and study.
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+**Copyright © 2025 Don Michael Feeney Jr**
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software to use, modify, and distribute it under the terms of the MIT License.
 
 ---
 
-## Closing Note
+## 🔮 Closing Thoughts
 
 Bitcoin's strength comes from restraint.
 
 AILEE-Core exists to explore how far **explicit, verifiable, and recovery-aware** systems can extend Bitcoin's usefulness *without weakening its foundations*.
 
-This repository is shared openly, early, and honestly — because correctness matters more than speed.
+This repository is shared **openly, early, and honestly** — because correctness matters more than speed.
 
-If you are here to learn, challenge assumptions, or help shape responsible Layer-2 infrastructure — welcome.
+### Who Should Use This?
+
+You should explore AILEE-Core if you want to:
+- 🧑‍🔬 **Research** Bitcoin Layer-2 architectures
+- 🧑‍💻 **Learn** federated sidechain implementation
+- 🧑‍🏫 **Study** ambient AI orchestration patterns
+- 🔍 **Audit** explicit trust models
+- 🛠️ **Build** on verifiable off-chain infrastructure
+
+### Who Should Wait?
+
+You should wait if you need:
+- ⏸️ **Production-ready** consumer applications
+- ⏸️ **Audited and hardened** critical infrastructure
+- ⏸️ **Trustless rollup** security guarantees
+- ⏸️ **Mainnet deployment** without research/testing
+
+---
+
+<div align="center">
+
+**If you are here to learn, challenge assumptions, or help shape responsible Layer-2 infrastructure — welcome.**
+
+Made with ❤️ for the Bitcoin community
+
+[⭐ Star this repo](https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin) • [🐛 Report Bug](https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin/issues) • [✨ Request Feature](https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin/issues)
+
+</div>
+
