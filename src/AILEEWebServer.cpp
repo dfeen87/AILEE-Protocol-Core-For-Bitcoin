@@ -39,7 +39,10 @@ public:
             
             if (config_.enable_ssl && !config_.ssl_cert_path.empty() 
                 && !config_.ssl_key_path.empty()) {
-                // SSL/TLS support
+                // SSL/TLS support - Note: cpp-httplib may require compilation with SSL support
+                // For now, fall back to regular HTTP with a warning
+                std::cout << "[WebServer] WARNING: SSL configured but not fully implemented yet" << std::endl;
+                std::cout << "[WebServer] Falling back to HTTP" << std::endl;
                 server_->listen(config_.host.c_str(), config_.port);
             } else {
                 // Standard HTTP
@@ -142,9 +145,11 @@ private:
 
         // Health check endpoint
         server_->Get("/api/health", [](const httplib::Request&, httplib::Response& res) {
+            auto now = std::chrono::system_clock::now();
+            auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
             json response = {
                 {"status", "healthy"},
-                {"timestamp", static_cast<double>(std::chrono::system_clock::now().time_since_epoch().count())}
+                {"timestamp", static_cast<double>(ms)}
             };
             res.set_content(response.dump(), "application/json");
         });
@@ -184,8 +189,10 @@ private:
 
         // Metrics endpoint
         server_->Get("/api/metrics", [this](const httplib::Request&, httplib::Response& res) {
+            auto now = std::chrono::system_clock::now();
+            auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
             json metrics = {
-                {"timestamp", static_cast<double>(std::chrono::system_clock::now().time_since_epoch().count())},
+                {"timestamp", static_cast<double>(ms)},
                 {"node", {
                     {"type", "AILEE-Core"},
                     {"layer", "Bitcoin Layer-2"}
@@ -278,10 +285,19 @@ private:
                     return;
                 }
                 
+                // Generate unique task ID with timestamp and counter
+                static std::atomic<uint64_t> task_counter{0};
+                auto now = std::chrono::system_clock::now();
+                auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+                uint64_t counter = task_counter.fetch_add(1);
+                
+                std::ostringstream task_id_stream;
+                task_id_stream << "task_" << ms << "_" << counter;
+                
                 // For now, just acknowledge the task
                 json response = {
                     {"status", "accepted"},
-                    {"task_id", std::string("task_") + std::to_string(std::chrono::system_clock::now().time_since_epoch().count())},
+                    {"task_id", task_id_stream.str()},
                     {"message", "Task submitted successfully"}
                 };
                 
