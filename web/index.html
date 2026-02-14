@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AILEE Protocol Core - Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+        
+        .card h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-online {
+            background-color: #10b981;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+        
+        .status-offline {
+            background-color: #ef4444;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .metric:last-child {
+            border-bottom: none;
+        }
+        
+        .metric-label {
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .metric-value {
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .error {
+            background-color: #fee;
+            color: #c00;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        .endpoint-list {
+            list-style: none;
+        }
+        
+        .endpoint-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        
+        .endpoint-item:hover {
+            background: #e9ecef;
+        }
+        
+        footer {
+            text-align: center;
+            color: white;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        footer a {
+            color: white;
+            text-decoration: underline;
+        }
+        
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-top: 15px;
+        }
+        
+        .refresh-btn:hover {
+            background: #5568d3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌐 AILEE Protocol Core</h1>
+            <p class="subtitle">Bitcoin Layer-2 Orchestration & Verification Framework</p>
+        </header>
+        
+        <div class="dashboard">
+            <!-- Node Status Card -->
+            <div class="card" id="status-card">
+                <h2>Node Status</h2>
+                <div class="loading">Loading...</div>
+            </div>
+            
+            <!-- Metrics Card -->
+            <div class="card" id="metrics-card">
+                <h2>Performance Metrics</h2>
+                <div class="loading">Loading...</div>
+            </div>
+            
+            <!-- Layer-2 State Card -->
+            <div class="card" id="l2-state-card">
+                <h2>Layer-2 State</h2>
+                <div class="loading">Loading...</div>
+            </div>
+            
+            <!-- API Endpoints Card -->
+            <div class="card">
+                <h2>API Endpoints</h2>
+                <ul class="endpoint-list">
+                    <li class="endpoint-item">GET /api/status</li>
+                    <li class="endpoint-item">GET /api/metrics</li>
+                    <li class="endpoint-item">GET /api/l2/state</li>
+                    <li class="endpoint-item">GET /api/orchestration/tasks</li>
+                    <li class="endpoint-item">GET /api/anchors/latest</li>
+                    <li class="endpoint-item">POST /api/orchestration/submit</li>
+                </ul>
+                <button class="refresh-btn" onclick="loadAllData()">Refresh All</button>
+            </div>
+        </div>
+        
+        <footer>
+            <p>AILEE Protocol Core | <a href="https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin" target="_blank">GitHub Repository</a></p>
+            <p>Building responsible Bitcoin Layer-2 infrastructure</p>
+        </footer>
+    </div>
+    
+    <script>
+        const API_BASE = window.location.origin;
+        
+        async function fetchData(endpoint) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error(`Error fetching ${endpoint}:`, error);
+                return null;
+            }
+        }
+        
+        function renderStatus(data) {
+            const card = document.getElementById('status-card');
+            if (!data) {
+                card.innerHTML = '<h2>Node Status</h2><div class="error">Failed to load status</div>';
+                return;
+            }
+            
+            const isRunning = data.running !== undefined ? data.running : true;
+            const statusClass = isRunning ? 'status-online' : 'status-offline';
+            
+            card.innerHTML = `
+                <h2>
+                    <span class="status-indicator ${statusClass}"></span>
+                    Node Status
+                </h2>
+                <div class="metric">
+                    <span class="metric-label">Status</span>
+                    <span class="metric-value">${isRunning ? 'Running' : 'Stopped'}</span>
+                </div>
+                ${data.version ? `
+                <div class="metric">
+                    <span class="metric-label">Version</span>
+                    <span class="metric-value">${data.version}</span>
+                </div>
+                ` : ''}
+                ${data.network ? `
+                <div class="metric">
+                    <span class="metric-label">Network</span>
+                    <span class="metric-value">${data.network}</span>
+                </div>
+                ` : ''}
+                ${data.uptime_seconds !== undefined ? `
+                <div class="metric">
+                    <span class="metric-label">Uptime</span>
+                    <span class="metric-value">${formatUptime(data.uptime_seconds)}</span>
+                </div>
+                ` : ''}
+                ${data.last_anchor_hash ? `
+                <div class="metric">
+                    <span class="metric-label">Last Anchor</span>
+                    <span class="metric-value" style="font-size: 0.8em;">${data.last_anchor_hash.substring(0, 16)}...</span>
+                </div>
+                ` : ''}
+            `;
+        }
+        
+        function renderMetrics(data) {
+            const card = document.getElementById('metrics-card');
+            if (!data) {
+                card.innerHTML = '<h2>Performance Metrics</h2><div class="error">Failed to load metrics</div>';
+                return;
+            }
+            
+            const perf = data.performance || {};
+            const stats = data.statistics || {};
+            
+            card.innerHTML = `
+                <h2>Performance Metrics</h2>
+                ${perf.current_tps !== undefined ? `
+                <div class="metric">
+                    <span class="metric-label">Current TPS</span>
+                    <span class="metric-value">${perf.current_tps.toFixed(2)}</span>
+                </div>
+                ` : ''}
+                ${perf.pending_tasks !== undefined ? `
+                <div class="metric">
+                    <span class="metric-label">Pending Tasks</span>
+                    <span class="metric-value">${perf.pending_tasks}</span>
+                </div>
+                ` : ''}
+                ${stats.total_transactions !== undefined ? `
+                <div class="metric">
+                    <span class="metric-label">Total Transactions</span>
+                    <span class="metric-value">${stats.total_transactions.toLocaleString()}</span>
+                </div>
+                ` : ''}
+                ${stats.total_blocks !== undefined ? `
+                <div class="metric">
+                    <span class="metric-label">Total Blocks</span>
+                    <span class="metric-value">${stats.total_blocks.toLocaleString()}</span>
+                </div>
+                ` : ''}
+                <div class="metric">
+                    <span class="metric-label">Last Updated</span>
+                    <span class="metric-value">${new Date().toLocaleTimeString()}</span>
+                </div>
+            `;
+        }
+        
+        function renderL2State(data) {
+            const card = document.getElementById('l2-state-card');
+            if (!data) {
+                card.innerHTML = '<h2>Layer-2 State</h2><div class="error">Failed to load L2 state</div>';
+                return;
+            }
+            
+            card.innerHTML = `
+                <h2>Layer-2 State</h2>
+                ${data.protocol ? `
+                <div class="metric">
+                    <span class="metric-label">Protocol</span>
+                    <span class="metric-value">${data.protocol}</span>
+                </div>
+                ` : ''}
+                ${data.layer ? `
+                <div class="metric">
+                    <span class="metric-label">Layer</span>
+                    <span class="metric-value">${data.layer}</span>
+                </div>
+                ` : ''}
+                ${data.ledger ? `
+                <div class="metric">
+                    <span class="metric-label">Ledger Status</span>
+                    <span class="metric-value">${data.ledger.status || 'Unknown'}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Ledger Type</span>
+                    <span class="metric-value">${data.ledger.type || 'Unknown'}</span>
+                </div>
+                ` : ''}
+                ${data.description ? `
+                <div class="metric">
+                    <span class="metric-label">Description</span>
+                    <span class="metric-value" style="font-size: 0.85em;">${data.description}</span>
+                </div>
+                ` : ''}
+            `;
+        }
+        
+        function formatUptime(seconds) {
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            
+            if (days > 0) {
+                return `${days}d ${hours}h ${minutes}m`;
+            } else if (hours > 0) {
+                return `${hours}h ${minutes}m`;
+            } else {
+                return `${minutes}m`;
+            }
+        }
+        
+        async function loadAllData() {
+            // Load status
+            const status = await fetchData('/api/status');
+            renderStatus(status);
+            
+            // Combine status and metrics for rendering
+            if (status && status.statistics) {
+                renderMetrics({
+                    performance: {
+                        current_tps: status.statistics.current_tps || 0,
+                        pending_tasks: status.statistics.pending_tasks || 0
+                    },
+                    statistics: status.statistics
+                });
+            } else {
+                const metrics = await fetchData('/api/metrics');
+                renderMetrics(metrics);
+            }
+            
+            // Load L2 state
+            const l2State = await fetchData('/api/l2/state');
+            renderL2State(l2State);
+        }
+        
+        // Initial load
+        loadAllData();
+        
+        // Auto-refresh every 10 seconds
+        setInterval(loadAllData, 10000);
+    </script>
+</body>
+</html>

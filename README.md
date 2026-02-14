@@ -290,6 +290,41 @@ AI always yields to deterministic safety rules.**
 
 ---
 
+## 🌐 World Wide Web Integration
+
+**AILEE-Core now includes full web integration** for global accessibility:
+
+### Web Dashboard & REST API
+
+- **Interactive Dashboard**: Real-time web-based monitoring interface
+- **RESTful API**: Complete HTTP API for node status, metrics, and operations
+- **CORS Enabled**: Browser-friendly for web application integration
+- **Auto-refresh**: Live updates of node performance and state
+
+### Quick Start
+
+```bash
+# Build and run the web demo
+mkdir build && cd build
+cmake .. && make
+./ailee_web_demo
+
+# Access the dashboard at http://localhost:8080
+```
+
+### API Endpoints
+
+- `GET /api/status` - Node status and health
+- `GET /api/metrics` - Performance metrics
+- `GET /api/l2/state` - Layer-2 state information
+- `GET /api/orchestration/tasks` - Task orchestration
+- `POST /api/orchestration/submit` - Submit new tasks
+- `GET /api/anchors/latest` - Bitcoin anchor status
+
+**Full Documentation**: See [`docs/WEB_INTEGRATION.md`](docs/WEB_INTEGRATION.md)
+
+---
+
 ## 📊 Performance & Metrics
 
 Any throughput, latency, or energy figures referenced in this repository represent:
