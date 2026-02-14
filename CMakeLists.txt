@@ -116,6 +116,7 @@ set(AILEE_HEADERS
     include/Global_Seven.h
     include/AmbientAI.h
     include/L2State.h
+    include/AILEEWebServer.h
 )
 
 # Policy System Headers (new files)
@@ -176,6 +177,7 @@ set(CORE_SOURCES
     src/security/zk_proofs.cpp
     src/l1/AnchorCommitment.cpp
     src/l2/L2State.cpp
+    src/AILEEWebServer.cpp
     ${ADAPTER_SOURCES}
     ${AMBIENT_SOURCES}
     ${POLICY_SOURCES}
@@ -332,8 +334,19 @@ endif()
 # Installation
 # ============================================================================
 
+# --- 3. Web Server Demo Executable ---
+add_executable(ailee_web_demo
+    examples/WebServerDemo.cpp
+    src/AILEEWebServer.cpp
+)
+
+target_link_libraries(ailee_web_demo
+    PRIVATE
+    Threads::Threads
+)
+
 # Install the binary
-install(TARGETS ailee_node DESTINATION bin)
+install(TARGETS ailee_node ailee_web_demo DESTINATION bin)
 
 # Install the Library Headers (So others can build on AILEE)
 install(FILES 
@@ -385,6 +398,7 @@ message(STATUS "   Governance:       DAO, Circuit Breaker")
 message(STATUS "   Multi-Chain:      Global Seven (7+ adapters)")
 message(STATUS "   AmbientAI:        Mesh Intelligence (Federated)")
 message(STATUS "   Policy System:    ${yaml-cpp_FOUND}")
+message(STATUS "   Web Server:       Enabled (port 8080)")
 message(STATUS "   Build Tests:      ${BUILD_TESTS}")
 message(STATUS "=============================================================")
 
