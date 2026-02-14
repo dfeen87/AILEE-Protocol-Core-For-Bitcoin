@@ -345,7 +345,7 @@ target_link_libraries(ailee_web_demo
     Threads::Threads
 )
 
-# --- 4. Ambient AI + VCP Integration Demo ---
+# --- 4. Ambient AI + VCP Integration Demo (Original) ---
 add_executable(ailee_ambient_vcp_demo
     examples/AmbientVCP_Demo.cpp
     src/AmbientAI.cpp
@@ -359,8 +359,24 @@ target_link_libraries(ailee_ambient_vcp_demo
     OpenSSL::Crypto
 )
 
-# Install the binary
-install(TARGETS ailee_node ailee_web_demo ailee_ambient_vcp_demo DESTINATION bin)
+# --- 5. Production Ambient AI + VCP Demo (With Real Implementations) ---
+add_executable(ailee_ambient_vcp_production_demo
+    examples/AmbientVCP_Production_Demo.cpp
+    src/AmbientAI.cpp
+    src/security/zk_proofs.cpp
+    src/security/HashProofSystem.cpp
+    src/runtime/WasmEdgeEngine.cpp
+)
+
+target_link_libraries(ailee_ambient_vcp_production_demo
+    PRIVATE
+    Threads::Threads
+    OpenSSL::SSL
+    OpenSSL::Crypto
+)
+
+# Install the binaries
+install(TARGETS ailee_node ailee_web_demo ailee_ambient_vcp_demo ailee_ambient_vcp_production_demo DESTINATION bin)
 
 # Install the Library Headers (So others can build on AILEE)
 install(FILES 

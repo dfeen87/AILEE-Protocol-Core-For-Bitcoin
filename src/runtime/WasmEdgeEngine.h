@@ -9,6 +9,9 @@
 #include <memory>
 #include <vector>
 #include <chrono>
+#include <unordered_map>
+#include <mutex>
+#include <stdexcept>
 
 // Forward declarations for WasmEdge types (to avoid including full SDK in header)
 struct WasmEdge_ConfigureContext;
