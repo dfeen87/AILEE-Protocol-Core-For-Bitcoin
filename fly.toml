@@ -1,41 +1,23 @@
-# Fly.io Configuration for AILEE-Core REST API
-# Deploy with: fly deploy
+# fly.toml app configuration file generated for app-icy-sunset-8762 on 2026-02-14T18:04:38Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
-app = "ailee-core-api"
-primary_region = "iad"
+app = 'app-icy-sunset-8762'
+primary_region = 'iad'
 
 [build]
-  dockerfile = "Dockerfile"
-
-[env]
-  AILEE_ENV = "production"
-  AILEE_LOG_LEVEL = "info"
-  AILEE_PORT = "8080"
-  AILEE_HOST = "0.0.0.0"
-  AILEE_CORS_ENABLED = "true"
-  AILEE_RATE_LIMIT_ENABLED = "true"
 
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = true
+  auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
-  processes = ["app"]
+  processes = ['app']
 
-[[http_service.checks]]
-  grace_period = "10s"
-  interval = "30s"
-  method = "GET"
-  timeout = "5s"
-  path = "/health"
-
-[vm]
-  cpu_kind = "shared"
-  cpus = 1
-  memory_mb = 256
-
-[[vm.size]]
-  cpu_kind = "shared"
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
   cpus = 1
   memory_mb = 256
