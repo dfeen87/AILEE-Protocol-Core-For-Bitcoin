@@ -1,0 +1,41 @@
+# Fly.io Configuration for AILEE-Core REST API
+# Deploy with: fly deploy
+
+app = "ailee-core-api"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  AILEE_ENV = "production"
+  AILEE_LOG_LEVEL = "info"
+  AILEE_PORT = "8080"
+  AILEE_HOST = "0.0.0.0"
+  AILEE_CORS_ENABLED = "true"
+  AILEE_RATE_LIMIT_ENABLED = "true"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[http_service.checks]]
+  grace_period = "10s"
+  interval = "30s"
+  method = "GET"
+  timeout = "5s"
+  path = "/health"
+
+[vm]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256
+
+[[vm.size]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256
