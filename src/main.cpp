@@ -45,6 +45,9 @@
 #include "Orchestrator.h"
 #include "Ledger.h"
 
+// Web Server for HTTP API
+#include "AILEEWebServer.h"
+
 // ---------------------------------------------------------
 // Enhanced Structured Logging with Levels and File Output
 // ---------------------------------------------------------
@@ -167,6 +170,11 @@ struct Config {
     int         metricsPort       = 9090;
     std::string logPath           = "./logs/ailee.log";
     
+    // HTTP Web Server
+    bool        enableWebServer   = true;
+    std::string webServerHost     = "0.0.0.0";
+    int         webServerPort     = 8080;
+    
     // Node identity
     std::string nodeId            = "node-001";
     std::string region            = "us-east";
@@ -194,6 +202,10 @@ struct Config {
         }
         if (maxConcurrentTasks < 1 || maxConcurrentTasks > 10000) {
             log(LogLevel::ERROR, "Invalid maxConcurrentTasks: " + std::to_string(maxConcurrentTasks));
+            return false;
+        }
+        if (enableWebServer && (webServerPort < 1024 || webServerPort > 65535)) {
+            log(LogLevel::ERROR, "Invalid webServerPort: " + std::to_string(webServerPort));
             return false;
         }
         return true;
@@ -248,6 +260,17 @@ static Config loadConfigFromEnv() {
     if (const char* logPath = std::getenv("AILEE_LOG_PATH")) {
         c.logPath = logPath;
     }
+    
+    // Web Server settings
+    if (const char* wsEnable = std::getenv("AILEE_WEB_SERVER_ENABLE")) {
+        c.enableWebServer = std::atoi(wsEnable) != 0;
+    }
+    if (const char* wsHost = std::getenv("AILEE_WEB_SERVER_HOST")) {
+        c.webServerHost = wsHost;
+    }
+    if (const char* wsPort = std::getenv("AILEE_WEB_SERVER_PORT")) {
+        c.webServerPort = std::atoi(wsPort);
+    }
 
     return c;
 }
@@ -260,6 +283,7 @@ public:
     explicit AILEEEngine(const Config& cfg) 
         : cfg_(cfg), 
           orchestrationEngine_(nullptr),
+          webServer_(nullptr),
           shutdownCalled_(false)
     {
         log(LogLevel::INFO, "AILEE Engine initializing with node ID: " + cfg_.nodeId);
@@ -267,6 +291,11 @@ public:
         // Initialize orchestration engine if enabled
         if (cfg_.enableOrchestration) {
             initOrchestrationEngine();
+        }
+        
+        // Initialize web server if enabled
+        if (cfg_.enableWebServer) {
+            initWebServer();
         }
         
         // Initialize NetFlow if enabled
@@ -288,6 +317,17 @@ public:
             registerSelfAsNode();
         }
         
+        // Start web server
+        if (webServer_) {
+            log(LogLevel::INFO, "Starting web server on " + cfg_.webServerHost + ":" + 
+                std::to_string(cfg_.webServerPort) + "...");
+            if (webServer_->start()) {
+                log(LogLevel::INFO, "Web server started successfully");
+            } else {
+                log(LogLevel::ERROR, "Failed to start web server");
+            }
+        }
+        
         log(LogLevel::INFO, "AILEE Engine started successfully");
     }
     
@@ -296,6 +336,12 @@ public:
             return;
         }
         log(LogLevel::INFO, "AILEE Engine shutting down");
+        
+        // Stop web server first
+        if (webServer_) {
+            log(LogLevel::INFO, "Stopping web server...");
+            webServer_->stop();
+        }
         
         if (orchestrationEngine_) {
             log(LogLevel::INFO, "Stopping orchestration engine...");
@@ -615,7 +661,9 @@ private:
     Config cfg_;
     ailee_netflow::HybridNetFlow netFlow_;
     std::unique_ptr<ailee::sched::Engine> orchestrationEngine_;
+    std::unique_ptr<ailee::AILEEWebServer> webServer_;
     std::atomic<bool> shutdownCalled_;
+    std::chrono::steady_clock::time_point startTime_;
     
     void initOrchestrationEngine() {
         try {
@@ -646,6 +694,57 @@ private:
                 
         } catch (const std::exception& e) {
             log(LogLevel::ERROR, "Failed to initialize orchestration engine: " + 
+                std::string(e.what()));
+            throw;
+        }
+    }
+    
+    void initWebServer() {
+        try {
+            ailee::WebServerConfig wsConfig;
+            wsConfig.host = cfg_.webServerHost;
+            wsConfig.port = cfg_.webServerPort;
+            wsConfig.enable_cors = true;
+            wsConfig.enable_ssl = false;
+            wsConfig.thread_pool_size = 4;
+            
+            webServer_ = std::make_unique<ailee::AILEEWebServer>(wsConfig);
+            
+            // Set up status callback to provide node information
+            startTime_ = std::chrono::steady_clock::now();
+            webServer_->setNodeStatusCallback([this]() -> ailee::NodeStatus {
+                auto now = std::chrono::steady_clock::now();
+                auto uptime = std::chrono::duration_cast<std::chrono::seconds>(now - startTime_).count();
+                
+                ailee::NodeStatus status;
+                status.running = true;
+                status.version = "2.0.0";
+                status.uptime_seconds = uptime;
+                status.network = "bitcoin-mainnet";
+                status.total_transactions = 0;
+                status.total_blocks = 0;
+                status.current_tps = 0.0;
+                status.pending_tasks = 0;
+                status.last_anchor_hash = "N/A";
+                
+                // Get metrics from orchestrator if available
+                if (orchestrationEngine_) {
+                    try {
+                        auto metrics = orchestrationEngine_->getMetrics();
+                        status.pending_tasks = metrics.queuedTasks;
+                    } catch (...) {
+                        // Ignore errors
+                    }
+                }
+                
+                return status;
+            });
+            
+            log(LogLevel::INFO, "Web server initialized on " + wsConfig.host + ":" + 
+                std::to_string(wsConfig.port));
+                
+        } catch (const std::exception& e) {
+            log(LogLevel::ERROR, "Failed to initialize web server: " + 
                 std::string(e.what()));
             throw;
         }
@@ -900,7 +999,32 @@ int main(int argc, char* argv[]) {
         log(LogLevel::INFO, "All systems tested in " + std::to_string(duration.count()) + "ms");
 
         if (g_shutdown.load()) {
-            log(LogLevel::WARN, "Shutdown requested by signal");
+            log(LogLevel::WARN, "Shutdown requested by signal during initialization");
+        } else {
+            // Keep the server running and wait for shutdown signal
+            log(LogLevel::INFO, "╔═══════════════════════════════════════════════════╗");
+            log(LogLevel::INFO, "║   AILEE-Core Node is now RUNNING                  ║");
+            
+            // Format the port message with proper spacing
+            std::ostringstream portMsg;
+            portMsg << "║   HTTP API available on port " << cfg.webServerPort;
+            // Pad with spaces to maintain box alignment (51 chars total width)
+            int paddingNeeded = 51 - static_cast<int>(portMsg.str().length());
+            for (int i = 0; i < paddingNeeded; ++i) {
+                portMsg << " ";
+            }
+            portMsg << "║";
+            log(LogLevel::INFO, portMsg.str());
+            
+            log(LogLevel::INFO, "║   Press Ctrl+C to shutdown gracefully             ║");
+            log(LogLevel::INFO, "╚═══════════════════════════════════════════════════╝");
+            
+            // Main service loop - wait for shutdown signal
+            while (!g_shutdown.load()) {
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }
+            
+            log(LogLevel::INFO, "Shutdown signal received, initiating graceful shutdown...");
         }
         
     } catch (const std::exception& e) {
