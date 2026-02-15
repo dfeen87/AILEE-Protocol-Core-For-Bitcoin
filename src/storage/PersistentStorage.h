@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <optional>
+#include <memory>
 
 namespace ailee::storage {
 
@@ -32,10 +33,20 @@ public:
     explicit PersistentStorage(const Config& config = Config{});
     ~PersistentStorage();
     
+    // Disable copy, allow move
+    PersistentStorage(const PersistentStorage&) = delete;
+    PersistentStorage& operator=(const PersistentStorage&) = delete;
+    PersistentStorage(PersistentStorage&&) = default;
+    PersistentStorage& operator=(PersistentStorage&&) = default;
+    
     bool put(const std::string& key, const std::string& value);
     std::optional<std::string> get(const std::string& key);
     bool remove(const std::string& key);
     bool exists(const std::string& key);
+
+private:
+    class Impl;
+    std::unique_ptr<Impl> impl_;
 };
 
 } // namespace ailee::storage
