@@ -1,6 +1,6 @@
-<div align="center">
 
-# 🌐 AILEE-Core
+
+# "I truly care about peoples hard earned money, because of this I am retiring this repository. AI isn't to be trusted building web applications for blockchain technology. This repo is a great foundation for those that want to pursue blockchain, but I say this with caution - be very careful. It takes time and dedication by teams of professionals to make something of this nature possible. It can be done but it requires a lot of patience, testing, and validation for security and promise of interworkings on the blockchain. I have learned a lot in this project and I am glad I am stopping now before launching this in an actual layer 2 for Bitcoin. I pray that people take time to develop on their own without the use of coding agents, this is the way." —Don 
 
 ### **Ambient AI + Bitcoin Layer-2 Orchestration Framework**
 
