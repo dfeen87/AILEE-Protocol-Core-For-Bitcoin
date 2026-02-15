@@ -45,6 +45,9 @@
 #include "Orchestrator.h"
 #include "Ledger.h"
 
+// Block Producer for L2 Chain
+#include "BlockProducer.h"
+
 // Web Server for HTTP API
 #include "AILEEWebServer.h"
 
@@ -293,6 +296,9 @@ public:
             initOrchestrationEngine();
         }
         
+        // Initialize block producer (L2 chain component)
+        initBlockProducer();
+        
         // Initialize web server if enabled
         if (cfg_.enableWebServer) {
             initWebServer();
@@ -319,6 +325,11 @@ public:
         
         // Start web server
         if (webServer_) {
+            // Connect block producer to web server before starting to avoid race condition
+            if (blockProducer_) {
+                webServer_->setBlockProducerRef(blockProducer_.get());
+            }
+            
             log(LogLevel::INFO, "Starting web server on " + cfg_.webServerHost + ":" + 
                 std::to_string(cfg_.webServerPort) + "...");
             if (webServer_->start()) {
@@ -326,6 +337,13 @@ public:
             } else {
                 log(LogLevel::ERROR, "Failed to start web server");
             }
+        }
+        
+        // Start block producer
+        if (blockProducer_) {
+            log(LogLevel::INFO, "Starting block producer...");
+            blockProducer_->start();
+            log(LogLevel::INFO, "Block producer started successfully");
         }
         
         log(LogLevel::INFO, "AILEE Engine started successfully");
@@ -337,7 +355,13 @@ public:
         }
         log(LogLevel::INFO, "AILEE Engine shutting down");
         
-        // Stop web server first
+        // Stop block producer first
+        if (blockProducer_) {
+            log(LogLevel::INFO, "Stopping block producer...");
+            blockProducer_->stop();
+        }
+        
+        // Stop web server
         if (webServer_) {
             log(LogLevel::INFO, "Stopping web server...");
             webServer_->stop();
@@ -662,6 +686,7 @@ private:
     ailee_netflow::HybridNetFlow netFlow_;
     std::unique_ptr<ailee::sched::Engine> orchestrationEngine_;
     std::unique_ptr<ailee::AILEEWebServer> webServer_;
+    std::unique_ptr<ailee::l2::BlockProducer> blockProducer_;
     std::atomic<bool> shutdownCalled_;
     std::chrono::steady_clock::time_point startTime_;
     
@@ -745,6 +770,28 @@ private:
                 
         } catch (const std::exception& e) {
             log(LogLevel::ERROR, "Failed to initialize web server: " + 
+                std::string(e.what()));
+            throw;
+        }
+    }
+    
+    void initBlockProducer() {
+        try {
+            ailee::l2::BlockProducer::Config blockConfig;
+            
+            // Use configured values from config.yaml
+            // These defaults match the values in config/config.yaml
+            blockConfig.blockIntervalMs = 1000;      // 1 block/second (config.yaml: block_interval_ms)
+            blockConfig.commitmentInterval = 100;     // Anchor every 100 blocks (config.yaml: commitment_interval)
+            
+            blockProducer_ = std::make_unique<ailee::l2::BlockProducer>(blockConfig);
+            
+            log(LogLevel::INFO, "Block producer initialized (interval: " + 
+                std::to_string(blockConfig.blockIntervalMs) + "ms, anchor every " + 
+                std::to_string(blockConfig.commitmentInterval) + " blocks)");
+                
+        } catch (const std::exception& e) {
+            log(LogLevel::ERROR, "Failed to initialize block producer: " + 
                 std::string(e.what()));
             throw;
         }

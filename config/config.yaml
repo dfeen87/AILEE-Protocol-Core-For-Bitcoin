@@ -2,6 +2,8 @@ version: 1
 mode: live
 step_ms: 50
 horizon_s: 600
+block_interval_ms: 1000
+commitment_interval: 100
 
 signals:
   - name: latency_ms

@@ -46,6 +46,10 @@ struct Config {
   size_t step_ms = 50;
   size_t horizon_s = 600;
 
+  // Block production settings
+  size_t block_interval_ms = 1000;      // 1 block per second
+  size_t commitment_interval = 100;     // Anchor every 100 blocks
+
   std::vector<SignalSpec> signals;
   std::vector<MetricSpec> metrics;
   std::vector<PolicySpec> policies;
