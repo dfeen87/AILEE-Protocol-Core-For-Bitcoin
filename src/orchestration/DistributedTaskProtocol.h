@@ -110,16 +110,24 @@ class DistributedTaskProtocol {
 public:
     struct Config {
         std::string nodeId;                    // Local node identifier
-        uint32_t maxConcurrentTasks = 10;      // Max parallel tasks
-        uint32_t taskTimeoutSeconds = 300;     // Default task timeout
-        bool autoExecute = true;               // Auto-execute received tasks
-        std::string resultsTopicPrefix = "ailee/task/results";
-        std::string tasksTopicPrefix = "ailee/task/distribute";
+        uint32_t maxConcurrentTasks;           // Max parallel tasks
+        uint32_t taskTimeoutSeconds;           // Default task timeout
+        bool autoExecute;                      // Auto-execute received tasks
+        std::string resultsTopicPrefix;
+        std::string tasksTopicPrefix;
+        
+        Config()
+            : maxConcurrentTasks(10)
+            , taskTimeoutSeconds(300)
+            , autoExecute(true)
+            , resultsTopicPrefix("ailee/task/results")
+            , tasksTopicPrefix("ailee/task/distribute")
+        {}
     };
     
     explicit DistributedTaskProtocol(
         std::shared_ptr<network::P2PNetwork> network,
-        const Config& config = Config{}
+        const Config& config = Config()
     );
     ~DistributedTaskProtocol();
     

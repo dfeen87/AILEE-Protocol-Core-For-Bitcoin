@@ -23,14 +23,22 @@ namespace ailee::storage {
 class PersistentStorage {
 public:
     struct Config {
-        std::string dbPath = "./data/ailee.db";
-        size_t maxOpenFiles = 1000;
-        size_t writeBufferSizeMB = 64;
-        size_t blockCacheSizeMB = 512;
-        bool createIfMissing = true;
+        std::string dbPath;
+        size_t maxOpenFiles;
+        size_t writeBufferSizeMB;
+        size_t blockCacheSizeMB;
+        bool createIfMissing;
+        
+        Config()
+            : dbPath("./data/ailee.db")
+            , maxOpenFiles(1000)
+            , writeBufferSizeMB(64)
+            , blockCacheSizeMB(512)
+            , createIfMissing(true)
+        {}
     };
     
-    explicit PersistentStorage(const Config& config = Config{});
+    explicit PersistentStorage(const Config& config = Config());
     ~PersistentStorage();
     
     // Disable copy, allow move

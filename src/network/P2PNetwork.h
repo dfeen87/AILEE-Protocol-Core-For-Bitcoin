@@ -39,12 +39,20 @@ struct NetworkMessage {
  * P2P Network configuration
  */
 struct P2PConfig {
-    std::string listenAddress = "/ip4/0.0.0.0/tcp/4001";
+    std::string listenAddress;
     std::vector<std::string> bootstrapPeers;
-    std::string privateKeyPath = "./data/p2p_private_key";
-    uint32_t maxPeers = 50;
-    bool enableMDNS = true;        // Local peer discovery
-    bool enableDHT = true;         // Distributed hash table
+    std::string privateKeyPath;
+    uint32_t maxPeers;
+    bool enableMDNS;        // Local peer discovery
+    bool enableDHT;         // Distributed hash table
+    
+    P2PConfig()
+        : listenAddress("/ip4/0.0.0.0/tcp/4001")
+        , privateKeyPath("./data/p2p_private_key")
+        , maxPeers(50)
+        , enableMDNS(true)
+        , enableDHT(true)
+    {}
 };
 
 /**
