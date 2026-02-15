@@ -57,7 +57,9 @@ def test_mempool_to_block_producer():
     
     # Step 3: Wait for block production
     print("3. Waiting for transactions to be included in blocks...")
-    time.sleep(3)  # Wait for at least 3 blocks (3 seconds at 1 block/sec)
+    # Note: Block interval is 1 second. Wait for at least 3 blocks to ensure all txs are processed.
+    # In production, consider polling L2 state until expected blocks are produced.
+    time.sleep(3)
     
     # Step 4: Check L2 state after
     print("4. Checking final L2 state...")

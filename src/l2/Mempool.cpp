@@ -26,6 +26,8 @@ void Mempool::confirmTransactions(const std::vector<std::string>& txHashes, std:
     std::lock_guard<std::mutex> lock(mutex_);
     
     // Move confirmed transactions from pending to confirmed
+    // Note: This implementation has O(n*m) complexity. For high-throughput scenarios,
+    // consider using an unordered_map indexed by txHash for O(1) lookups.
     for (const auto& txHash : txHashes) {
         auto it = std::find_if(
             pendingTransactions_.begin(),

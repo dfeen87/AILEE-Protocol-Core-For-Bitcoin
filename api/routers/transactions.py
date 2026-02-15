@@ -156,11 +156,10 @@ async def submit_transaction(tx: TransactionInput):
         except Exception as e:
             logger.warning(f"Failed to submit to C++ mempool (will retry): {e}")
         
-        # Get current block height from C++ node
+        # Get current block height from C++ node for response
         block_height = None
         cpp_state = await client.get_l2_state()
         if cpp_state:
-            # Get current block height from C++ node
             block_height = cpp_state.get("block_height", 0)
             # Transaction will be included in next block
             block_height += 1
