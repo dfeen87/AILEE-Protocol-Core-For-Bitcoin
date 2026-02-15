@@ -19,6 +19,7 @@ class Ledger;
 
 namespace l2 {
 class BlockProducer;
+class Mempool;
 }
 
 struct WebServerConfig {
@@ -63,6 +64,7 @@ public:
     void setOrchestratorRef(Orchestrator* orch);
     void setLedgerRef(Ledger* ledger);
     void setBlockProducerRef(l2::BlockProducer* producer);
+    void setMempoolRef(l2::Mempool* mempool);
 
 private:
     class Impl;

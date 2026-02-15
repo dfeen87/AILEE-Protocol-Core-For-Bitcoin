@@ -229,6 +229,7 @@ set(CORE_SOURCES
     src/l1/AnchorCommitment.cpp
     src/l2/L2State.cpp
     src/l2/BlockProducer.cpp
+    src/l2/Mempool.cpp
     src/AILEEWebServer.cpp
     ${ADAPTER_SOURCES}
     ${AMBIENT_SOURCES}

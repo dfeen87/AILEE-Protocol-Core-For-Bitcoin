@@ -47,6 +47,7 @@
 
 // Block Producer for L2 Chain
 #include "BlockProducer.h"
+#include "Mempool.h"
 
 // Web Server for HTTP API
 #include "AILEEWebServer.h"
@@ -325,9 +326,12 @@ public:
         
         // Start web server
         if (webServer_) {
-            // Connect block producer to web server before starting to avoid race condition
+            // Connect block producer and mempool to web server before starting to avoid race condition
             if (blockProducer_) {
                 webServer_->setBlockProducerRef(blockProducer_.get());
+            }
+            if (mempool_) {
+                webServer_->setMempoolRef(mempool_.get());
             }
             
             log(LogLevel::INFO, "Starting web server on " + cfg_.webServerHost + ":" + 
@@ -687,6 +691,7 @@ private:
     std::unique_ptr<ailee::sched::Engine> orchestrationEngine_;
     std::unique_ptr<ailee::AILEEWebServer> webServer_;
     std::unique_ptr<ailee::l2::BlockProducer> blockProducer_;
+    std::unique_ptr<ailee::l2::Mempool> mempool_;
     std::atomic<bool> shutdownCalled_;
     std::chrono::steady_clock::time_point startTime_;
     
@@ -777,6 +782,10 @@ private:
     
     void initBlockProducer() {
         try {
+            // Create mempool first
+            mempool_ = std::make_unique<ailee::l2::Mempool>();
+            log(LogLevel::INFO, "Mempool initialized");
+            
             ailee::l2::BlockProducer::Config blockConfig;
             
             // Use configured values from config.yaml
@@ -785,6 +794,9 @@ private:
             blockConfig.commitmentInterval = 100;     // Anchor every 100 blocks (config.yaml: commitment_interval)
             
             blockProducer_ = std::make_unique<ailee::l2::BlockProducer>(blockConfig);
+            
+            // Wire mempool to block producer
+            blockProducer_->setMempool(mempool_.get());
             
             log(LogLevel::INFO, "Block producer initialized (interval: " + 
                 std::to_string(blockConfig.blockIntervalMs) + "ms, anchor every " + 
