@@ -1,0 +1,162 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ailee-core"
+version = "1.2.1"
+description = "Bitcoin-anchored Layer-2 orchestration and verification framework with ambient AI, deterministic verification, and federated security"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Don Michael Feeney", email = "dfeen87@users.noreply.github.com"}
+]
+maintainers = [
+    {name = "Don Michael Feeney", email = "dfeen87@users.noreply.github.com"}
+]
+keywords = [
+    "bitcoin",
+    "layer-2",
+    "sidechain",
+    "blockchain",
+    "cryptocurrency",
+    "federated-security",
+    "deterministic-verification",
+    "ambient-ai",
+    "orchestration",
+    "fastapi",
+    "rest-api",
+    "bitcoin-l2",
+    "blockchain-infrastructure",
+    "recovery-protocol",
+    "energy-efficiency"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Topic :: System :: Distributed Computing",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Topic :: Security :: Cryptography",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: C++",
+    "Operating System :: OS Independent",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Environment :: Web Environment",
+    "Framework :: FastAPI",
+]
+
+dependencies = [
+    "fastapi>=0.104.1,<1.0.0",
+    "uvicorn[standard]>=0.24.0,<1.0.0",
+    "pydantic>=2.5.0,<3.0.0",
+    "pydantic-settings>=2.1.0,<3.0.0",
+    "python-multipart>=0.0.6,<1.0.0",
+    "slowapi>=0.1.9,<1.0.0",
+    "psutil>=5.9.6,<6.0.0",
+    "python-jose[cryptography]>=3.3.0,<4.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.5.0",
+]
+docs = [
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.4.0",
+]
+monitoring = [
+    "prometheus-client>=0.18.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin"
+Documentation = "https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin/tree/main/docs"
+Repository = "https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin"
+Issues = "https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin/issues"
+Changelog = "https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin/blob/main/CHANGELOG.md"
+
+[project.scripts]
+ailee-api = "api.main:app"
+
+[tool.setuptools]
+packages = ["api", "api.routers"]
+
+[tool.setuptools.package-data]
+api = ["*.py"]
+
+[tool.black]
+line-length = 120
+target-version = ["py38", "py39", "py310", "py311", "py312"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.ruff]
+line-length = 120
+target-version = "py38"
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "C",  # flake8-comprehensions
+    "B",  # flake8-bugbear
+]
+ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+disallow_untyped_calls = false
+warn_redundant_casts = true
+warn_unused_ignores = true
+follow_imports = "normal"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers"
+testpaths = [
+    "tests",
+]
+python_files = [
+    "test_*.py",
+    "*_test.py",
+]
