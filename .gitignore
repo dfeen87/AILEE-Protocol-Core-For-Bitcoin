@@ -47,10 +47,59 @@ htmlcov/
 dist/
 *.egg-info/
 
-# Environment files
+# Environment files - NEVER commit these (contains secrets!)
 .env
 .env.local
 .env.*.local
+.env.production
+.env.staging
+.env.development
+
+# Secrets and credentials - NEVER commit these!
+secrets.yaml
+secrets.yml
+secrets.json
+config/secrets.yaml
+config/secrets.yml
+**/secrets/**
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# Certificate private keys - NEVER commit these!
+*.key
+**/certs/**/*.key
+**/certs/private/**
+server.key
+client.key
+privkey.pem
+
+# HSM and key material
+*.hsm
+*.pkcs11
+
+# Backup files that might contain secrets
+*.backup
+*.bak
+*.old
+*_backup
+*_bak
+
+# Terraform state files (may contain secrets)
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Kubernetes secrets
+*-secret.yaml
+*-secret.yml
+
+# Docker secrets
+docker-compose.override.yml
+**/secrets/*
 
 # IDE
 *.swp

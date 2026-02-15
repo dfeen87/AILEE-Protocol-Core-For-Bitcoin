@@ -23,6 +23,16 @@ This guide covers TLS/SSL configuration for all AILEE-Core components:
 
 **Production Requirement:** All external connections MUST use TLS with valid certificates.
 
+**For production deployments:**
+- ✅ Use **Let's Encrypt** (free, automated, trusted by all browsers)
+- ✅ Use **Commercial CA** (DigiCert, GlobalSign, Sectigo for enterprise)
+- ❌ **NEVER** use self-signed certificates in production
+
+**For development/testing only:**
+- Use self-signed certificates (see end of this guide)
+- Not trusted by browsers (will show warnings)
+- Not suitable for any public-facing deployment
+
 ---
 
 ## Why TLS is Critical
@@ -47,59 +57,66 @@ This guide covers TLS/SSL configuration for all AILEE-Core components:
 
 ## Quick Start
 
-### Self-Signed Certificates (Development Only)
-
-```bash
-# Generate self-signed certificates for development
-cd /opt/ailee-core
-./scripts/generate-dev-certs.sh
-
-# This creates:
-# - /etc/ailee/certs/ca.crt (Certificate Authority)
-# - /etc/ailee/certs/server.crt (API server certificate)
-# - /etc/ailee/certs/server.key (API server private key)
-# - /etc/ailee/certs/client.crt (Client certificate)
-# - /etc/ailee/certs/client.key (Client private key)
-```
-
-### Production Certificates
+### Production Certificates (REQUIRED for Public Deployments)
 
 For production, use certificates from a trusted Certificate Authority (CA):
 
-**Option 1: Let's Encrypt (Free, Automated)**
+**Option 1: Let's Encrypt (Recommended - Free & Automated)**
+
+Let's Encrypt provides free, automated certificates trusted by all browsers.
+
 ```bash
-# Install certbot
-sudo apt-get install certbot
+# Quick setup with automated script
+cd /opt/ailee-core
+sudo DOMAIN=api.yourdomain.com EMAIL=admin@yourdomain.com \
+    ./scripts/security/setup-letsencrypt.sh
 
-# Generate certificate for your domain
-sudo certbot certonly --standalone -d api.ailee.example.com
+# This will:
+# 1. Install certbot
+# 2. Obtain SSL certificate from Let's Encrypt
+# 3. Configure automatic renewal (every 60 days)
+# 4. Update AILEE configuration
+# 5. Set up monitoring
 
-# Certificates will be in /etc/letsencrypt/live/api.ailee.example.com/
-# - fullchain.pem (certificate + intermediates)
-# - privkey.pem (private key)
-
-# Set up auto-renewal
-sudo certbot renew --dry-run
+# Certificates installed at:
+# /etc/letsencrypt/live/api.yourdomain.com/fullchain.pem
+# /etc/letsencrypt/live/api.yourdomain.com/privkey.pem
 ```
 
-**Option 2: Commercial CA (DigiCert, GlobalSign, etc.)**
-```bash
-# Generate Certificate Signing Request (CSR)
-openssl req -new -newkey rsa:4096 -nodes \
-    -keyout /etc/ailee/certs/server.key \
-    -out /etc/ailee/certs/server.csr \
-    -subj "/C=US/ST=State/L=City/O=Organization/CN=api.ailee.example.com"
+**Benefits of Let's Encrypt:**
+- ✅ **Free** - No cost for certificates
+- ✅ **Automated** - Auto-renewal every 60 days
+- ✅ **Trusted** - Accepted by all major browsers
+- ✅ **Quick** - Setup in minutes
+- ✅ **Secure** - Modern best practices
 
-# Submit CSR to CA, receive signed certificate
-# Install certificate as /etc/ailee/certs/server.crt
+**Requirements:**
+- Domain name pointing to your server
+- Port 80 accessible (for verification)
+- Port 443 accessible (for HTTPS)
+
+**Option 2: Commercial CA (Enterprise)**
+
+For enterprise deployments requiring extended validation or specific compliance:
+
+```bash
+# Generate CSR and obtain certificate from commercial CA
+cd /opt/ailee-core
+sudo DOMAIN=api.yourdomain.com \
+    ./scripts/security/setup-commercial-ca.sh
+
+# This will:
+# 1. Generate private key and CSR
+# 2. Guide you through CA submission
+# 3. Help install received certificates
+# 4. Configure AILEE to use certificates
 ```
 
-**Option 3: Internal PKI (Enterprise)**
-```bash
-# Use your organization's internal CA
-# Request certificate through your PKI system
-# Install certificate and private key
-```
+**Commercial CA Options:**
+- **DigiCert** - Industry leader, highest trust
+- **GlobalSign** - Worldwide coverage
+- **Sectigo** (formerly Comodo) - Cost-effective
+- **GoDaddy** - Easy integration
 
 ---
 
@@ -668,6 +685,49 @@ Before going to production:
 - [ ] Backup of certificates and keys secured
 - [ ] Firewall rules configured correctly
 - [ ] Monitoring and alerting configured
+
+---
+
+## Appendix: Self-Signed Certificates (Development Only)
+
+⚠️ **WARNING: NEVER use self-signed certificates in production!**
+
+Self-signed certificates are **ONLY** for:
+- Local development
+- Internal testing  
+- Offline environments
+
+**Why NOT for production:**
+- ❌ Not trusted by browsers (security warnings)
+- ❌ No certificate revocation
+- ❌ Manual management required
+- ❌ Professional/compliance issues
+
+**For development/testing:**
+
+```bash
+# Generate self-signed certificates
+cd /opt/ailee-core
+sudo ./scripts/security/generate-dev-certs.sh
+
+# This creates:
+# - /etc/ailee/certs/ca.crt (self-signed CA)
+# - /etc/ailee/certs/server.crt
+# - /etc/ailee/certs/server.key
+# - /etc/ailee/certs/client.crt (for mTLS testing)
+```
+
+**Testing with self-signed certs:**
+
+```bash
+# Test with curl (specify CA)
+curl --cacert /etc/ailee/certs/ca.crt https://localhost:8443/health
+
+# Or ignore verification (insecure, testing only)
+curl -k https://localhost:8443/health
+```
+
+**For production, use Let's Encrypt or a commercial CA!**
 
 ---
 
