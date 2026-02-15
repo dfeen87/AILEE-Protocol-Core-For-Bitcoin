@@ -62,13 +62,14 @@ def generate_mock_anchors(limit: int = 10, offset: int = 0) -> List[AnchorRecord
     
     anchors = []
     current_bitcoin_height = 830000  # Mock current Bitcoin height
+    base_timestamp = datetime.now(timezone.utc)
     
     # Generate enough anchors to satisfy limit + offset
     total_to_generate = limit + offset
     
     for i in range(total_to_generate):
         height = current_bitcoin_height - (i * 144)  # One anchor per day approximately
-        timestamp = datetime.now(timezone.utc) - timedelta(days=i)
+        timestamp = base_timestamp - timedelta(days=i)
         
         anchor_id = f"anchor-{height}"
         state_root = hashlib.sha256(f"STATE:{height}".encode()).hexdigest()
@@ -157,8 +158,8 @@ async def get_anchor_history(
     # Get mock anchor history with proper pagination
     all_anchors = generate_mock_anchors(limit, offset)
     
-    # Apply offset (anchors are already generated with offset considered)
-    anchors = all_anchors[offset:offset + limit] if offset < len(all_anchors) else []
+    # Apply pagination slice (anchors are already generated starting from current)
+    anchors = all_anchors[offset:offset + limit]
     
     # Total count would come from database in production
     total_count = 1000  # Mock total count
