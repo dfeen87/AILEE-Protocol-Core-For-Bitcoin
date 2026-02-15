@@ -69,6 +69,22 @@ find_package(yaml-cpp QUIET)
 # 7. Threads (Required for running ZMQ listener in background)
 find_package(Threads REQUIRED)
 
+# 8. RocksDB (Optional - for persistent storage)
+find_package(RocksDB QUIET)
+if(RocksDB_FOUND)
+    message(STATUS "RocksDB found: ${RocksDB_LIBRARIES}")
+else()
+    # Try pkg-config
+    if(PKG_CONFIG_FOUND)
+        pkg_check_modules(ROCKSDB QUIET rocksdb)
+        if(ROCKSDB_FOUND)
+            set(RocksDB_FOUND TRUE)
+            set(RocksDB_LIBRARIES ${ROCKSDB_LIBRARIES})
+            set(RocksDB_INCLUDE_DIRS ${ROCKSDB_INCLUDE_DIRS})
+        endif()
+    endif()
+endif()
+
 # ============================================================================
 # Include Directories
 # ============================================================================
@@ -84,6 +100,10 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/security
     ${CMAKE_CURRENT_SOURCE_DIR}/src/telemetry
     ${CMAKE_CURRENT_SOURCE_DIR}/src/recovery
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/storage
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/network
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/metrics
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/orchestration
     ${OPENSSL_INCLUDE_DIR}
     ${CURL_INCLUDE_DIRS}
     ${JSONCPP_INCLUDE_DIRS}
@@ -96,6 +116,11 @@ endif()
 # Add yaml-cpp include if found
 if(yaml-cpp_FOUND)
     include_directories(${YAML_CPP_INCLUDE_DIR})
+endif()
+
+# Add RocksDB include if found
+if(RocksDB_FOUND)
+    include_directories(${RocksDB_INCLUDE_DIRS})
 endif()
 
 # ============================================================================
@@ -158,6 +183,14 @@ set(AMBIENT_SOURCES
     src/AmbientAI.cpp
 )
 
+# New Infrastructure Sources
+set(INFRASTRUCTURE_SOURCES
+    src/storage/PersistentStorage.cpp
+    src/network/P2PNetwork.cpp
+    src/orchestration/DistributedTaskProtocol.cpp
+    src/metrics/PrometheusExporter.cpp
+)
+
 # Policy System Sources
 set(POLICY_SOURCES
     src/security/policies.cpp
@@ -180,6 +213,7 @@ set(CORE_SOURCES
     src/AILEEWebServer.cpp
     ${ADAPTER_SOURCES}
     ${AMBIENT_SOURCES}
+    ${INFRASTRUCTURE_SOURCES}
     ${POLICY_SOURCES}
     ${AILEE_HEADERS}
     ${POLICY_HEADERS}
@@ -226,6 +260,15 @@ else()
     message(WARNING "yaml-cpp not found - policy hot-reload system will be disabled")
 endif()
 
+# Link RocksDB if found (for persistent storage)
+if(RocksDB_FOUND)
+    target_link_libraries(ailee_node PRIVATE ${RocksDB_LIBRARIES})
+    target_compile_definitions(ailee_node PRIVATE AILEE_HAS_ROCKSDB=1)
+    message(STATUS "RocksDB support enabled")
+else()
+    message(WARNING "RocksDB not found - persistent storage will be disabled")
+endif()
+
 # Robust ZeroMQ Linking
 if(TARGET cppzmq)
     target_link_libraries(ailee_node PRIVATE cppzmq)
@@ -243,6 +286,7 @@ endif()
 add_library(ailee_adapters STATIC 
     ${ADAPTER_SOURCES}
     ${AMBIENT_SOURCES}
+    ${INFRASTRUCTURE_SOURCES}
     ${POLICY_SOURCES}
     src/security/zk_proofs.cpp
 )
@@ -268,6 +312,12 @@ endif()
 # Link yaml-cpp to library as well
 if(yaml-cpp_FOUND)
     target_link_libraries(ailee_adapters PRIVATE yaml-cpp)
+endif()
+
+# Link RocksDB to library as well
+if(RocksDB_FOUND)
+    target_link_libraries(ailee_adapters PRIVATE ${RocksDB_LIBRARIES})
+    target_compile_definitions(ailee_adapters PRIVATE AILEE_HAS_ROCKSDB=1)
 endif()
 
 # Robust ZeroMQ Linking for library

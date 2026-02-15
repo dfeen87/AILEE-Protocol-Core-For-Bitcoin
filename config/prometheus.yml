@@ -1,0 +1,30 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'ailee-testnet'
+
+scrape_configs:
+  # AILEE Node 1
+  - job_name: 'ailee-node-1'
+    static_configs:
+      - targets: ['ailee-node-1:9090']
+        labels:
+          node: 'node-1'
+          role: 'bootstrap'
+
+  # AILEE Node 2
+  - job_name: 'ailee-node-2'
+    static_configs:
+      - targets: ['ailee-node-2:9090']
+        labels:
+          node: 'node-2'
+          role: 'peer'
+
+  # AILEE Node 3
+  - job_name: 'ailee-node-3'
+    static_configs:
+      - targets: ['ailee-node-3:9090']
+        labels:
+          node: 'node-3'
+          role: 'peer'

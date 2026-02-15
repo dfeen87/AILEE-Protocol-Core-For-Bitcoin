@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <optional>
+#include <memory>
 
 namespace ailee::storage {
 
@@ -22,20 +23,38 @@ namespace ailee::storage {
 class PersistentStorage {
 public:
     struct Config {
-        std::string dbPath = "./data/ailee.db";
-        size_t maxOpenFiles = 1000;
-        size_t writeBufferSizeMB = 64;
-        size_t blockCacheSizeMB = 512;
-        bool createIfMissing = true;
+        std::string dbPath;
+        size_t maxOpenFiles;
+        size_t writeBufferSizeMB;
+        size_t blockCacheSizeMB;
+        bool createIfMissing;
+        
+        Config()
+            : dbPath("./data/ailee.db")
+            , maxOpenFiles(1000)
+            , writeBufferSizeMB(64)
+            , blockCacheSizeMB(512)
+            , createIfMissing(true)
+        {}
     };
     
-    explicit PersistentStorage(const Config& config = Config{});
+    explicit PersistentStorage(const Config& config = Config());
     ~PersistentStorage();
+    
+    // Disable copy, allow move
+    PersistentStorage(const PersistentStorage&) = delete;
+    PersistentStorage& operator=(const PersistentStorage&) = delete;
+    PersistentStorage(PersistentStorage&&) = default;
+    PersistentStorage& operator=(PersistentStorage&&) = default;
     
     bool put(const std::string& key, const std::string& value);
     std::optional<std::string> get(const std::string& key);
     bool remove(const std::string& key);
     bool exists(const std::string& key);
+
+private:
+    class Impl;
+    std::unique_ptr<Impl> impl_;
 };
 
 } // namespace ailee::storage

@@ -2,12 +2,14 @@
 // HashProofSystem.cpp — Production-Grade Hash-Based Verification Implementation
 
 #include "HashProofSystem.h"
+#include <openssl/evp.h>
 #include <openssl/sha.h>
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
 #include <mutex>
 #include <ctime>
+#include <stdexcept>
 
 namespace ailee::security {
 
@@ -18,24 +20,80 @@ std::mutex HashProofSystem::nonceMutex_;
 // ==================== HASH UTILITIES ====================
 
 std::string HashProofSystem::sha3_256(const std::string& data) {
-    // For MVP, use SHA256 (OpenSSL built-in)
-    // In production, migrate to SHA3-256 using OpenSSL 3.0+
-    unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256(reinterpret_cast<const unsigned char*>(data.data()), data.size(), hash);
+    // Use SHA3-256 with OpenSSL 3.0+ EVP interface
+    unsigned char hash[32]; // SHA3-256 produces 32 bytes
+    unsigned int hashLen = 0;
+    
+    EVP_MD_CTX* ctx = EVP_MD_CTX_new();
+    if (!ctx) {
+        throw std::runtime_error("Failed to create EVP_MD_CTX for SHA3-256");
+    }
+    
+    const EVP_MD* md = EVP_sha3_256();
+    if (!md) {
+        EVP_MD_CTX_free(ctx);
+        // Fallback to SHA256 if SHA3 not available
+        unsigned char fallbackHash[SHA256_DIGEST_LENGTH];
+        SHA256(reinterpret_cast<const unsigned char*>(data.data()), data.size(), fallbackHash);
+        
+        std::stringstream ss;
+        for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+            ss << std::hex << std::setw(2) << std::setfill('0') << (int)fallbackHash[i];
+        }
+        return ss.str();
+    }
+    
+    if (EVP_DigestInit_ex(ctx, md, nullptr) != 1 ||
+        EVP_DigestUpdate(ctx, data.data(), data.size()) != 1 ||
+        EVP_DigestFinal_ex(ctx, hash, &hashLen) != 1) {
+        EVP_MD_CTX_free(ctx);
+        throw std::runtime_error("SHA3-256 computation failed");
+    }
+    
+    EVP_MD_CTX_free(ctx);
     
     std::stringstream ss;
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+    for (unsigned int i = 0; i < hashLen; i++) {
         ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
     }
     return ss.str();
 }
 
 std::string HashProofSystem::sha3_256(const std::vector<uint8_t>& data) {
-    unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256(data.data(), data.size(), hash);
+    // Use SHA3-256 with OpenSSL 3.0+ EVP interface
+    unsigned char hash[32]; // SHA3-256 produces 32 bytes
+    unsigned int hashLen = 0;
+    
+    EVP_MD_CTX* ctx = EVP_MD_CTX_new();
+    if (!ctx) {
+        throw std::runtime_error("Failed to create EVP_MD_CTX for SHA3-256");
+    }
+    
+    const EVP_MD* md = EVP_sha3_256();
+    if (!md) {
+        EVP_MD_CTX_free(ctx);
+        // Fallback to SHA256 if SHA3 not available
+        unsigned char fallbackHash[SHA256_DIGEST_LENGTH];
+        SHA256(data.data(), data.size(), fallbackHash);
+        
+        std::stringstream ss;
+        for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+            ss << std::hex << std::setw(2) << std::setfill('0') << (int)fallbackHash[i];
+        }
+        return ss.str();
+    }
+    
+    if (EVP_DigestInit_ex(ctx, md, nullptr) != 1 ||
+        EVP_DigestUpdate(ctx, data.data(), data.size()) != 1 ||
+        EVP_DigestFinal_ex(ctx, hash, &hashLen) != 1) {
+        EVP_MD_CTX_free(ctx);
+        throw std::runtime_error("SHA3-256 computation failed");
+    }
+    
+    EVP_MD_CTX_free(ctx);
     
     std::stringstream ss;
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+    for (unsigned int i = 0; i < hashLen; i++) {
         ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
     }
     return ss.str();
