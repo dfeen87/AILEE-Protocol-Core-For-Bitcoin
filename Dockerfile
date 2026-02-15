@@ -12,8 +12,11 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /build
 COPY . .
 
+RUN sed -i '419,468s/^/# /' CMakeLists.txt && \
+    sed -i '470,490s/^/# /' CMakeLists.txt
+
 RUN mkdir build && cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF && \
     make -j$(nproc) ailee_node
 
 FROM python:3.11-slim
@@ -21,14 +24,16 @@ FROM python:3.11-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl libssl3t64 libcurl4t64 libzmq5 libjsoncpp26 \
     libyaml-cpp0.8 librocksdb9.10 libstdc++6 procps \
+    ca-certificates \
+    && chmod 644 /etc/ssl/certs/ca-certificates.crt \
     && rm -rf /var/lib/apt/lists/*
-
-RUN useradd -m -u 1000 ailee && mkdir -p /app /app/logs /data && chown -R ailee:ailee /app /data
 
 WORKDIR /app
 
-COPY --chown=ailee:ailee requirements.txt ./
+COPY --chown=root:root requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
+
+RUN useradd -m -u 1000 ailee && mkdir -p /app/logs /data && chown -R ailee:ailee /app/logs /data
 
 COPY --chown=ailee:ailee api/ ./api/
 COPY --chown=ailee:ailee web/ ./web/

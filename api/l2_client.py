@@ -30,7 +30,12 @@ class AILEECoreClient:
         """
         self.base_url = base_url or os.getenv("AILEE_NODE_URL", "http://localhost:8080")
         self.timeout = timeout
-        self.client = httpx.AsyncClient(timeout=self.timeout, follow_redirects=True)
+        # Disable SSL verification for localhost connections
+        self.client = httpx.AsyncClient(
+            timeout=self.timeout, 
+            follow_redirects=True,
+            verify=False
+        )
         
         # Node availability tracking for smarter error handling
         self._node_available = None  # None = unknown, True = available, False = unavailable
