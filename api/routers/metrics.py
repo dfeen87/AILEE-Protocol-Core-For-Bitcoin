@@ -65,6 +65,8 @@ async def get_current_metrics() -> MetricsResponse:
             "disk_available_gb": 0.0
         }
     
+    # Return default metrics when C++ node is unavailable
+    # These are zero values to satisfy the Pydantic model, not actual operational metrics
     return MetricsResponse(
         node_metrics={
             "requests_per_second": 0.0,
