@@ -25,10 +25,10 @@ class AILEECoreClient:
         Initialize client
         
         Args:
-            base_url: Base URL of C++ node (defaults to env var AILEE_NODE_URL or localhost:8080)
+            base_url: Base URL of C++ node (defaults to env var AILEE_NODE_URL or Fly.dev deployment)
             timeout: Request timeout in seconds
         """
-        self.base_url = base_url or os.getenv("AILEE_NODE_URL", "http://localhost:8080")
+        self.base_url = base_url or os.getenv("AILEE_NODE_URL", "https://ailee-protocol-core-for-bitcoin.fly.dev")
         self.timeout = timeout
         # Disable SSL verification for localhost/127.0.0.1 (same container in Fly.io)
         # Enable SSL verification for remote HTTPS endpoints
