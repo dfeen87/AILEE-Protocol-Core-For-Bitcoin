@@ -26,10 +26,13 @@ namespace ailee::security {
  * 
  * NOT cryptographically hiding (execution details are visible)
  * Use as MVP until full ZK integration (RISC Zero) in Phase 2
+ * 
+ * NOTE: Currently uses SHA256 for hashing. Will migrate to SHA3-256
+ * in production deployment with OpenSSL 3.0+
  */
 struct HashProof {
     // Core proof elements
-    std::string executionHash;     // SHA3-256(moduleHash + inputHash + outputHash)
+    std::string executionHash;     // SHA256(moduleHash + inputHash + outputHash)
     std::string merkleRoot;        // Root of execution trace Merkle tree
     std::vector<std::string> tracePath; // Merkle path for verification
     
@@ -83,9 +86,9 @@ public:
     /**
      * Generate a hash-based proof from execution result
      * 
-     * @param moduleHash SHA3-256 of WASM module
-     * @param inputHash SHA3-256 of input data
-     * @param outputHash SHA3-256 of output data
+     * @param moduleHash SHA256 of WASM module
+     * @param inputHash SHA256 of input data
+     * @param outputHash SHA256 of output data
      * @param trace Optional execution trace for Merkle proof
      * @param nodePrivkey Optional private key for signing
      * @return HashProof structure
@@ -104,7 +107,7 @@ public:
      * Verify a hash-based proof
      * 
      * Checks:
-     * 1. Execution hash = SHA3(module + input + output)
+     * 1. Execution hash = SHA256(module + input + output)
      * 2. Merkle root matches trace (if provided)
      * 3. Node signature is valid (if provided)
      * 4. Timestamp is within acceptable range
