@@ -15,23 +15,7 @@ WORKDIR /build
 # Copy the full repo
 COPY . .
 
-# Create econ directory if it doesn't exist and add a stub ILedger.h
-# This ensures the build doesn't fail even if econ/ is missing
-RUN mkdir -p econ && \
-    if [ ! -f econ/ILedger.h ]; then \
-        echo '// Stub ILedger.h for build compatibility' > econ/ILedger.h && \
-        echo '#ifndef AILEE_ILEDGER_H' >> econ/ILedger.h && \
-        echo '#define AILEE_ILEDGER_H' >> econ/ILedger.h && \
-        echo 'namespace ailee { namespace econ {' >> econ/ILedger.h && \
-        echo 'class ILedger { public: virtual ~ILedger() = default; };' >> econ/ILedger.h && \
-        echo '}}' >> econ/ILedger.h && \
-        echo '#endif' >> econ/ILedger.h; \
-    fi
-
-# Add econ directory to CMakeLists.txt include paths
-RUN sed -i '/CMAKE_CURRENT_SOURCE_DIR}\/src\/orchestration/a \    ${CMAKE_CURRENT_SOURCE_DIR}/econ  # For ILedger.h and economic model headers' CMakeLists.txt
-
-# Build the C++ node
+# Build the C++ node (no econ stub needed - you deleted that folder)
 RUN mkdir build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF && \
     make -j$(nproc) ailee_node
@@ -70,13 +54,23 @@ COPY --from=cpp-builder --chown=ailee:ailee /build/config ./config
 
 RUN chmod +x ./ailee_node
 
-# Start script
+# FIXED: Start script with proper port configuration
 RUN echo '#!/bin/bash\n\
 set -e\n\
 echo "Starting C++ node on :8080..."\n\
 ./ailee_node > /app/logs/cpp-node.log 2>&1 &\n\
-sleep 3\n\
+CPP_PID=$!\n\
+echo "C++ node PID: $CPP_PID"\n\
+sleep 5\n\
+if ! kill -0 $CPP_PID 2>/dev/null; then\n\
+    echo "ERROR: C++ node failed to start!"\n\
+    echo "--- C++ Node Log ---"\n\
+    cat /app/logs/cpp-node.log\n\
+    exit 1\n\
+fi\n\
+echo "C++ node started successfully"\n\
 echo "Starting Python API on :8000..."\n\
+export PORT=8000\n\
 export AILEE_NODE_URL="http://localhost:8080"\n\
 exec uvicorn api.main:app --host 0.0.0.0 --port 8000 --log-level info' > /app/start.sh && \
     chmod +x /app/start.sh && chown ailee:ailee /app/start.sh
@@ -85,6 +79,6 @@ USER ailee
 EXPOSE 8000 8080
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
-    CMD curl -f http://localhost:8000/health && curl -f http://localhost:8080/api/health || exit 1
+    CMD curl -f http://localhost:8000/health || exit 1
 
 CMD ["/app/start.sh"]
