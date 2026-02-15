@@ -227,6 +227,7 @@ set(CORE_SOURCES
     src/security/ailee_circuit_breaker.cpp
     src/security/zk_proofs.cpp
     src/l1/AnchorCommitment.cpp
+    src/l1/ReorgDetector.cpp
     src/l2/L2State.cpp
     src/l2/BlockProducer.cpp
     src/l2/Mempool.cpp
@@ -401,6 +402,29 @@ if(BUILD_TESTS)
     )
     
     add_test(NAME AdapterTests COMMAND ailee_tests)
+    
+    # ReorgDetector tests (requires RocksDB)
+    if(RocksDB_FOUND)
+        add_executable(reorg_detector_tests 
+            tests/ReorgDetectorTests.cpp
+            src/l1/ReorgDetector.cpp
+        )
+        
+        target_include_directories(reorg_detector_tests PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/minigtest
+        )
+        
+        target_link_libraries(reorg_detector_tests
+            PRIVATE
+            ${RocksDB_LIBRARIES}
+            rocksdb
+            GTest::gtest
+            GTest::gtest_main
+        )
+        
+        target_compile_definitions(reorg_detector_tests PRIVATE AILEE_HAS_ROCKSDB=1)
+        add_test(NAME ReorgDetectorTests COMMAND reorg_detector_tests)
+    endif()
     
     # Optional: Add policy system tests
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/PolicyTests.cpp")

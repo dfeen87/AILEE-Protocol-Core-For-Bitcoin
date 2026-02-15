@@ -120,6 +120,10 @@ inline void ExpectTrue(bool result,
     ::testing::detail::ExpectTrue(static_cast<bool>(CONDITION),               \
                                   #CONDITION, __FILE__, __LINE__, false)
 
+#define EXPECT_FALSE(CONDITION)                                               \
+    ::testing::detail::ExpectTrue(!static_cast<bool>(CONDITION),              \
+                                  "!(" #CONDITION ")", __FILE__, __LINE__, false)
+
 #define ASSERT_TRUE(CONDITION)                                                \
     ::testing::detail::ExpectTrue(static_cast<bool>(CONDITION),               \
                                   #CONDITION, __FILE__, __LINE__, true)
@@ -127,6 +131,10 @@ inline void ExpectTrue(bool result,
 #define EXPECT_EQ(A, B)                                                       \
     ::testing::detail::ExpectBinary((A) == (B), (A), (B), "==", #A, #B,        \
                                     __FILE__, __LINE__, false)
+
+#define ASSERT_EQ(A, B)                                                       \
+    ::testing::detail::ExpectBinary((A) == (B), (A), (B), "==", #A, #B,        \
+                                    __FILE__, __LINE__, true)
 
 #define ASSERT_NE(A, B)                                                       \
     ::testing::detail::ExpectBinary((A) != (B), (A), (B), "!=", #A, #B,        \
