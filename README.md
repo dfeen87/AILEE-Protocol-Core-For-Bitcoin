@@ -17,26 +17,6 @@
 
 ---
 
-## ⚠️ SECURITY NOTICE - PUBLIC REPOSITORY
-
-**This is a PUBLIC repository.** All files, commits, and history are visible to anyone on the internet.
-
-🔴 **NEVER commit:**
-- Real credentials (Bitcoin RPC passwords, API keys, JWT secrets)
-- Private keys (`.key`, `.pem` files)
-- Production configuration files (`.env`, `secrets.yaml`)
-
-✅ **Safe to commit:**
-- Example files (`.env.example`, `secrets.example.yaml`)
-- Documentation and code
-- Public certificates (without private keys)
-
-📖 **See [SECURITY_PUBLIC_REPO.md](SECURITY_PUBLIC_REPO.md) for complete security guidelines.**
-
-</div>
-
----
-
 ## 📖 Table of Contents
 
 - [Overview](#-overview)
