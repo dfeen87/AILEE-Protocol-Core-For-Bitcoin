@@ -87,15 +87,28 @@ AILEE_JWT_ENABLED=false
 
 ## 📊 API Endpoints
 
+### Core Endpoints
 - `GET /` - API information
 - `GET /health` - Health check
 - `GET /status` - Node status
-- `POST /trust/score` - Compute trust score
-- `POST /trust/validate` - Validate output
-- `GET /l2/state` - L2 state snapshot
-- `GET /l2/anchors` - Anchor history
 - `GET /metrics` - Node metrics
 - `GET /docs` - OpenAPI documentation
+
+### Trust & Validation
+- `POST /trust/score` - Compute trust score
+- `POST /trust/validate` - Validate output
+
+### Layer-2 State
+- `GET /l2/state` - L2 state snapshot
+- `GET /l2/anchors` - Anchor history
+
+### Transactions ⭐ NEW
+- `POST /transactions/submit` - Submit transaction
+- `GET /transactions/list` - List all transactions
+- `GET /transactions/hash/{tx_hash}` - Get transaction by hash
+- `GET /transactions/address/{address}` - Get transactions by address
+
+For detailed transaction API documentation, see [docs/TRANSACTION_API.md](docs/TRANSACTION_API.md)
 
 ## 🧪 Testing
 
@@ -117,6 +130,28 @@ curl http://localhost:8080/l2/state
 
 # Metrics
 curl http://localhost:8080/metrics
+```
+
+### Transaction Submission ⭐ NEW
+```bash
+# Submit a transaction
+curl -X POST http://localhost:8080/transactions/submit \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from_address": "alice",
+    "to_address": "bob",
+    "amount": 1000,
+    "data": "Payment for services"
+  }'
+
+# List all transactions
+curl http://localhost:8080/transactions/list
+
+# Get transaction by hash
+curl http://localhost:8080/transactions/hash/{tx_hash}
+
+# Get transactions for an address
+curl http://localhost:8080/transactions/address/alice
 ```
 
 ### Testing C++ Node Connectivity

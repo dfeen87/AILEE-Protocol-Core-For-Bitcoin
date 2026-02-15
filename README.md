@@ -93,7 +93,13 @@ AILEE (AI-Load Energy Efficiency) is a **Bitcoin Layer-2 framework** that treats
    - Circuit breakers and fail-safe mechanisms
    - Explicit incident accountability
 
-4. **Global Accessibility**
+4. **Transaction Submission & Querying**
+   - Submit transactions to L2 blockchain via REST API
+   - Query transactions by hash, address, or list all
+   - Deterministic transaction hashing for integrity
+   - Pagination support for large transaction sets
+
+5. **Global Accessibility**
    - RESTful API for programmatic access
    - Web dashboard for real-time monitoring
    - CORS-enabled for browser integration
@@ -496,6 +502,7 @@ AILEE-Core is **NOT**:
 
 ### Implementation Details
 - **[Adapters](docs/ADAPTERS.md)**: Multi-chain integration
+- **[Transaction API](docs/TRANSACTION_API.md)**: Submit and query transactions ⭐ NEW
 - **[Web Integration](docs/WEB_INTEGRATION.md)**: HTTP API and dashboard
 - **[Recovery Guide](docs/RECOVERY_GUIDE.md)**: Recovery protocols
 - **[Security](docs/SECURITY_AND_POWER.md)**: Power model and safety
