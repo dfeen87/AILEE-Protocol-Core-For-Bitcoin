@@ -3,9 +3,12 @@ Metrics Router
 Node performance metrics and telemetry with Prometheus support
 """
 
+import hashlib
+import logging
 from datetime import datetime, timezone
 from typing import Dict
 
+import psutil
 from fastapi import APIRouter
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
@@ -13,6 +16,7 @@ from pydantic import BaseModel, Field
 from api.l2_client import get_ailee_client
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class MetricsResponse(BaseModel):
@@ -60,7 +64,6 @@ async def get_current_metrics() -> MetricsResponse:
         
         # Get system metrics from psutil since C++ node doesn't expose them
         try:
-            import psutil
             cpu_percent = psutil.cpu_percent(interval=0.1)
             memory = psutil.virtual_memory()
             disk = psutil.disk_usage("/")
@@ -97,8 +100,6 @@ async def get_current_metrics() -> MetricsResponse:
         )
 
     # Fallback: Get system metrics only (C++ node not available)
-    import psutil
-
     try:
         cpu_percent = psutil.cpu_percent(interval=0.1)
         memory = psutil.virtual_memory()
@@ -229,8 +230,6 @@ async def get_metrics():
         return await get_current_metrics()
     except Exception as e:
         # Log the error and re-raise
-        import logging
-        logger = logging.getLogger(__name__)
         logger.error(f"Error fetching metrics: {e}")
         raise
 

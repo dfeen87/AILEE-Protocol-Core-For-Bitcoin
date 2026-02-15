@@ -3,6 +3,8 @@ Layer-2 Router
 Layer-2 state snapshot and anchor history endpoints
 """
 
+import hashlib
+import logging
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 from fastapi import APIRouter, Query
@@ -11,6 +13,7 @@ from pydantic import BaseModel, Field
 from api.l2_client import get_ailee_client
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class L2StateSnapshot(BaseModel):
@@ -70,7 +73,6 @@ async def get_l2_state():
         
         # Since the C++ node doesn't yet provide state_root, timestamp_ms, balance_count, etc.,
         # we compute a deterministic state root from available data
-        import hashlib
         state_data = f"{cpp_state.get('layer', '')}-{cpp_state.get('protocol', '')}-{health_status}"
         state_root = hashlib.sha256(state_data.encode()).hexdigest()
         
@@ -89,8 +91,6 @@ async def get_l2_state():
         }
     
     # C++ node not available - return fallback data
-    import logging
-    logger = logging.getLogger(__name__)
     logger.warning("C++ AILEE-Core node unavailable for L2 state")
     
     return {
