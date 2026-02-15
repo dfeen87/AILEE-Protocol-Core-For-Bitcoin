@@ -41,7 +41,6 @@ primary_region = 'iad'
 
 # Persistent storage for L2 state (CRITICAL for data persistence)
 # Create volume with: fly volumes create ailee_data --size 10 -a ailee-protocol-core-for-bitcoin
-# Uncomment when volume is created:
-# [mounts]
-#   source = "ailee_data"
-#   destination = "/data"
+[mounts]
+  source = "ailee_data"
+  destination = "/data"

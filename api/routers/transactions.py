@@ -7,10 +7,12 @@ import hashlib
 import logging
 from datetime import datetime, timezone
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel, Field
 
 from api.l2_client import get_ailee_client
+from api.auth import verify_api_key
+from api import database as db
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -88,21 +90,27 @@ def compute_transaction_hash(tx_data: dict) -> str:
     return hashlib.sha256(tx_string.encode('utf-8')).hexdigest()
 
 
-# In-memory transaction storage (for demo purposes)
-# In production, this would be stored in the C++ node's persistent storage
-_transaction_store: List[dict] = []
-
-
 @router.post("/submit", response_model=TransactionResponse)
-async def submit_transaction(tx: TransactionInput):
+async def submit_transaction(
+    tx: TransactionInput,
+    api_key: str = Depends(verify_api_key)
+):
     """
-    Submit Transaction to L2 Blockchain
+    Submit Transaction to L2 Blockchain (Protected)
+    
+    **Authentication Required**: This endpoint requires a valid API key.
+    
+    Include the API key in the Authorization header:
+    ```
+    Authorization: Bearer YOUR_API_KEY
+    ```
     
     Submits a transaction to the AILEE Layer-2 blockchain for processing.
     The transaction will be validated and included in the next block.
     
     Args:
         tx: Transaction details (from, to, amount, optional data)
+        api_key: API key from Authorization header (validated)
         
     Returns:
         Transaction confirmation with hash and status
@@ -130,9 +138,6 @@ async def submit_transaction(tx: TransactionInput):
         tx_hash = compute_transaction_hash(tx_data)
         tx_data["tx_hash"] = tx_hash
         
-        # Store transaction locally for querying (in production, this would go to the C++ node)
-        _transaction_store.append(tx_data)
-        
         # Submit transaction to C++ node's mempool
         client = get_ailee_client()
         try:
@@ -155,6 +160,19 @@ async def submit_transaction(tx: TransactionInput):
                     logger.warning(f"C++ mempool returned status {cpp_response.status_code}")
         except Exception as e:
             logger.warning(f"Failed to submit to C++ mempool (will retry): {e}")
+        
+        # Persist transaction to database (critical for production)
+        # Database failure must NOT break mempool acceptance
+        try:
+            await db.insert_transaction(tx_data)
+            logger.debug(f"Transaction persisted to database: {tx_hash[:16]}...")
+        except Exception as e:
+            logger.error(f"Failed to persist transaction to database: {e}", exc_info=True)
+            # Return 500 if database write fails
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to persist transaction"
+            )
         
         # Get current block height from C++ node for response
         block_height = None
@@ -182,7 +200,7 @@ async def submit_transaction(tx: TransactionInput):
         logger.error(f"Failed to submit transaction: {e}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to submit transaction: {str(e)}"
+            detail="Failed to submit transaction"
         )
 
 
@@ -200,19 +218,20 @@ async def get_transaction(tx_hash: str):
         Transaction details if found
     """
     try:
-        # Find transaction in store
-        for tx_data in _transaction_store:
-            if tx_data["tx_hash"] == tx_hash:
-                return TransactionQuery(
-                    tx_hash=tx_data["tx_hash"],
-                    from_address=tx_data["from_address"],
-                    to_address=tx_data["to_address"],
-                    amount=tx_data["amount"],
-                    status=tx_data["status"],
-                    block_height=tx_data.get("block_height"),
-                    data=tx_data.get("data"),
-                    timestamp=tx_data["timestamp"]
-                )
+        # Query transaction from database
+        tx_data = await db.get_transaction_by_hash(tx_hash)
+        
+        if tx_data:
+            return TransactionQuery(
+                tx_hash=tx_data["tx_hash"],
+                from_address=tx_data["from_address"],
+                to_address=tx_data["to_address"],
+                amount=tx_data["amount"],
+                status=tx_data["status"],
+                block_height=tx_data.get("block_height"),
+                data=tx_data.get("data"),
+                timestamp=tx_data["timestamp"]
+            )
         
         raise HTTPException(
             status_code=404,
@@ -225,7 +244,7 @@ async def get_transaction(tx_hash: str):
         logger.error(f"Failed to get transaction: {e}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to get transaction: {str(e)}"
+            detail="Failed to get transaction"
         )
 
 
@@ -249,20 +268,10 @@ async def get_transactions_by_address(
         List of transactions involving the address
     """
     try:
-        # Filter transactions by address
-        address_txs = [
-            tx for tx in _transaction_store
-            if tx["from_address"] == address or tx["to_address"] == address
-        ]
-        
-        # Sort by timestamp (most recent first)
-        address_txs.sort(key=lambda x: x["timestamp"], reverse=True)
-        
-        # Pagination
-        total_count = len(address_txs)
-        start_idx = (page - 1) * page_size
-        end_idx = start_idx + page_size
-        page_txs = address_txs[start_idx:end_idx]
+        # Query transactions from database
+        transactions_data, total_count = await db.get_transactions_by_address(
+            address, page, page_size
+        )
         
         # Convert to response model
         transactions = [
@@ -276,7 +285,7 @@ async def get_transactions_by_address(
                 data=tx.get("data"),
                 timestamp=tx["timestamp"]
             )
-            for tx in page_txs
+            for tx in transactions_data
         ]
         
         return TransactionListResponse(
@@ -290,7 +299,7 @@ async def get_transactions_by_address(
         logger.error(f"Failed to get transactions for address: {e}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to get transactions: {str(e)}"
+            detail="Failed to get transactions"
         )
 
 
@@ -314,20 +323,10 @@ async def list_transactions(
         Paginated list of transactions
     """
     try:
-        # Filter by status if provided
-        if status:
-            filtered_txs = [tx for tx in _transaction_store if tx["status"] == status]
-        else:
-            filtered_txs = _transaction_store.copy()
-        
-        # Sort by timestamp (most recent first)
-        filtered_txs.sort(key=lambda x: x["timestamp"], reverse=True)
-        
-        # Pagination
-        total_count = len(filtered_txs)
-        start_idx = (page - 1) * page_size
-        end_idx = start_idx + page_size
-        page_txs = filtered_txs[start_idx:end_idx]
+        # Query transactions from database
+        transactions_data, total_count = await db.get_transactions(
+            page, page_size, status
+        )
         
         # Convert to response model
         transactions = [
@@ -341,7 +340,7 @@ async def list_transactions(
                 data=tx.get("data"),
                 timestamp=tx["timestamp"]
             )
-            for tx in page_txs
+            for tx in transactions_data
         ]
         
         return TransactionListResponse(
@@ -355,5 +354,5 @@ async def list_transactions(
         logger.error(f"Failed to list transactions: {e}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to list transactions: {str(e)}"
+            detail="Failed to list transactions"
         )

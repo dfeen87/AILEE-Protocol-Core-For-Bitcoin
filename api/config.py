@@ -99,6 +99,12 @@ class Settings(BaseSettings):
         description="Application description"
     )
     
+    # Database Configuration
+    db_path: str = Field(
+        default="/data/ailee.db",
+        description="Path to SQLite database file"
+    )
+    
     # Bitcoin RPC Configuration
     bitcoin_rpc_url: str = Field(
         default="https://localhost:8332",

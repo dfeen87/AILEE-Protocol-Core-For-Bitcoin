@@ -7,10 +7,11 @@ import hashlib
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, HTTPException
 from pydantic import BaseModel, Field
 
 from api.l2_client import get_ailee_client
+from api import database as db
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -27,12 +28,18 @@ class L2StateSnapshot(BaseModel):
 
 class AnchorRecord(BaseModel):
     """Bitcoin anchor record model"""
-    anchor_id: str = Field(..., description="Unique anchor identifier")
-    l2_state_root: str = Field(..., description="L2 state root at anchor")
-    bitcoin_height: int = Field(..., description="Bitcoin block height", ge=0)
-    anchor_hash: str = Field(..., description="Bitcoin anchor commitment hash")
+    anchor_height: int = Field(..., description="Anchor block height", ge=0)
+    state_root: str = Field(..., description="L2 state root at anchor")
+    bitcoin_txid: str = Field(..., description="Bitcoin transaction ID")
     timestamp: str = Field(..., description="Anchor timestamp (ISO 8601)")
-    tx_count: int = Field(..., description="Transactions anchored", ge=0)
+
+
+class AnchorDetailResponse(BaseModel):
+    """Response model for single anchor"""
+    anchor_height: int = Field(..., description="Anchor block height", ge=0)
+    state_root: str = Field(..., description="L2 state root at anchor")
+    bitcoin_txid: str = Field(..., description="Bitcoin transaction ID")
+    timestamp: str = Field(..., description="Anchor timestamp (ISO 8601)")
 
 
 class L2StateResponse(BaseModel):
@@ -45,7 +52,8 @@ class AnchorsResponse(BaseModel):
     """Response model for anchor history"""
     anchors: List[AnchorRecord]
     total_count: int = Field(..., description="Total number of anchors", ge=0)
-    latest_height: int = Field(..., description="Latest Bitcoin height", ge=0)
+    page: int = Field(..., description="Current page number", ge=1)
+    page_size: int = Field(..., description="Number of items per page", ge=1)
 
 
 @router.get("/state", response_model=L2StateResponse)
@@ -111,57 +119,87 @@ async def get_l2_state():
 
 @router.get("/anchors", response_model=AnchorsResponse)
 async def get_anchor_history(
-    limit: int = Query(
-        default=10,
-        ge=1,
-        le=100,
-        description="Number of anchors to return"
-    ),
-    offset: int = Query(
-        default=0,
-        ge=0,
-        description="Offset for pagination"
-    )
+    page: int = Query(default=1, ge=1, description="Page number"),
+    page_size: int = Query(default=10, ge=1, le=100, description="Items per page")
 ):
     """
     Get Bitcoin Anchor History
     
-    Returns the history of Bitcoin anchor commitments from C++ AILEE-Core node
+    Returns the history of Bitcoin anchor commitments stored in the database.
+    Results are ordered by anchor_height DESC (most recent first).
     
     Query Parameters:
-    - limit: Number of anchors to return (1-100, default: 10)
-    - offset: Pagination offset (default: 0)
+    - page: Page number for pagination (default: 1, min: 1)
+    - page_size: Number of items per page (default: 10, min: 1, max: 100)
     
     Returns:
-        List of anchor records with pagination info
+        Paginated list of anchor records
     """
-    client = get_ailee_client()
-    
-    # Get latest anchor from C++ node
-    cpp_anchor = await client.get_latest_anchor()
-    
-    if cpp_anchor and cpp_anchor.get("last_anchor_hash"):
-        # Build anchor record from latest
+    try:
+        # Query anchors from database
+        anchors_data, total_count = await db.get_anchors(page, page_size)
+        
+        # Convert to response model
         anchors = [
             AnchorRecord(
-                anchor_id="latest",
-                l2_state_root="",
-                bitcoin_height=0,
-                anchor_hash=cpp_anchor["last_anchor_hash"],
-                timestamp=datetime.now(timezone.utc).isoformat(),
-                tx_count=0
+                anchor_height=anchor["anchor_height"],
+                state_root=anchor["state_root"],
+                bitcoin_txid=anchor["bitcoin_txid"],
+                timestamp=anchor["timestamp"]
             )
+            for anchor in anchors_data
         ]
         
         return AnchorsResponse(
             anchors=anchors,
-            total_count=1,
-            latest_height=0
+            total_count=total_count,
+            page=page,
+            page_size=page_size
         )
+        
+    except Exception as e:
+        logger.error(f"Failed to get anchor history: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to get anchor history"
+        )
+
+
+@router.get("/anchors/{height}", response_model=AnchorDetailResponse)
+async def get_anchor_by_height(height: int):
+    """
+    Get Anchor by Height
     
-    # C++ node not available or no anchors
-    return AnchorsResponse(
-        anchors=[],
-        total_count=0,
-        latest_height=0
-    )
+    Returns a specific anchor event by its height.
+    
+    Args:
+        height: Anchor height to query
+        
+    Returns:
+        Anchor event details if found
+    """
+    try:
+        # Query anchor from database
+        anchor_data = await db.get_anchor_by_height(height)
+        
+        if anchor_data:
+            return AnchorDetailResponse(
+                anchor_height=anchor_data["anchor_height"],
+                state_root=anchor_data["state_root"],
+                bitcoin_txid=anchor_data["bitcoin_txid"],
+                timestamp=anchor_data["timestamp"]
+            )
+        
+        raise HTTPException(
+            status_code=404,
+            detail=f"Anchor not found at height: {height}"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get anchor: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to get anchor"
+        )

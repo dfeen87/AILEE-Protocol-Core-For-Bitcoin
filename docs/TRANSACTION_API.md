@@ -2,7 +2,39 @@
 
 ## Overview
 
-The AILEE-Core blockchain now supports transaction submission and querying through a RESTful API. This document describes the available transaction endpoints.
+The AILEE-Core blockchain supports transaction submission and querying through a RESTful API. This document describes the available transaction endpoints.
+
+**Security:** Write endpoints require API key authentication. See [SECURITY.md](SECURITY.md) for details.
+
+---
+
+## Authentication
+
+### Protected Endpoints
+
+The following endpoint requires authentication:
+
+- `POST /transactions/submit`
+
+**Authentication Header:**
+```
+Authorization: Bearer YOUR_API_KEY
+```
+
+**Getting an API Key:**
+- Set `AILEE_API_KEY` environment variable before starting the server
+- If not set, a random key will be generated and logged on startup
+- See [SECURITY.md](SECURITY.md) for detailed setup instructions
+
+### Public Endpoints
+
+The following endpoints are publicly accessible (no authentication required):
+
+- `GET /transactions/hash/{tx_hash}`
+- `GET /transactions/address/{address}`
+- `GET /transactions/list`
+
+---
 
 ## Endpoints
 
@@ -10,7 +42,15 @@ The AILEE-Core blockchain now supports transaction submission and querying throu
 
 Submit a new transaction to the blockchain for processing.
 
+**Authentication:** Required
+
 **Endpoint:** `POST /transactions/submit`
+
+**Headers:**
+```
+Authorization: Bearer YOUR_API_KEY
+Content-Type: application/json
+```
 
 **Request Body:**
 ```json
@@ -43,7 +83,20 @@ Submit a new transaction to the blockchain for processing.
 
 **Example:**
 ```bash
-curl -X POST http://localhost:8080/transactions/submit \
+# Local development
+curl -X POST http://localhost:8000/transactions/submit \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from_address": "alice",
+    "to_address": "bob",
+    "amount": 1000,
+    "data": "Payment for services"
+  }'
+
+# Production (replace with your actual Fly.io URL)
+curl -X POST https://ailee-protocol-core-for-bitcoin.fly.dev/transactions/submit \
+  -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "from_address": "alice",
@@ -57,6 +110,30 @@ curl -X POST http://localhost:8080/transactions/submit \
 - `from_address` and `to_address` must be different
 - `amount` must be greater than 0
 - All required fields must be provided
+- Valid API key required in Authorization header
+
+**Error Responses:**
+
+**401 Unauthorized** - Invalid or missing API key:
+```json
+{
+  "detail": "Invalid or missing API key"
+}
+```
+
+**400 Bad Request** - Validation error:
+```json
+{
+  "detail": "Cannot send transaction to the same address"
+}
+```
+
+**500 Internal Server Error** - Database or server error:
+```json
+{
+  "detail": "Failed to persist transaction"
+}
+```
 
 ---
 
@@ -85,7 +162,7 @@ Retrieve a specific transaction by its hash.
 
 **Example:**
 ```bash
-curl http://localhost:8080/transactions/hash/df9f96690eefa7d6ff1bf870427749f2c4d58a3cc87f907b98bb17c35920ff9b
+curl http://localhost:8000/transactions/hash/df9f96690eefa7d6ff1bf870427749f2c4d58a3cc87f907b98bb17c35920ff9b
 ```
 
 **Error Response (404):**
@@ -132,10 +209,10 @@ Retrieve all transactions for a specific address (sent or received).
 **Example:**
 ```bash
 # Get all transactions for Alice
-curl http://localhost:8080/transactions/address/alice
+curl http://localhost:8000/transactions/address/alice
 
 # Get first page with 5 items
-curl http://localhost:8080/transactions/address/alice?page=1&page_size=5
+curl http://localhost:8000/transactions/address/alice?page=1&page_size=5
 ```
 
 ---
@@ -185,13 +262,13 @@ Retrieve a paginated list of all transactions in the blockchain.
 **Example:**
 ```bash
 # Get all transactions
-curl http://localhost:8080/transactions/list
+curl http://localhost:8000/transactions/list
 
 # Get second page with 20 items
-curl http://localhost:8080/transactions/list?page=2&page_size=20
+curl http://localhost:8000/transactions/list?page=2&page_size=20
 
 # Filter by status
-curl http://localhost:8080/transactions/list?status=pending
+curl http://localhost:8000/transactions/list?status=pending
 ```
 
 ---
@@ -222,10 +299,11 @@ All transaction endpoints are subject to the API's rate limiting:
 ## Error Codes
 
 - `400 Bad Request`: Invalid transaction data (e.g., same address for sender and receiver)
+- `401 Unauthorized`: Invalid or missing API key (write endpoints only)
 - `404 Not Found`: Transaction not found
 - `422 Unprocessable Entity`: Validation error in request body
 - `429 Too Many Requests`: Rate limit exceeded
-- `500 Internal Server Error`: Server error
+- `500 Internal Server Error`: Server error (no stack traces returned to clients)
 
 ## Interactive Documentation
 
@@ -234,8 +312,9 @@ Visit `/docs` on your API server for interactive Swagger UI documentation where 
 ## Example Workflow
 
 ```bash
-# 1. Submit a transaction
-TX_HASH=$(curl -s -X POST http://localhost:8080/transactions/submit \
+# 1. Submit a transaction (requires API key)
+TX_HASH=$(curl -s -X POST http://localhost:8000/transactions/submit \
+  -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "from_address": "alice",
@@ -245,13 +324,13 @@ TX_HASH=$(curl -s -X POST http://localhost:8080/transactions/submit \
   }' | jq -r '.tx_hash')
 
 # 2. Get the transaction details
-curl http://localhost:8080/transactions/hash/$TX_HASH
+curl http://localhost:8000/transactions/hash/$TX_HASH
 
 # 3. List all transactions for Alice
-curl http://localhost:8080/transactions/address/alice
+curl http://localhost:8000/transactions/address/alice
 
 # 4. List all pending transactions
-curl http://localhost:8080/transactions/list?status=pending
+curl http://localhost:8000/transactions/list?status=pending
 ```
 
 ## Future Enhancements

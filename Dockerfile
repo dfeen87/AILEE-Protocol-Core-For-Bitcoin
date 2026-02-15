@@ -65,6 +65,8 @@ RUN chmod +x ./ailee_node
 # FIXED: Start script with proper port configuration
 RUN echo '#!/bin/bash\n\
 set -e\n\
+# Ensure /data directory exists for database\n\
+mkdir -p /data\n\
 echo "Starting C++ node on :8080..."\n\
 ./ailee_node > /app/logs/cpp-node.log 2>&1 &\n\
 CPP_PID=$!\n\

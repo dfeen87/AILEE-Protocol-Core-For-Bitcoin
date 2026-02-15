@@ -22,6 +22,8 @@ from slowapi.errors import RateLimitExceeded
 from api.config import settings
 from api.routers import health, status, trust, l2, metrics, transactions
 from api.security_audit import get_audit_logger, audit_log, AuditEventType, AuditEventSeverity
+from api.database import init_database, close_database
+from api.auth import init_api_key
 
 
 # Configure logging
@@ -64,6 +66,27 @@ async def lifespan(app: FastAPI):
     
     if settings.rate_limit_enabled:
         logger.info(f"   └─ Limit: {settings.rate_limit_requests} requests per {settings.rate_limit_window}s")
+    
+    # Initialize database
+    logger.info("")
+    logger.info("💾 Initializing database...")
+    logger.info(f"   └─ Database path: {settings.db_path}")
+    try:
+        await init_database(settings.db_path)
+        logger.info("✅ Database initialized successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize database: {e}", exc_info=True)
+        raise
+    
+    # Initialize API key
+    logger.info("")
+    logger.info("🔑 Initializing API authentication...")
+    try:
+        api_key = init_api_key()
+        logger.info("✅ API authentication initialized")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize API key: {e}", exc_info=True)
+        raise
     
     # Check C++ node connection
     from api.l2_client import get_ailee_client
@@ -111,6 +134,13 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("")
     logger.info("🛑 Shutting down AILEE-Core API Server...")
+    
+    # Close database
+    try:
+        await close_database()
+        logger.info("✅ Database closed successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to close database: {e}", exc_info=True)
     
     # Close C++ node client
     from api.l2_client import close_ailee_client
