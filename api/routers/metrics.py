@@ -22,8 +22,10 @@ class MetricsResponse(BaseModel):
 
 async def get_current_metrics() -> MetricsResponse:
     """
-    Get current node metrics
-    In production, this would query actual AILEE-Core metrics
+    Get current node metrics (async for consistency with route handlers)
+    
+    Returns mock metrics for standalone API testing.
+    In production, this would query actual AILEE-Core metrics.
     """
     import psutil
     import os
@@ -78,8 +80,10 @@ async def get_current_metrics() -> MetricsResponse:
 
 async def get_prometheus_metrics() -> str:
     """
-    Generate Prometheus-compatible metrics
-    In production, this would use the C++ PrometheusExporter
+    Generate Prometheus-compatible metrics (async for consistency with route handlers)
+    
+    Returns mock metrics in Prometheus text format for standalone API testing.
+    In production, this would use the C++ PrometheusExporter.
     """
     import psutil
     import time
