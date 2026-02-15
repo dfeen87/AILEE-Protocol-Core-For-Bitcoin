@@ -8,9 +8,12 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include <cstring> // For std::strlen
+#include <optional>
 
 namespace ailee::l1 {
 
+// Anonymous namespace for internal helpers
 namespace {
 
 // Helper to create a key for block hash storage
@@ -45,7 +48,9 @@ std::optional<std::uint64_t> parseHeightFromKey(const std::string& key) {
     }
 }
 
-} // namespace
+} // namespace (anonymous)
+
+} // namespace ailee::l1
 
 ReorgDetector::ReorgDetector(const std::string& dbPath,
                              std::uint64_t confirmationThreshold,
