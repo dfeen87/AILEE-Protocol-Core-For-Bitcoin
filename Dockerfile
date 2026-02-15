@@ -23,15 +23,21 @@ RUN mkdir build && cd build && \
 # =======================
 # Python runtime image
 # =======================
-FROM python:3.11-slim
+FROM ubuntu:22.04
 
-# Install minimal runtime dependencies
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install Python 3.11 and runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl libssl3t64 libcurl4t64 libzmq5 libjsoncpp26 \
-    libyaml-cpp0.8 librocksdb9.10 libstdc++6 procps \
+    python3.11 python3-pip python3.11-venv \
+    curl libssl3 libcurl4 libzmq5 libjsoncpp25 \
+    libyaml-cpp0.7 librocksdb6.11 libstdc++6 procps \
     ca-certificates \
-    && chmod 644 /etc/ssl/certs/ca-certificates.crt \
     && rm -rf /var/lib/apt/lists/*
+
+# Set python3.11 as default python
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
 
 WORKDIR /app
 

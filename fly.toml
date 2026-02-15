@@ -8,6 +8,7 @@ app = 'ailee-protocol-core-for-bitcoin'
 primary_region = 'iad'
 
 [build]
+  dockerfile = "Dockerfile"
 
 [env]
   AILEE_ENV = "production"
