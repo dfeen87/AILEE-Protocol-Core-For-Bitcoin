@@ -3,6 +3,8 @@ Layer-2 Router
 Layer-2 state snapshot and anchor history endpoints
 """
 
+import hashlib
+import logging
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 from fastapi import APIRouter, Query
@@ -11,6 +13,7 @@ from pydantic import BaseModel, Field
 from api.l2_client import get_ailee_client
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class L2StateSnapshot(BaseModel):
@@ -61,34 +64,35 @@ async def get_l2_state():
     cpp_state = await client.get_l2_state()
     
     if cpp_state:
-        # Extract state_root and timestamp from C++ response
-        state_root = cpp_state.get("state_root", "")
-        timestamp_ms = cpp_state.get("timestamp_ms", 0)
+        # C++ node returns: {"layer": "Layer-2", "protocol": "AILEE-Core", "ledger": {"status": "active", "type": "federated"}}
+        # We need to adapt this to our expected response format
         
-        # Get ledger info
+        # Extract ledger info
         ledger_info = cpp_state.get("ledger", {})
-        balance_count = ledger_info.get("balance_count", 0)
-        escrow_count = ledger_info.get("escrow_count", 0)
+        health_status = ledger_info.get("status", "active")
         
-        # Convert timestamp to ISO 8601 format
-        if timestamp_ms > 0:
-            timestamp = datetime.fromtimestamp(timestamp_ms / 1000.0, timezone.utc).isoformat()
-        else:
-            timestamp = datetime.now(timezone.utc).isoformat()
+        # Since the C++ node doesn't yet provide state_root, timestamp_ms, balance_count, etc.,
+        # we compute a deterministic state root from available data
+        state_data = f"{cpp_state.get('layer', '')}-{cpp_state.get('protocol', '')}-{health_status}"
+        state_root = hashlib.sha256(state_data.encode()).hexdigest()
         
         # Return structured state from C++ node
+        # Note: block_height, total_transactions, and last_anchor_height will be 0 
+        # until the C++ node implements blockchain state tracking
         return {
             "state": {
                 "state_root": state_root,
-                "block_height": 0,  # Not yet available from C++
-                "total_transactions": balance_count,  # Note: Using balance count as proxy until actual tx tracking is implemented
-                "last_anchor_height": 0,  # Not yet available from C++
-                "timestamp": timestamp
+                "block_height": 0,  # Not yet available from C++ node - will be implemented when blockchain tracking is added
+                "total_transactions": 0,  # Not yet available from C++ node - will be implemented when tx tracking is added
+                "last_anchor_height": 0,  # Not yet available from C++ node - will be implemented when anchor tracking is added
+                "timestamp": datetime.now(timezone.utc).isoformat()
             },
-            "health": ledger_info.get("status", "active")
+            "health": health_status
         }
     
-    # C++ node not available
+    # C++ node not available - return fallback data
+    logger.warning("C++ AILEE-Core node unavailable for L2 state")
+    
     return {
         "state": {
             "state_root": "",

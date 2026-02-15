@@ -3,9 +3,12 @@ Metrics Router
 Node performance metrics and telemetry with Prometheus support
 """
 
+import hashlib
+import logging
 from datetime import datetime, timezone
 from typing import Dict
 
+import psutil
 from fastapi import APIRouter
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
@@ -13,6 +16,7 @@ from pydantic import BaseModel, Field
 from api.l2_client import get_ailee_client
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class MetricsResponse(BaseModel):
@@ -46,16 +50,56 @@ async def get_current_metrics() -> MetricsResponse:
             # If already a string or None, use it or default to now
             timestamp_str = raw_timestamp if raw_timestamp else datetime.now(timezone.utc).isoformat()
 
+        # Extract performance metrics from C++ node
+        # C++ returns: {"performance": {"current_tps": X, "pending_tasks": Y}}
+        cpp_performance = cpp_metrics.get("performance", {})
+        
+        # Map C++ metrics to expected node_metrics format
+        node_metrics = {
+            "requests_per_second": float(cpp_performance.get("current_tps", 0.0)),
+            "avg_response_time_ms": 0.0,  # Not available from C++ node yet
+            "trust_score_computations": 0.0,  # Not available from C++ node yet
+            "validations_performed": 0.0,  # Not available from C++ node yet
+        }
+        
+        # Get system metrics from psutil since C++ node doesn't expose them
+        try:
+            cpu_percent = psutil.cpu_percent(interval=0.1)
+            memory = psutil.virtual_memory()
+            disk = psutil.disk_usage("/")
+            
+            system_metrics = {
+                "cpu_usage_percent": round(cpu_percent, 2),
+                "memory_used_percent": round(memory.percent, 2),
+                "memory_available_mb": round(memory.available / (1024 * 1024), 2),
+                "disk_used_percent": round(disk.percent, 2),
+                "disk_available_gb": round(disk.free / (1024 * 1024 * 1024), 2),
+            }
+        except Exception:
+            system_metrics = {
+                "cpu_usage_percent": 0.0,
+                "memory_used_percent": 0.0,
+                "memory_available_mb": 0.0,
+                "disk_used_percent": 0.0,
+                "disk_available_gb": 0.0,
+            }
+        
+        # L2 metrics from C++ performance data
+        l2_metrics = {
+            "current_block_height": 0,  # Not available from C++ node yet
+            "pending_transactions": int(cpp_performance.get("pending_tasks", 0)),
+            "anchors_created": 0,  # Not available from C++ node yet
+            "state_updates": 0,  # Not available from C++ node yet
+        }
+
         return MetricsResponse(
-            node_metrics=cpp_metrics.get("performance", {}),
-            system_metrics={},  # C++ node doesn't expose system metrics via this endpoint
-            l2_metrics={},
+            node_metrics=node_metrics,
+            system_metrics=system_metrics,
+            l2_metrics=l2_metrics,
             timestamp=timestamp_str,
         )
 
     # Fallback: Get system metrics only (C++ node not available)
-    import psutil
-
     try:
         cpu_percent = psutil.cpu_percent(interval=0.1)
         memory = psutil.virtual_memory()
@@ -182,7 +226,12 @@ async def get_metrics():
     Returns:
         Current node metrics with timestamp
     """
-    return await get_current_metrics()
+    try:
+        return await get_current_metrics()
+    except Exception as e:
+        # Log the error and re-raise
+        logger.error(f"Error fetching metrics: {e}")
+        raise
 
 
 @router.get("/metrics/prometheus", response_class=PlainTextResponse)

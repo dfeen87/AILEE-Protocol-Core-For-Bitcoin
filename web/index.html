@@ -308,6 +308,12 @@
                     <span class="metric-value">${systemMetrics.memory_used_percent.toFixed(1)}%</span>
                 </div>
                 ` : ''}
+                ${l2Metrics.pending_transactions !== undefined ? `
+                <div class="metric">
+                    <span class="metric-label">Pending Transactions</span>
+                    <span class="metric-value">${l2Metrics.pending_transactions.toLocaleString()}</span>
+                </div>
+                ` : ''}
                 <div class="metric">
                     <span class="metric-label">Last Updated</span>
                     <span class="metric-value">${new Date().toLocaleTimeString()}</span>
