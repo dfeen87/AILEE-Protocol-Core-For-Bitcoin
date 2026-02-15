@@ -12,6 +12,8 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /build
 COPY . .
 
+# Comment out demo executables (lines 419-468) - these reference missing example files
+# Comment out install targets (lines 470-490) - these reference the commented demos
 RUN sed -i '419,468s/^/# /' CMakeLists.txt && \
     sed -i '470,490s/^/# /' CMakeLists.txt
 
@@ -56,6 +58,6 @@ USER ailee
 EXPOSE 8000 8080
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:8000/health && curl -f http://localhost:8080/api/health || exit 1
 
 CMD ["/app/start.sh"]
