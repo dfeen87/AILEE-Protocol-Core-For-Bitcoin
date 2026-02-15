@@ -61,18 +61,31 @@ async def get_l2_state():
     cpp_state = await client.get_l2_state()
     
     if cpp_state:
-        # Return real state from C++ node
-        # The C++ node returns: {"layer": "Layer-2", "protocol": "AILEE-Core", ...}
-        # We need to adapt it to our expected format
+        # Extract state_root and timestamp from C++ response
+        state_root = cpp_state.get("state_root", "")
+        timestamp_ms = cpp_state.get("timestamp_ms", 0)
+        
+        # Get ledger info
+        ledger_info = cpp_state.get("ledger", {})
+        balance_count = ledger_info.get("balance_count", 0)
+        escrow_count = ledger_info.get("escrow_count", 0)
+        
+        # Convert timestamp to ISO 8601 format
+        if timestamp_ms > 0:
+            timestamp = datetime.fromtimestamp(timestamp_ms / 1000.0, timezone.utc).isoformat()
+        else:
+            timestamp = datetime.now(timezone.utc).isoformat()
+        
+        # Return structured state from C++ node
         return {
             "state": {
-                "state_root": "",  # C++ node doesn't expose this in current format
-                "block_height": 0,
-                "total_transactions": 0,
-                "last_anchor_height": 0,
-                "timestamp": datetime.now(timezone.utc).isoformat()
+                "state_root": state_root,
+                "block_height": 0,  # Not yet available from C++
+                "total_transactions": balance_count,  # Note: Using balance count as proxy until actual tx tracking is implemented
+                "last_anchor_height": 0,  # Not yet available from C++
+                "timestamp": timestamp
             },
-            "health": cpp_state.get("ledger", {}).get("status", "unknown")
+            "health": ledger_info.get("status", "active")
         }
     
     # C++ node not available

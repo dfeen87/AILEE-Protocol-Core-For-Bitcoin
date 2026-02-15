@@ -4,6 +4,7 @@
 #include "AILEEWebServer.h"
 #include "Orchestrator.h"
 #include "Ledger.h"
+#include "L2State.h"
 #include "third_party/httplib.h"
 #include "nlohmann/json.hpp"
 
@@ -223,11 +224,64 @@ private:
             };
             
             if (ledger_) {
-                // Add ledger information if available
-                state["ledger"] = {
-                    {"status", "active"},
-                    {"type", "federated"}
-                };
+                // Cast to ILedger to access snapshot() method
+                auto* iledger = dynamic_cast<ailee::econ::ILedger*>(ledger_);
+                if (iledger) {
+                    try {
+                        // Get ledger snapshot
+                        auto ledgerSnapshot = iledger->snapshot();
+                        
+                        // Create a minimal L2StateSnapshot with just ledger data
+                        // Note: Full snapshot with bridge/orchestration requires adding
+                        // SidechainBridge reference to WebServer (currently not passed in)
+                        ailee::l2::L2StateSnapshot snapshot;
+                        auto now = std::chrono::system_clock::now();
+                        snapshot.snapshotTimestampMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            now.time_since_epoch()).count();
+                        snapshot.ledger = ledgerSnapshot;
+                        
+                        // Compute state root from snapshot
+                        std::string stateRoot = ailee::l2::computeL2StateRoot(snapshot);
+                        
+                        // Build response with ledger snapshot details
+                        state["state_root"] = stateRoot;
+                        state["timestamp_ms"] = snapshot.snapshotTimestampMs;
+                        state["ledger"] = {
+                            {"status", "active"},
+                            {"type", "federated"},
+                            {"balance_count", ledgerSnapshot.balances.size()},
+                            {"escrow_count", ledgerSnapshot.escrows.size()}
+                        };
+                        
+                        // Add balance information (count only for performance)
+                        std::uint64_t totalBalance = 0;
+                        for (const auto& bal : ledgerSnapshot.balances) {
+                            totalBalance += bal.balance;
+                        }
+                        state["ledger"]["total_balance"] = totalBalance;
+                        
+                        // Add escrow information (count only)
+                        std::uint64_t totalEscrow = 0;
+                        for (const auto& esc : ledgerSnapshot.escrows) {
+                            totalEscrow += esc.amount;
+                        }
+                        state["ledger"]["total_escrow"] = totalEscrow;
+                        
+                    } catch (const std::exception& e) {
+                        // If snapshot fails, return basic status
+                        state["ledger"] = {
+                            {"status", "active"},
+                            {"type", "federated"},
+                            {"error", e.what()}
+                        };
+                    }
+                } else {
+                    // Ledger doesn't support ILedger interface
+                    state["ledger"] = {
+                        {"status", "active"},
+                        {"type", "federated"}
+                    };
+                }
             }
             
             res.set_content(state.dump(), "application/json");
