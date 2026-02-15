@@ -15,6 +15,11 @@ logger = logging.getLogger(__name__)
 class AILEECoreClient:
     """Client for C++ AILEE-Core node HTTP API"""
     
+    # Configuration constants
+    DEFAULT_CHECK_INTERVAL = 60  # Re-check availability every 60 seconds
+    DEFAULT_MAX_LOG_FAILURES = 3  # Only log first 3 failures to reduce noise
+    DEFAULT_HEALTH_CHECK_TIMEOUT = 2.0  # Timeout for health checks in seconds
+    
     def __init__(self, base_url: Optional[str] = None, timeout: float = 5.0):
         """
         Initialize client
@@ -30,9 +35,10 @@ class AILEECoreClient:
         # Node availability tracking for smarter error handling
         self._node_available = None  # None = unknown, True = available, False = unavailable
         self._last_check_time = 0
-        self._check_interval = 60  # Re-check availability every 60 seconds
+        self._check_interval = self.DEFAULT_CHECK_INTERVAL
         self._consecutive_failures = 0
-        self._max_log_failures = 3  # Only log first 3 failures to reduce noise
+        self._max_log_failures = self.DEFAULT_MAX_LOG_FAILURES
+        self._health_check_timeout = self.DEFAULT_HEALTH_CHECK_TIMEOUT
     
     async def get_status(self) -> Optional[Dict[str, Any]]:
         """Get node status from C++ node"""
@@ -109,11 +115,11 @@ class AILEECoreClient:
         
         # Perform health check
         try:
-            response = await self.client.get(f"{self.base_url}/api/health", timeout=2.0)
+            response = await self.client.get(f"{self.base_url}/api/health", timeout=self._health_check_timeout)
             is_available = response.status_code == 200
             
-            if is_available and not self._node_available:
-                # Node came back online
+            if is_available and self._node_available is False:
+                # Node came back online (transition from False to True)
                 logger.info(f"C++ AILEE-Core node is now available at {self.base_url}")
                 self._consecutive_failures = 0
             
@@ -122,7 +128,7 @@ class AILEECoreClient:
             return is_available
         except Exception:
             if self._node_available is not False:
-                # First time we detect node is unavailable
+                # First time we detect node is unavailable (transition from None/True to False)
                 logger.warning(f"C++ AILEE-Core node unavailable at {self.base_url}. API will run in standalone mode.")
             
             self._node_available = False
