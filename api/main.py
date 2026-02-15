@@ -64,6 +64,20 @@ async def lifespan(app: FastAPI):
     if settings.rate_limit_enabled:
         logger.info(f"   └─ Limit: {settings.rate_limit_requests} requests per {settings.rate_limit_window}s")
     
+    # Check C++ node connection
+    from api.l2_client import get_ailee_client
+    client = get_ailee_client()
+    cpp_node_url = client.base_url
+    is_healthy = await client.health_check()
+    
+    logger.info("")
+    logger.info("🔗 C++ AILEE-Core Node Connection:")
+    logger.info(f"   └─ URL: {cpp_node_url}")
+    logger.info(f"   └─ Status: {'✅ Connected' if is_healthy else '❌ Not Available'}")
+    
+    if not is_healthy:
+        logger.warning("⚠️  API will run in standalone mode (no real L2 data)")
+    
     logger.info("")
     logger.info("✅ Deterministic initialization complete")
     logger.info("✅ Configuration loaded and validated")
@@ -81,6 +95,11 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("")
     logger.info("🛑 Shutting down AILEE-Core API Server...")
+    
+    # Close C++ node client
+    from api.l2_client import close_ailee_client
+    await close_ailee_client()
+    
     uptime = time.time() - startup_time
     logger.info(f"⏱️  Total uptime: {uptime:.2f} seconds")
     logger.info("✅ Graceful shutdown complete")

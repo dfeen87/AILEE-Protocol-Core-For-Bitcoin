@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter
 
 from api.config import settings
+from api.l2_client import get_ailee_client
 
 router = APIRouter()
 
@@ -17,19 +18,21 @@ async def get_status():
     """
     Node Status Endpoint
     
-    Returns comprehensive node metadata including:
-    - Version information
-    - Uptime statistics
-    - Configuration summary
-    - Environment details
-    
-    This endpoint provides read-only access to node state.
+    Returns comprehensive node metadata from the C++ AILEE-Core node
     
     Returns:
         dict: Node status and metadata
     """
-    # Calculate uptime (would need to be tracked from main.py startup)
-    # For now, we'll use a placeholder
+    client = get_ailee_client()
+    
+    # Try to get real status from C++ node
+    cpp_status = await client.get_status()
+    
+    if cpp_status:
+        # Return real status from C++ node
+        return cpp_status
+    
+    # Fallback: C++ node not available, return Python API status only
     from api.main import get_startup_time
     startup_time = get_startup_time()
     
@@ -42,7 +45,8 @@ async def get_status():
             "id": settings.node_id,
             "version": settings.app_version,
             "environment": settings.env,
-            "uptime_seconds": round(uptime_seconds, 2)
+            "uptime_seconds": round(uptime_seconds, 2),
+            "mode": "api_only"  # Indicates C++ node not connected
         },
         "config": {
             "jwt_enabled": settings.jwt_enabled,
@@ -56,5 +60,6 @@ async def get_status():
             "host": settings.host,
             "port": settings.port
         },
+        "warning": "C++ AILEE-Core node not available - API running in standalone mode",
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
