@@ -1,5 +1,5 @@
 version: 1
-mode: simulation
+mode: live
 step_ms: 50
 horizon_s: 600
 
