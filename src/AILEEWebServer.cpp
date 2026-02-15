@@ -5,6 +5,7 @@
 #include "Orchestrator.h"
 #include "Ledger.h"
 #include "L2State.h"
+#include "BlockProducer.h"
 #include "third_party/httplib.h"
 #include "nlohmann/json.hpp"
 
@@ -77,6 +78,10 @@ public:
 
     void setLedgerRef(Ledger* ledger) {
         ledger_ = ledger;
+    }
+
+    void setBlockProducerRef(l2::BlockProducer* producer) {
+        block_producer_ = producer;
     }
 
 private:
@@ -212,7 +217,7 @@ private:
             res.set_content(metrics.dump(), "application/json");
         });
 
-        // Layer-2 state endpoint - simplified
+        // Layer-2 state endpoint - now with real block data
         server_->Get("/api/l2/state", [this](const httplib::Request&, httplib::Response& res) {
             json state = {
                 {"layer", "Layer-2"},
@@ -225,6 +230,19 @@ private:
                     {"status", "active"},
                     {"type", "federated"}
                 };
+            }
+            
+            // Add block producer state if available
+            if (block_producer_) {
+                auto blockState = block_producer_->getState();
+                state["block_height"] = blockState.blockHeight;
+                state["total_transactions"] = blockState.totalTransactions;
+                state["last_anchor_height"] = blockState.lastAnchorHeight;
+            } else {
+                // Fallback if block producer not initialized yet
+                state["block_height"] = 0;
+                state["total_transactions"] = 0;
+                state["last_anchor_height"] = 0;
             }
             
             res.set_content(state.dump(), "application/json");
@@ -325,6 +343,7 @@ private:
     std::function<NodeStatus()> status_callback_;
     Orchestrator* orchestrator_ = nullptr;
     Ledger* ledger_ = nullptr;
+    l2::BlockProducer* block_producer_ = nullptr;
 };
 
 // Public API implementation
@@ -358,6 +377,10 @@ void AILEEWebServer::setOrchestratorRef(Orchestrator* orch) {
 
 void AILEEWebServer::setLedgerRef(Ledger* ledger) {
     pImpl->setLedgerRef(ledger);
+}
+
+void AILEEWebServer::setBlockProducerRef(l2::BlockProducer* producer) {
+    pImpl->setBlockProducerRef(producer);
 }
 
 } // namespace ailee

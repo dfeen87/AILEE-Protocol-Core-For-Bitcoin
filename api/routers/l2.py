@@ -64,8 +64,9 @@ async def get_l2_state():
     cpp_state = await client.get_l2_state()
     
     if cpp_state:
-        # C++ node returns: {"layer": "Layer-2", "protocol": "AILEE-Core", "ledger": {"status": "active", "type": "federated"}}
-        # We need to adapt this to our expected response format
+        # C++ node now returns: {"layer": "Layer-2", "protocol": "AILEE-Core", 
+        # "ledger": {"status": "active", "type": "federated"},
+        # "block_height": N, "total_transactions": M, "last_anchor_height": K}
         
         # Extract ledger info
         ledger_info = cpp_state.get("ledger", {})
@@ -76,15 +77,18 @@ async def get_l2_state():
         state_data = f"{cpp_state.get('layer', '')}-{cpp_state.get('protocol', '')}-{health_status}"
         state_root = hashlib.sha256(state_data.encode()).hexdigest()
         
+        # Get block production metrics from C++ node
+        block_height = cpp_state.get("block_height", 0)
+        total_transactions = cpp_state.get("total_transactions", 0)
+        last_anchor_height = cpp_state.get("last_anchor_height", 0)
+        
         # Return structured state from C++ node
-        # Note: block_height, total_transactions, and last_anchor_height will be 0 
-        # until the C++ node implements blockchain state tracking
         return {
             "state": {
                 "state_root": state_root,
-                "block_height": 0,  # Not yet available from C++ node - will be implemented when blockchain tracking is added
-                "total_transactions": 0,  # Not yet available from C++ node - will be implemented when tx tracking is added
-                "last_anchor_height": 0,  # Not yet available from C++ node - will be implemented when anchor tracking is added
+                "block_height": block_height,
+                "total_transactions": total_transactions,
+                "last_anchor_height": last_anchor_height,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             },
             "health": health_status

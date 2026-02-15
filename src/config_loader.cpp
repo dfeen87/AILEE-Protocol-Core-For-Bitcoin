@@ -33,6 +33,8 @@ static std::optional<Config> parse_yaml(const std::string& text) {
     if (root["mode"]) cfg.mode = root["mode"].as<std::string>();
     if (root["step_ms"]) cfg.step_ms = root["step_ms"].as<size_t>();
     if (root["horizon_s"]) cfg.horizon_s = root["horizon_s"].as<size_t>();
+    if (root["block_interval_ms"]) cfg.block_interval_ms = root["block_interval_ms"].as<size_t>();
+    if (root["commitment_interval"]) cfg.commitment_interval = root["commitment_interval"].as<size_t>();
 
     if (root["signals"]) {
       for (const auto& sig : root["signals"]) {

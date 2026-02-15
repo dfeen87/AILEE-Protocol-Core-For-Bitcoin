@@ -17,6 +17,10 @@ namespace ailee {
 class Orchestrator;
 class Ledger;
 
+namespace l2 {
+class BlockProducer;
+}
+
 struct WebServerConfig {
     std::string host = "0.0.0.0";
     int port = 8080;
@@ -58,6 +62,7 @@ public:
     void setNodeStatusCallback(std::function<NodeStatus()> callback);
     void setOrchestratorRef(Orchestrator* orch);
     void setLedgerRef(Ledger* ledger);
+    void setBlockProducerRef(l2::BlockProducer* producer);
 
 private:
     class Impl;

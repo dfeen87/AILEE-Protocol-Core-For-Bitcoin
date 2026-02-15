@@ -158,6 +158,7 @@ set(AILEE_HEADERS
     include/Global_Seven.h
     include/AmbientAI.h
     include/L2State.h
+    include/BlockProducer.h
     include/AILEEWebServer.h
 )
 
@@ -227,6 +228,7 @@ set(CORE_SOURCES
     src/security/zk_proofs.cpp
     src/l1/AnchorCommitment.cpp
     src/l2/L2State.cpp
+    src/l2/BlockProducer.cpp
     src/AILEEWebServer.cpp
     ${ADAPTER_SOURCES}
     ${AMBIENT_SOURCES}
