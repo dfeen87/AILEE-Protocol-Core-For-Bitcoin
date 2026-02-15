@@ -3,6 +3,7 @@ FROM ubuntu:22.04 AS cpp-builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Install build dependencies
 RUN apt-get update && apt-get install -y \
     build-essential cmake git wget \
     libssl-dev libcurl4-openssl-dev libzmq3-dev \
@@ -10,19 +11,26 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
+
+# Copy the full repo, including econ headers
 COPY . .
 
-# Comment out demo executables (lines 419-468) - these reference missing example files
-# Comment out install targets (lines 470-490) - these reference the commented demos
+# Ensure the C++ build sees econ headers
 RUN sed -i '419,468s/^/# /' CMakeLists.txt && \
-    sed -i '470,490s/^/# /' CMakeLists.txt
+    sed -i '470,490s/^/# /' CMakeLists.txt && \
+    echo "include_directories(\${CMAKE_SOURCE_DIR}/econ)" >> CMakeLists.txt
 
+# Build the C++ node
 RUN mkdir build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF && \
     make -j$(nproc) ailee_node
 
+# =======================
+# Python runtime image
+# =======================
 FROM python:3.11-slim
 
+# Install minimal runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl libssl3t64 libcurl4t64 libzmq5 libjsoncpp26 \
     libyaml-cpp0.8 librocksdb9.10 libstdc++6 procps \
@@ -32,18 +40,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
+# Install Python dependencies
 COPY --chown=root:root requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-RUN useradd -m -u 1000 ailee && mkdir -p /app/logs /data && chown -R ailee:ailee /app/logs /data
+# Setup user and directories
+RUN useradd -m -u 1000 ailee && \
+    mkdir -p /app/logs /data && \
+    chown -R ailee:ailee /app/logs /data
 
+# Copy application code
 COPY --chown=ailee:ailee api/ ./api/
 COPY --chown=ailee:ailee web/ ./web/
+
+# Copy C++ node and config from build stage
 COPY --from=cpp-builder --chown=ailee:ailee /build/build/ailee_node ./ailee_node
 COPY --from=cpp-builder --chown=ailee:ailee /build/config ./config
 
 RUN chmod +x ./ailee_node
 
+# Start script
 RUN echo '#!/bin/bash\n\
 set -e\n\
 echo "Starting C++ node on :8080..."\n\
