@@ -3,7 +3,7 @@ Layer-2 Router
 Layer-2 state snapshot and anchor history endpoints
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field
@@ -68,7 +68,7 @@ def generate_mock_anchors(limit: int = 10, offset: int = 0) -> List[AnchorRecord
     
     for i in range(total_to_generate):
         height = current_bitcoin_height - (i * 144)  # One anchor per day approximately
-        timestamp = datetime.now(timezone.utc)
+        timestamp = datetime.now(timezone.utc) - timedelta(days=i)
         
         anchor_id = f"anchor-{height}"
         state_root = hashlib.sha256(f"STATE:{height}".encode()).hexdigest()

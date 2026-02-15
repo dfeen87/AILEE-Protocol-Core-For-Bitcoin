@@ -170,7 +170,7 @@ app.include_router(metrics.router, tags=["Metrics"])
 
 
 # Root endpoint
-@app.get("/", include_in_schema=True)
+@app.get("/", include_in_schema=False)
 async def root():
     """
     Root endpoint - API information
