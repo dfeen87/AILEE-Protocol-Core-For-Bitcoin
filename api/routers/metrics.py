@@ -66,9 +66,19 @@ async def get_current_metrics() -> MetricsResponse:
         }
     
     return MetricsResponse(
-        node_metrics={"warning": "C++ node not available"},
+        node_metrics={
+            "requests_per_second": 0.0,
+            "avg_response_time_ms": 0.0,
+            "trust_score_computations": 0.0,
+            "validations_performed": 0.0,
+        },
         system_metrics=system_metrics,
-        l2_metrics={},
+        l2_metrics={
+            "current_block_height": 0,
+            "pending_transactions": 0,
+            "anchors_created": 0,
+            "state_updates": 0,
+        },
         timestamp=datetime.now(timezone.utc).isoformat()
     )
 
@@ -108,43 +118,43 @@ async def get_prometheus_metrics() -> str:
     # Node metrics
     lines.append("# HELP ailee_requests_per_second Request rate")
     lines.append("# TYPE ailee_requests_per_second gauge")
-    lines.append(f"ailee_requests_per_second {metrics.node_metrics['requests_per_second']}")
+    lines.append(f"ailee_requests_per_second {metrics.node_metrics.get('requests_per_second', 0.0)}")
     lines.append("")
     
     lines.append("# HELP ailee_response_time_milliseconds Average response time")
     lines.append("# TYPE ailee_response_time_milliseconds gauge")
-    lines.append(f"ailee_response_time_milliseconds {metrics.node_metrics['avg_response_time_ms']}")
+    lines.append(f"ailee_response_time_milliseconds {metrics.node_metrics.get('avg_response_time_ms', 0.0)}")
     lines.append("")
     
     lines.append("# HELP ailee_trust_computations_total Total trust score computations")
     lines.append("# TYPE ailee_trust_computations_total counter")
-    lines.append(f"ailee_trust_computations_total {metrics.node_metrics['trust_score_computations']}")
+    lines.append(f"ailee_trust_computations_total {metrics.node_metrics.get('trust_score_computations', 0.0)}")
     lines.append("")
     
     lines.append("# HELP ailee_validations_total Total validations performed")
     lines.append("# TYPE ailee_validations_total counter")
-    lines.append(f"ailee_validations_total {metrics.node_metrics['validations_performed']}")
+    lines.append(f"ailee_validations_total {metrics.node_metrics.get('validations_performed', 0.0)}")
     lines.append("")
     
     # L2 metrics
     lines.append("# HELP ailee_block_height Current block height")
     lines.append("# TYPE ailee_block_height gauge")
-    lines.append(f"ailee_block_height {metrics.l2_metrics['current_block_height']}")
+    lines.append(f"ailee_block_height {metrics.l2_metrics.get('current_block_height', 0)}")
     lines.append("")
     
     lines.append("# HELP ailee_pending_transactions Pending transactions")
     lines.append("# TYPE ailee_pending_transactions gauge")
-    lines.append(f"ailee_pending_transactions {metrics.l2_metrics['pending_transactions']}")
+    lines.append(f"ailee_pending_transactions {metrics.l2_metrics.get('pending_transactions', 0)}")
     lines.append("")
     
     lines.append("# HELP ailee_anchors_created_total Total anchors created")
     lines.append("# TYPE ailee_anchors_created_total counter")
-    lines.append(f"ailee_anchors_created_total {metrics.l2_metrics['anchors_created']}")
+    lines.append(f"ailee_anchors_created_total {metrics.l2_metrics.get('anchors_created', 0)}")
     lines.append("")
     
     lines.append("# HELP ailee_state_updates_total Total state updates")
     lines.append("# TYPE ailee_state_updates_total counter")
-    lines.append(f"ailee_state_updates_total {metrics.l2_metrics['state_updates']}")
+    lines.append(f"ailee_state_updates_total {metrics.l2_metrics.get('state_updates', 0)}")
     lines.append("")
     
     return "\n".join(lines)
