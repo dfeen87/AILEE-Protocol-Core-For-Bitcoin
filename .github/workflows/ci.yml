@@ -23,7 +23,12 @@ jobs:
             libcurl4-openssl-dev \
             libzmq3-dev \
             libjsoncpp-dev \
-            libyaml-cpp-dev
+            libyaml-cpp-dev \
+            librocksdb-dev \
+            zlib1g-dev \
+            libbz2-dev \
+            liblz4-dev \
+            libsnappy-dev
 
       - name: Configure
         run: |
