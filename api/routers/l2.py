@@ -3,7 +3,7 @@ Layer-2 Router
 Layer-2 state snapshot and anchor history endpoints
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field

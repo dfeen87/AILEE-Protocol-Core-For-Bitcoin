@@ -73,16 +73,18 @@ async def get_current_metrics() -> MetricsResponse:
     )
 
 
-def get_prometheus_metrics() -> str:
+async def get_prometheus_metrics() -> str:
     """
-    Generate Prometheus-compatible metrics
-    In production, this would use the C++ PrometheusExporter
+    Generate Prometheus-compatible metrics (async for consistency with route handlers)
+    
+    Returns mock metrics in Prometheus text format for standalone API testing.
+    In production, this would use the C++ PrometheusExporter.
     """
     import psutil
     import time
     
     # Get current metrics
-    metrics = get_current_metrics()
+    metrics = await get_current_metrics()
     
     # Build Prometheus text format
     lines = []
@@ -171,4 +173,4 @@ async def get_prometheus_metrics_endpoint():
     Returns:
         Metrics in Prometheus text format
     """
-    return get_prometheus_metrics()
+    return await get_prometheus_metrics()
