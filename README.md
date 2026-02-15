@@ -219,10 +219,13 @@ open http://localhost:8080
 docker build -t ailee-core-api .
 
 # Run container
-docker run -p 8080:8080 --env-file .env ailee-core-api
+docker run -p 8000:8000 --env-file .env ailee-core-api
 
 # Test the API
-curl http://localhost:8080/status
+curl http://localhost:8000/status
+
+# Access the web dashboard
+open http://localhost:8000/
 ```
 
 ### Option 5: Deploy to Fly.io

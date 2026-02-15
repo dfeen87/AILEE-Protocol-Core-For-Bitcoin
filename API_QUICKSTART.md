@@ -23,10 +23,13 @@ open http://localhost:8080/docs
 docker build -t ailee-core-api .
 
 # Run the container
-docker run -p 8080:8080 ailee-core-api
+docker run -p 8000:8000 ailee-core-api
 
 # Test the API
-curl http://localhost:8080/health
+curl http://localhost:8000/health
+
+# Access the web dashboard
+open http://localhost:8000/
 ```
 
 ## ☁️ Deploy to Fly.io
