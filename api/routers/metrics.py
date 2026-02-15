@@ -40,6 +40,7 @@ async def get_current_metrics() -> MetricsResponse:
         raw_timestamp = cpp_metrics.get("timestamp")
         if isinstance(raw_timestamp, (int, float)):
             # Convert milliseconds since epoch to ISO 8601 string
+            # Note: C++ node (src/AILEEWebServer.cpp) returns timestamps as milliseconds since epoch
             timestamp_str = datetime.fromtimestamp(raw_timestamp / 1000.0, tz=timezone.utc).isoformat()
         else:
             # If already a string or None, use it or default to now
