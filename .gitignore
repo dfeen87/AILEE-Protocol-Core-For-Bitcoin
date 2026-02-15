@@ -105,3 +105,7 @@ docker-compose.override.yml
 *.swp
 *.swo
 *~
+
+# Logs
+logs/
+*.log

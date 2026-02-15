@@ -31,7 +31,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Initialize security audit logger
-audit_logger = get_audit_logger()
+audit_logger = get_audit_logger(log_file=settings.audit_log_path)
 
 # Global state
 startup_time = None
