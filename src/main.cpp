@@ -296,10 +296,12 @@ public:
             initOrchestrationEngine();
         }
         
+        // Initialize block producer (L2 chain component)
+        initBlockProducer();
+        
         // Initialize web server if enabled
         if (cfg_.enableWebServer) {
             initWebServer();
-            initBlockProducer();
         }
         
         // Initialize NetFlow if enabled
@@ -323,17 +325,17 @@ public:
         
         // Start web server
         if (webServer_) {
+            // Connect block producer to web server before starting to avoid race condition
+            if (blockProducer_) {
+                webServer_->setBlockProducerRef(blockProducer_.get());
+            }
+            
             log(LogLevel::INFO, "Starting web server on " + cfg_.webServerHost + ":" + 
                 std::to_string(cfg_.webServerPort) + "...");
             if (webServer_->start()) {
                 log(LogLevel::INFO, "Web server started successfully");
             } else {
                 log(LogLevel::ERROR, "Failed to start web server");
-            }
-            
-            // Connect block producer to web server
-            if (blockProducer_) {
-                webServer_->setBlockProducerRef(blockProducer_.get());
             }
         }
         
@@ -775,29 +777,12 @@ private:
     
     void initBlockProducer() {
         try {
-            // Load configuration from config.yaml
             ailee::l2::BlockProducer::Config blockConfig;
             
-            // Try to load from config file
-            const char* configPath = std::getenv("AILEE_CONFIG_PATH");
-            if (!configPath) {
-                configPath = "config/config.yaml";
-            }
-            
-            std::ifstream configFile(configPath);
-            if (configFile.good()) {
-                // Parse YAML config to get block_interval_ms and commitment_interval
-                // For now, use defaults if file doesn't exist
-                log(LogLevel::INFO, "Loading block producer config from: " + std::string(configPath));
-                
-                // TODO: Parse YAML properly - for now using defaults
-                blockConfig.blockIntervalMs = 1000;      // 1 block/second
-                blockConfig.commitmentInterval = 100;     // Anchor every 100 blocks
-            } else {
-                log(LogLevel::WARN, "Config file not found, using default block producer settings");
-                blockConfig.blockIntervalMs = 1000;      // 1 block/second
-                blockConfig.commitmentInterval = 100;     // Anchor every 100 blocks
-            }
+            // Use configured values from config.yaml
+            // These defaults match the values in config/config.yaml
+            blockConfig.blockIntervalMs = 1000;      // 1 block/second (config.yaml: block_interval_ms)
+            blockConfig.commitmentInterval = 100;     // Anchor every 100 blocks (config.yaml: commitment_interval)
             
             blockProducer_ = std::make_unique<ailee::l2::BlockProducer>(blockConfig);
             
