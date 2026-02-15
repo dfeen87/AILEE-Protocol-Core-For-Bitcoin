@@ -216,7 +216,27 @@ fly deploy
 fly logs
 ```
 
-See **[API_QUICKSTART.md](API_QUICKSTART.md)** for detailed deployment guides.
+### Option 6: Multi-Node Cluster (Docker Compose) ⭐ NEW
+
+```bash
+# Deploy 3-node cluster with Prometheus + Grafana
+./scripts/deploy-multinode.sh
+
+# Access points
+# - Node 1: http://localhost:8080
+# - Node 2: http://localhost:8081
+# - Node 3: http://localhost:8082
+# - Prometheus: http://localhost:9000
+# - Grafana: http://localhost:3000 (admin/admin)
+
+# View logs
+docker-compose logs -f
+
+# Stop cluster
+docker-compose down
+```
+
+See **[API_QUICKSTART.md](API_QUICKSTART.md)** and **[Next Phase Features](docs/NEXT_PHASE_FEATURES.md)** for detailed deployment guides.
 
 ---
 
@@ -237,14 +257,20 @@ See **[API_QUICKSTART.md](API_QUICKSTART.md)** for detailed deployment guides.
 - REST API with FastAPI
 - Web dashboard and monitoring
 - Docker and cloud deployment configs
+- **🆕 SHA3-256 cryptographic hashing** (OpenSSL 3.0+)
+- **🆕 RocksDB persistent storage layer**
+- **🆕 P2P networking infrastructure** (libp2p-ready)
+- **🆕 Distributed task protocol**
+- **🆕 Prometheus metrics export**
+- **🆕 Multi-node deployment testing** (Docker Compose)
 
 ### 🚧 In Active Development
 - Distributed consensus for L2 state
-- Persistent replicated storage
 - End-to-end automated test coverage
 - Adversarial and fault-injection testing
 - External cryptographic audits
 - Production hardening and operational tooling
+- Full libp2p C++ integration
 
 ### 🔬 Research Areas
 - Layer-2 orchestration optimization
@@ -433,6 +459,7 @@ AILEE-Core is **NOT**:
 - **[API Quick Start](API_QUICKSTART.md)**: REST API deployment
 - **[Build Guide](docs/BUILD.md)**: Detailed build instructions
 - **[Ambient AI + VCP Demo](examples/README.md)**: Working integration demonstration ⭐ NEW
+- **[Next Phase Features](docs/NEXT_PHASE_FEATURES.md)**: P2P, Storage, Metrics, Multi-node ⭐ NEW
 
 ### Architecture & Design
 - **[Architecture Overview](docs/ARCHITECTURE_CONCEPTUAL.md)**: System design
@@ -446,6 +473,9 @@ AILEE-Core is **NOT**:
 - **[Web Integration](docs/WEB_INTEGRATION.md)**: HTTP API and dashboard
 - **[Recovery Guide](docs/RECOVERY_GUIDE.md)**: Recovery protocols
 - **[Security](docs/SECURITY_AND_POWER.md)**: Power model and safety
+- **[P2P Networking](docs/NEXT_PHASE_FEATURES.md#-3-p2p-networking-layer)**: Distributed networking ⭐ NEW
+- **[Persistent Storage](docs/NEXT_PHASE_FEATURES.md#-2-rocksdb-persistent-storage)**: RocksDB integration ⭐ NEW
+- **[Metrics Export](docs/NEXT_PHASE_FEATURES.md#-5-prometheus-metrics-export)**: Prometheus monitoring ⭐ NEW
 
 ### For Developers
 - **[Examples Directory](examples/)**: Working code demonstrations
