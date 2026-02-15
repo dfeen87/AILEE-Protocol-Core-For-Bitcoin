@@ -18,8 +18,11 @@
 
 using namespace ailee::network;
 
+// Global network pointer for signal handler
+static P2PNetwork* g_network = nullptr;
+
 // Global flag for graceful shutdown
-static bool running = true;
+static volatile bool running = true;
 
 void signalHandler(int signal) {
     std::cout << "\n[Demo] Received signal " << signal << ", shutting down..." << std::endl;

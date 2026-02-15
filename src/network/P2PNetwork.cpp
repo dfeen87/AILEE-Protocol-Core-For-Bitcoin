@@ -58,11 +58,10 @@ public:
     }
     
     ~Impl() {
-        if (running) {
-            running = false;
-            if (backgroundThread.joinable()) {
-                backgroundThread.join();
-            }
+        // Ensure clean shutdown
+        running = false;
+        if (backgroundThread.joinable()) {
+            backgroundThread.join();
         }
     }
     
@@ -152,10 +151,12 @@ public:
             msg.timestamp = std::chrono::system_clock::now().time_since_epoch().count();
             msg.messageId = generateMessageId();
             
-            // Deliver asynchronously
-            std::thread([handler = it->second, msg]() {
-                handler(msg);
-            }).detach();
+            // Deliver synchronously to avoid detached thread issues on shutdown
+            try {
+                it->second(msg);
+            } catch (const std::exception& e) {
+                std::cerr << "[P2PNetwork] Error in message handler: " << e.what() << std::endl;
+            }
         }
         
         stats.totalMessagesSent++;

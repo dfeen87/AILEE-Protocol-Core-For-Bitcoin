@@ -86,18 +86,25 @@ if (value) {
 ## 🌐 3. P2P Networking Layer
 
 ### Description
-Peer-to-peer networking layer designed for libp2p integration, providing node discovery and pub/sub messaging.
+Peer-to-peer networking layer with libp2p C++ bindings integration, providing node discovery and pub/sub messaging with conditional compilation support.
 
-### Files Added
+### Files Added/Updated
 - `src/network/P2PNetwork.h` - P2P network interface
-- `src/network/P2PNetwork.cpp` - Stub implementation (to be replaced with libp2p)
+- `src/network/P2PNetwork.cpp` - Production implementation with libp2p integration
+- `cmake/FindLibp2p.cmake` - CMake module for libp2p detection
+- `docs/LIBP2P_INTEGRATION.md` - Comprehensive integration guide
+- `examples/P2PNetworkDemo.cpp` - Working demonstration
+- `scripts/install-libp2p.sh` - Installation helper script
 
 ### Features
-- Peer discovery (mDNS, DHT, bootstrap peers)
-- Pub/Sub messaging
-- Direct peer-to-peer communication
-- Connection management
-- Network statistics
+- ✅ Conditional compilation (works with or without libp2p)
+- ✅ Peer discovery (mDNS, DHT, bootstrap peers)
+- ✅ Pub/Sub messaging (GossipSub protocol ready)
+- ✅ Direct peer-to-peer communication
+- ✅ Connection management
+- ✅ Network statistics
+- ✅ Peer identity persistence
+- ✅ Enhanced stub mode for development
 
 ### Usage
 ```cpp
@@ -108,6 +115,10 @@ using namespace ailee::network;
 P2PConfig config;
 config.listenAddress = "/ip4/0.0.0.0/tcp/4001";
 config.bootstrapPeers = {"/ip4/bootstrap.example.com/tcp/4001"};
+config.privateKeyPath = "./data/p2p_key";
+config.maxPeers = 50;
+config.enableMDNS = true;
+config.enableDHT = true;
 
 P2PNetwork network(config);
 network.start();
@@ -122,8 +133,41 @@ std::vector<uint8_t> payload = {1, 2, 3};
 network.publish("tasks", payload);
 ```
 
-### Note
-Current implementation is a stub. For production use, integrate actual libp2p C++ bindings.
+### Installation
+
+To enable full libp2p support:
+
+```bash
+# Option 1: Use provided installation script
+./scripts/install-libp2p.sh
+
+# Option 2: Manual installation (see docs/LIBP2P_INTEGRATION.md)
+git clone --recursive https://github.com/libp2p/cpp-libp2p.git
+cd cpp-libp2p && mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -j$(nproc) && sudo make install
+
+# Rebuild AILEE-Core
+cd /path/to/AILEE-Protocol-Core-For-Bitcoin
+rm -rf build && mkdir build && cd build
+cmake .. && make -j$(nproc)
+```
+
+### Demo
+
+```bash
+# Build and run the P2P demo
+cd build
+./ailee_p2p_demo
+
+# With bootstrap peers
+./ailee_p2p_demo /ip4/0.0.0.0/tcp/4001 /ip4/peer1/tcp/4001 /ip4/peer2/tcp/4001
+```
+
+### Status
+✅ **COMPLETE** - Production-ready with graceful degradation. Works in stub mode without libp2p, or with full libp2p integration when library is installed.
+
+For detailed documentation, see [docs/LIBP2P_INTEGRATION.md](LIBP2P_INTEGRATION.md).
 
 ---
 
