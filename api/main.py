@@ -20,7 +20,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from api.config import settings
-from api.routers import health, status, trust, l2, metrics
+from api.routers import health, status, trust, l2, metrics, transactions
 from api.security_audit import get_audit_logger, audit_log, AuditEventType, AuditEventSeverity
 
 
@@ -202,6 +202,7 @@ app.include_router(health.router, tags=["Health"])
 app.include_router(status.router, tags=["Status"])
 app.include_router(trust.router, prefix="/trust", tags=["Trust"])
 app.include_router(l2.router, prefix="/l2", tags=["Layer-2"])
+app.include_router(transactions.router, prefix="/transactions", tags=["Transactions"])
 app.include_router(metrics.router, tags=["Metrics"])
 
 # Mount static files (web dashboard)
@@ -242,6 +243,8 @@ async def root():
             "trust_validate": "/trust/validate",
             "l2_state": "/l2/state",
             "l2_anchors": "/l2/anchors",
+            "transactions_submit": "/transactions/submit",
+            "transactions_list": "/transactions/list",
             "metrics": "/metrics"
         },
         "timestamp": datetime.now(timezone.utc).isoformat()
@@ -274,6 +277,8 @@ async def api_info():
             "trust_validate": "/trust/validate",
             "l2_state": "/l2/state",
             "l2_anchors": "/l2/anchors",
+            "transactions_submit": "/transactions/submit",
+            "transactions_list": "/transactions/list",
             "metrics": "/metrics"
         },
         "timestamp": datetime.now(timezone.utc).isoformat()
