@@ -5,6 +5,7 @@ Production-ready FastAPI implementation with deterministic, safe, read-only endp
 """
 
 import logging
+import os
 import sys
 import time
 from contextlib import asynccontextmanager
@@ -68,15 +69,30 @@ async def lifespan(app: FastAPI):
     from api.l2_client import get_ailee_client
     client = get_ailee_client()
     cpp_node_url = client.base_url
+    
+    logger.info("")
+    logger.info("🔗 C++ AILEE-Core Node Configuration:")
+    logger.info(f"   └─ Endpoint URL: {cpp_node_url}")
+    logger.info(f"   └─ Source: {'AILEE_NODE_URL env var' if os.getenv('AILEE_NODE_URL') else 'default (localhost:8080)'}")
+    logger.info(f"   └─ Timeout: {client.timeout}s")
+    
+    logger.info("")
+    logger.info("🔍 Testing C++ node connectivity...")
     is_healthy = await client.health_check()
     
     logger.info("")
-    logger.info("🔗 C++ AILEE-Core Node Connection:")
-    logger.info(f"   └─ URL: {cpp_node_url}")
-    logger.info(f"   └─ Status: {'✅ Connected' if is_healthy else '❌ Not Available'}")
-    
-    if not is_healthy:
-        logger.warning("⚠️  API will run in standalone mode (no real L2 data)")
+    if is_healthy:
+        logger.info("✅ C++ AILEE-Core Node Status: CONNECTED")
+        logger.info("   └─ Health check: PASSED")
+        logger.info("   └─ Real L2 data: AVAILABLE")
+    else:
+        logger.warning("⚠️  C++ AILEE-Core Node Status: NOT AVAILABLE")
+        logger.warning(f"   └─ Could not connect to: {cpp_node_url}")
+        logger.warning("   └─ API will run in standalone mode (mock data only)")
+        logger.warning("   └─ To connect to C++ node:")
+        logger.warning(f"      • Set AILEE_NODE_URL env var to correct endpoint")
+        logger.warning(f"      • Ensure C++ node is running and accessible")
+        logger.warning(f"      • Test with: curl {cpp_node_url}/api/health")
     
     logger.info("")
     logger.info("✅ Deterministic initialization complete")

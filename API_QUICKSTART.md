@@ -96,6 +96,7 @@ AILEE_JWT_ENABLED=false
 
 ## 🧪 Testing
 
+### Basic Health Check
 ```bash
 # Health check
 curl http://localhost:8080/health
@@ -113,6 +114,112 @@ curl http://localhost:8080/l2/state
 
 # Metrics
 curl http://localhost:8080/metrics
+```
+
+### Testing C++ Node Connectivity
+
+#### From Host Machine
+```bash
+# Test Python API
+curl http://localhost:8080/health
+
+# Test C++ node (if running locally)
+curl http://localhost:8080/api/health
+```
+
+#### From Inside Docker Container
+```bash
+# Access running container
+docker exec -it <container-name> bash
+
+# Test connectivity to C++ node
+# For localhost setup:
+curl http://localhost:8080/api/health
+
+# For Docker Compose setup (C++ node in separate container):
+curl http://ailee-node-1:8080/api/health
+
+# For Fly.io deployment (C++ node as separate app):
+curl https://<cpp-node-app>.fly.dev/api/health
+
+# Check DNS resolution (Docker Compose)
+nslookup ailee-node-1
+
+# Check if port is reachable
+nc -zv localhost 8080
+nc -zv ailee-node-1 8080
+```
+
+#### Debugging Connection Issues
+```bash
+# Check environment variable
+echo $AILEE_NODE_URL
+
+# Test with explicit URL
+curl http://localhost:8080/api/health -v
+
+# Check if service is listening on 0.0.0.0 (not 127.0.0.1)
+netstat -tlnp | grep 8080
+
+# View Python API logs for C++ connection status
+docker logs <container-name>
+```
+
+### Deployment Architecture
+
+The AILEE Protocol supports multiple deployment configurations:
+
+#### 1. **Local Development** (Default)
+- Python API: `localhost:8080`
+- C++ Node: `localhost:8080` (if running)
+- Set `AILEE_NODE_URL=http://localhost:8080`
+
+#### 2. **Docker Compose** (Multi-container)
+- Python API: Container on port 8080
+- C++ Node: Separate container (`ailee-node-1`)
+- Set `AILEE_NODE_URL=http://ailee-node-1:8080`
+
+#### 3. **Fly.io - Separate Apps**
+- Python API: One Fly app
+- C++ Node: Separate Fly app
+- Set `AILEE_NODE_URL=https://<cpp-node-app>.fly.dev`
+
+#### 4. **Fly.io - Sidecar** (Not recommended)
+- Python API and C++ Node in same container
+- Set `AILEE_NODE_URL=http://localhost:8080`
+- Note: Requires custom Dockerfile combining both services
+
+### Configuration Examples
+
+#### Docker Compose Example
+```yaml
+# docker-compose.yml
+services:
+  python-api:
+    build:
+      dockerfile: Dockerfile
+    environment:
+      - AILEE_NODE_URL=http://ailee-node-1:8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      - ailee-node-1
+  
+  ailee-node-1:
+    build:
+      dockerfile: Dockerfile.node
+    ports:
+      - "8080:8080"
+```
+
+#### Fly.io Example (Separate Apps)
+```bash
+# Deploy C++ node first
+fly launch --dockerfile Dockerfile.node --name ailee-cpp-node
+
+# Deploy Python API with C++ node URL
+fly secrets set AILEE_NODE_URL=https://ailee-cpp-node.fly.dev
+fly deploy
 ```
 
 ## 📚 Documentation
