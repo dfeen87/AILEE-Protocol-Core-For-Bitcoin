@@ -11,7 +11,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 # Create non-root user for security
 RUN useradd -m -u 1000 ailee && \
-    mkdir -p /app && \
+    mkdir -p /app /app/logs && \
     chown -R ailee:ailee /app
 
 WORKDIR /app

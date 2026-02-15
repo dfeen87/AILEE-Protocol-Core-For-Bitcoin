@@ -270,11 +270,11 @@ class SecurityAuditLogger:
 _audit_logger: Optional[SecurityAuditLogger] = None
 
 
-def get_audit_logger() -> SecurityAuditLogger:
+def get_audit_logger(log_file: str = "/var/log/ailee/security-audit.log") -> SecurityAuditLogger:
     """Get global audit logger instance"""
     global _audit_logger
     if _audit_logger is None:
-        _audit_logger = SecurityAuditLogger()
+        _audit_logger = SecurityAuditLogger(log_file=log_file)
     return _audit_logger
 
 

@@ -32,6 +32,10 @@ class Settings(BaseSettings):
         default="info",
         description="Logging level: debug, info, warning, error, critical"
     )
+    audit_log_path: str = Field(
+        default="/app/logs/security-audit.log",
+        description="Path to security audit log file"
+    )
     
     # API Server
     host: str = Field(
