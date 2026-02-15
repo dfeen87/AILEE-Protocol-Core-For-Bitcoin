@@ -15,10 +15,9 @@ WORKDIR /build
 # Copy the full repo, including econ headers
 COPY . .
 
-# Ensure the C++ build sees econ headers
-RUN sed -i '419,468s/^/# /' CMakeLists.txt && \
-    sed -i '470,490s/^/# /' CMakeLists.txt && \
-    echo "include_directories(\${CMAKE_SOURCE_DIR}/econ)" >> CMakeLists.txt
+# Fix CMakeLists.txt to include econ directory for ILedger.h
+# Insert after the orchestration include line (surgical fix, no breaking syntax)
+RUN sed -i '/CMAKE_CURRENT_SOURCE_DIR}\/src\/orchestration/a \    ${CMAKE_CURRENT_SOURCE_DIR}/econ  # For ILedger.h and economic model headers' CMakeLists.txt
 
 # Build the C++ node
 RUN mkdir build && cd build && \
