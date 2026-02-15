@@ -199,13 +199,13 @@ services:
     build:
       dockerfile: Dockerfile
     environment:
-      - AILEE_NODE_URL=http://cpp-node:8080
+      - AILEE_NODE_URL=http://ailee-node-1:8080
     ports:
       - "8080:8080"
     depends_on:
-      - cpp-node
+      - ailee-node-1
   
-  cpp-node:
+  ailee-node-1:
     build:
       dockerfile: Dockerfile.node
     ports:
