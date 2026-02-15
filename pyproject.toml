@@ -90,9 +90,6 @@ Repository = "https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin"
 Issues = "https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin/issues"
 Changelog = "https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin/blob/main/CHANGELOG.md"
 
-[project.scripts]
-ailee-api = "api.main:app"
-
 [tool.setuptools]
 packages = ["api", "api.routers"]
 

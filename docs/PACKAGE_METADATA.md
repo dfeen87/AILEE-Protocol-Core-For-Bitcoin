@@ -328,16 +328,18 @@ pip install dist/ailee_core-1.2.1-py3-none-any.whl
 
 ### Running with pyproject.toml
 
-The `pyproject.toml` defines a script entry point:
+After installation, run the API server with uvicorn:
 
-```toml
-[project.scripts]
-ailee-api = "api.main:app"
-```
-
-After installation, you can run:
 ```bash
-ailee-api  # Starts the API server
+# Install the package
+pip install -e .
+
+# Run with uvicorn
+uvicorn api.main:app --host 0.0.0.0 --port 8080 --reload
+
+# Or use the standard approach from the project root
+cd /path/to/AILEE-Protocol-Core-For-Bitcoin
+uvicorn api.main:app --host 0.0.0.0 --port 8080
 ```
 
 ### Tool Configuration
