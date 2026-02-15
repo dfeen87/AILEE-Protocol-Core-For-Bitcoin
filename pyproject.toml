@@ -7,7 +7,7 @@ name = "ailee-core"
 version = "1.2.1"
 description = "Bitcoin-anchored Layer-2 orchestration and verification framework with ambient AI, deterministic verification, and federated security"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
     {name = "Don Michael Feeney", email = "dfeen87@users.noreply.github.com"}
@@ -42,7 +42,6 @@ classifiers = [
     "Topic :: Security :: Cryptography",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -98,7 +97,7 @@ api = ["*.py"]
 
 [tool.black]
 line-length = 120
-target-version = ["py38", "py39", "py310", "py311", "py312"]
+target-version = ["py39", "py310", "py311", "py312"]
 include = '\.pyi?$'
 extend-exclude = '''
 /(
@@ -116,7 +115,7 @@ extend-exclude = '''
 
 [tool.ruff]
 line-length = 120
-target-version = "py38"
+target-version = "py39"
 select = [
     "E",  # pycodestyle errors
     "W",  # pycodestyle warnings
@@ -135,7 +134,7 @@ ignore = [
 "__init__.py" = ["F401"]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
