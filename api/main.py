@@ -19,6 +19,7 @@ from slowapi.errors import RateLimitExceeded
 
 from api.config import settings
 from api.routers import health, status, trust, l2, metrics
+from api.security_audit import get_audit_logger, audit_log, AuditEventType, AuditEventSeverity
 
 
 # Configure logging
@@ -28,6 +29,9 @@ logging.basicConfig(
     stream=sys.stdout
 )
 logger = logging.getLogger(__name__)
+
+# Initialize security audit logger
+audit_logger = get_audit_logger()
 
 # Global state
 startup_time = None
