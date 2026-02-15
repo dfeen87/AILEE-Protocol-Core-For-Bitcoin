@@ -49,6 +49,8 @@ class AILEECoreClient:
             self._consecutive_failures += 1
             if self._consecutive_failures <= self._max_log_failures:
                 logger.error(f"Failed to get status from C++ node: {e}")
+            elif self._consecutive_failures == self._max_log_failures + 1:
+                logger.warning(f"Suppressing further C++ node connection errors (node appears unavailable)")
             self._node_available = False
             self._last_check_time = time.time()
             return None
@@ -56,6 +58,8 @@ class AILEECoreClient:
             self._consecutive_failures += 1
             if self._consecutive_failures <= self._max_log_failures:
                 logger.error(f"Unexpected error getting status: {e}")
+            elif self._consecutive_failures == self._max_log_failures + 1:
+                logger.warning(f"Suppressing further C++ node connection errors (node appears unavailable)")
             self._node_available = False
             self._last_check_time = time.time()
             return None
@@ -75,6 +79,8 @@ class AILEECoreClient:
             self._consecutive_failures += 1
             if self._consecutive_failures <= self._max_log_failures:
                 logger.error(f"Failed to get metrics from C++ node: {e}")
+            elif self._consecutive_failures == self._max_log_failures + 1:
+                logger.warning(f"Suppressing further C++ node connection errors (node appears unavailable)")
             self._node_available = False
             self._last_check_time = time.time()
             return None
@@ -82,6 +88,8 @@ class AILEECoreClient:
             self._consecutive_failures += 1
             if self._consecutive_failures <= self._max_log_failures:
                 logger.error(f"Unexpected error getting metrics: {e}")
+            elif self._consecutive_failures == self._max_log_failures + 1:
+                logger.warning(f"Suppressing further C++ node connection errors (node appears unavailable)")
             self._node_available = False
             self._last_check_time = time.time()
             return None
@@ -112,7 +120,7 @@ class AILEECoreClient:
             self._node_available = is_available
             self._last_check_time = current_time
             return is_available
-        except:
+        except Exception:
             if self._node_available is not False:
                 # First time we detect node is unavailable
                 logger.warning(f"C++ AILEE-Core node unavailable at {self.base_url}. API will run in standalone mode.")
@@ -140,7 +148,7 @@ class AILEECoreClient:
             if self._consecutive_failures <= self._max_log_failures:
                 logger.error(f"Failed to get L2 state from C++ node: {e}")
             elif self._consecutive_failures == self._max_log_failures + 1:
-                logger.warning(f"Suppressing further L2 state connection errors (node appears unavailable)")
+                logger.warning(f"Suppressing further C++ node connection errors (node appears unavailable)")
             
             # Mark node as unavailable after failures
             self._node_available = False
@@ -151,6 +159,8 @@ class AILEECoreClient:
             
             if self._consecutive_failures <= self._max_log_failures:
                 logger.error(f"Unexpected error getting L2 state: {e}")
+            elif self._consecutive_failures == self._max_log_failures + 1:
+                logger.warning(f"Suppressing further C++ node connection errors (node appears unavailable)")
             
             self._node_available = False
             self._last_check_time = time.time()
@@ -171,6 +181,8 @@ class AILEECoreClient:
             self._consecutive_failures += 1
             if self._consecutive_failures <= self._max_log_failures:
                 logger.error(f"Failed to get tasks from C++ node: {e}")
+            elif self._consecutive_failures == self._max_log_failures + 1:
+                logger.warning(f"Suppressing further C++ node connection errors (node appears unavailable)")
             self._node_available = False
             self._last_check_time = time.time()
             return None
@@ -178,6 +190,8 @@ class AILEECoreClient:
             self._consecutive_failures += 1
             if self._consecutive_failures <= self._max_log_failures:
                 logger.error(f"Unexpected error getting tasks: {e}")
+            elif self._consecutive_failures == self._max_log_failures + 1:
+                logger.warning(f"Suppressing further C++ node connection errors (node appears unavailable)")
             self._node_available = False
             self._last_check_time = time.time()
             return None
@@ -197,6 +211,8 @@ class AILEECoreClient:
             self._consecutive_failures += 1
             if self._consecutive_failures <= self._max_log_failures:
                 logger.error(f"Failed to get latest anchor from C++ node: {e}")
+            elif self._consecutive_failures == self._max_log_failures + 1:
+                logger.warning(f"Suppressing further C++ node connection errors (node appears unavailable)")
             self._node_available = False
             self._last_check_time = time.time()
             return None
@@ -204,6 +220,8 @@ class AILEECoreClient:
             self._consecutive_failures += 1
             if self._consecutive_failures <= self._max_log_failures:
                 logger.error(f"Unexpected error getting latest anchor: {e}")
+            elif self._consecutive_failures == self._max_log_failures + 1:
+                logger.warning(f"Suppressing further C++ node connection errors (node appears unavailable)")
             self._node_available = False
             self._last_check_time = time.time()
             return None
