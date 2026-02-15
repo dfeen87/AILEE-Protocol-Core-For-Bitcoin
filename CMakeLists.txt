@@ -416,66 +416,8 @@ endif()
 # Installation
 # ============================================================================
 
-# --- 3. Web Server Demo Executable ---
-add_executable(ailee_web_demo
-    examples/WebServerDemo.cpp
-    src/AILEEWebServer.cpp
-)
-
-target_link_libraries(ailee_web_demo
-    PRIVATE
-    Threads::Threads
-)
-
-# --- 4. Ambient AI + VCP Integration Demo (Original) ---
-add_executable(ailee_ambient_vcp_demo
-    examples/AmbientVCP_Demo.cpp
-    src/AmbientAI.cpp
-    src/security/zk_proofs.cpp
-)
-
-target_link_libraries(ailee_ambient_vcp_demo
-    PRIVATE
-    Threads::Threads
-    OpenSSL::SSL
-    OpenSSL::Crypto
-)
-
-# --- 5. Production Ambient AI + VCP Demo (With Real Implementations) ---
-add_executable(ailee_ambient_vcp_production_demo
-    examples/AmbientVCP_Production_Demo.cpp
-    src/AmbientAI.cpp
-    src/security/zk_proofs.cpp
-    src/security/HashProofSystem.cpp
-    src/runtime/WasmEdgeEngine.cpp
-)
-
-target_link_libraries(ailee_ambient_vcp_production_demo
-    PRIVATE
-    Threads::Threads
-    OpenSSL::SSL
-    OpenSSL::Crypto
-)
-
-# --- 6. P2P Network Demo ---
-add_executable(ailee_p2p_demo
-    examples/P2PNetworkDemo.cpp
-    src/network/P2PNetwork.cpp
-)
-
-target_link_libraries(ailee_p2p_demo
-    PRIVATE
-    Threads::Threads
-)
-
-# Link libp2p to demo if available
-if(LIBP2P_FOUND)
-    target_link_libraries(ailee_p2p_demo PRIVATE ${LIBP2P_LIBRARIES})
-    target_compile_definitions(ailee_p2p_demo PRIVATE AILEE_HAS_LIBP2P=1)
-endif()
-
 # Install the binaries
-install(TARGETS ailee_node ailee_web_demo ailee_ambient_vcp_demo ailee_ambient_vcp_production_demo ailee_p2p_demo DESTINATION bin)
+install(TARGETS ailee_node DESTINATION bin)
 
 # Install the Library Headers (So others can build on AILEE)
 install(FILES 
