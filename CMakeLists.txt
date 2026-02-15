@@ -85,6 +85,17 @@ else()
     endif()
 endif()
 
+# 9. libp2p (Optional - for P2P networking)
+# Add cmake module path for custom FindLibp2p
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+find_package(Libp2p QUIET)
+if(LIBP2P_FOUND)
+    message(STATUS "libp2p found: ${LIBP2P_LIBRARIES}")
+else()
+    message(WARNING "libp2p not found - P2P networking will use stub implementation")
+    message(STATUS "To enable libp2p: Install cpp-libp2p from https://github.com/libp2p/cpp-libp2p")
+endif()
+
 # ============================================================================
 # Include Directories
 # ============================================================================
@@ -121,6 +132,11 @@ endif()
 # Add RocksDB include if found
 if(RocksDB_FOUND)
     include_directories(${RocksDB_INCLUDE_DIRS})
+endif()
+
+# Add libp2p include if found
+if(LIBP2P_FOUND)
+    include_directories(${LIBP2P_INCLUDE_DIRS})
 endif()
 
 # ============================================================================
@@ -269,6 +285,15 @@ else()
     message(WARNING "RocksDB not found - persistent storage will be disabled")
 endif()
 
+# Link libp2p if found (for P2P networking)
+if(LIBP2P_FOUND)
+    target_link_libraries(ailee_node PRIVATE ${LIBP2P_LIBRARIES})
+    target_compile_definitions(ailee_node PRIVATE AILEE_HAS_LIBP2P=1)
+    message(STATUS "libp2p support enabled")
+else()
+    message(WARNING "libp2p not found - P2P networking will use stub implementation")
+endif()
+
 # Robust ZeroMQ Linking
 if(TARGET cppzmq)
     target_link_libraries(ailee_node PRIVATE cppzmq)
@@ -318,6 +343,12 @@ endif()
 if(RocksDB_FOUND)
     target_link_libraries(ailee_adapters PRIVATE ${RocksDB_LIBRARIES})
     target_compile_definitions(ailee_adapters PRIVATE AILEE_HAS_ROCKSDB=1)
+endif()
+
+# Link libp2p to library as well
+if(LIBP2P_FOUND)
+    target_link_libraries(ailee_adapters PRIVATE ${LIBP2P_LIBRARIES})
+    target_compile_definitions(ailee_adapters PRIVATE AILEE_HAS_LIBP2P=1)
 endif()
 
 # Robust ZeroMQ Linking for library
@@ -425,8 +456,25 @@ target_link_libraries(ailee_ambient_vcp_production_demo
     OpenSSL::Crypto
 )
 
+# --- 6. P2P Network Demo ---
+add_executable(ailee_p2p_demo
+    examples/P2PNetworkDemo.cpp
+    src/network/P2PNetwork.cpp
+)
+
+target_link_libraries(ailee_p2p_demo
+    PRIVATE
+    Threads::Threads
+)
+
+# Link libp2p to demo if available
+if(LIBP2P_FOUND)
+    target_link_libraries(ailee_p2p_demo PRIVATE ${LIBP2P_LIBRARIES})
+    target_compile_definitions(ailee_p2p_demo PRIVATE AILEE_HAS_LIBP2P=1)
+endif()
+
 # Install the binaries
-install(TARGETS ailee_node ailee_web_demo ailee_ambient_vcp_demo ailee_ambient_vcp_production_demo DESTINATION bin)
+install(TARGETS ailee_node ailee_web_demo ailee_ambient_vcp_demo ailee_ambient_vcp_production_demo ailee_p2p_demo DESTINATION bin)
 
 # Install the Library Headers (So others can build on AILEE)
 install(FILES 
