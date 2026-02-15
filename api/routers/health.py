@@ -3,11 +3,14 @@ Health Check Router
 Simple health check endpoint for load balancers and monitoring
 """
 
+import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter
 
 from api.l2_client import get_ailee_client
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -33,8 +36,9 @@ async def health_check():
     client = get_ailee_client()
     try:
         cpp_node_available = await client.health_check()
-    except Exception:
+    except Exception as e:
         # If health check raises an exception, treat node as unavailable
+        logger.warning(f"C++ node health check failed: {e}")
         cpp_node_available = False
 
     return {
