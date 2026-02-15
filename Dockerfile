@@ -30,6 +30,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY --chown=ailee:ailee api/ ./api/
+COPY --chown=ailee:ailee web/ ./web/
 
 # Switch to non-root user
 USER ailee
