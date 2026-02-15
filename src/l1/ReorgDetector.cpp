@@ -104,9 +104,14 @@ std::optional<ReorgEvent> ReorgDetector::detectReorg(std::uint64_t height,
     std::string oldBlockHash;
     rocksdb::Status status = db_->Get(rocksdb::ReadOptions(), key, &oldBlockHash);
     
-    if (!status.ok() || status.IsNotFound()) {
+    if (status.IsNotFound()) {
         // No previous block at this height - not a reorg, just new block
         trackBlock(height, newBlockHash, timestamp);
+        return std::nullopt;
+    }
+    
+    if (!status.ok()) {
+        // Some other error occurred
         return std::nullopt;
     }
     
@@ -332,7 +337,12 @@ std::optional<AnchorCommitmentRecord> ReorgDetector::getAnchorStatus(const std::
     std::string value;
     rocksdb::Status status = db_->Get(rocksdb::ReadOptions(), key, &value);
     
-    if (!status.ok() || status.IsNotFound()) {
+    if (status.IsNotFound()) {
+        return std::nullopt;
+    }
+    
+    if (!status.ok()) {
+        // Some other error occurred
         return std::nullopt;
     }
     
@@ -487,7 +497,12 @@ std::optional<std::string> ReorgDetector::getBlockHashAtHeight(std::uint64_t hei
     std::string value;
     rocksdb::Status status = db_->Get(rocksdb::ReadOptions(), key, &value);
     
-    if (!status.ok() || status.IsNotFound()) {
+    if (status.IsNotFound()) {
+        return std::nullopt;
+    }
+    
+    if (!status.ok()) {
+        // Some other error occurred
         return std::nullopt;
     }
     
