@@ -1004,7 +1004,18 @@ int main(int argc, char* argv[]) {
             // Keep the server running and wait for shutdown signal
             log(LogLevel::INFO, "╔═══════════════════════════════════════════════════╗");
             log(LogLevel::INFO, "║   AILEE-Core Node is now RUNNING                  ║");
-            log(LogLevel::INFO, "║   HTTP API available on port " + std::to_string(cfg.webServerPort) + "                ║");
+            
+            // Format the port message with proper spacing
+            std::ostringstream portMsg;
+            portMsg << "║   HTTP API available on port " << cfg.webServerPort;
+            // Pad with spaces to maintain box alignment (51 chars total width)
+            int paddingNeeded = 51 - static_cast<int>(portMsg.str().length());
+            for (int i = 0; i < paddingNeeded; ++i) {
+                portMsg << " ";
+            }
+            portMsg << "║";
+            log(LogLevel::INFO, portMsg.str());
+            
             log(LogLevel::INFO, "║   Press Ctrl+C to shutdown gracefully             ║");
             log(LogLevel::INFO, "╚═══════════════════════════════════════════════════╝");
             
