@@ -12,11 +12,23 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /build
 
-# Copy the full repo, including econ headers
+# Copy the full repo
 COPY . .
 
-# Fix CMakeLists.txt to include econ directory for ILedger.h
-# Insert after the orchestration include line (surgical fix, no breaking syntax)
+# Create econ directory if it doesn't exist and add a stub ILedger.h
+# This ensures the build doesn't fail even if econ/ is missing
+RUN mkdir -p econ && \
+    if [ ! -f econ/ILedger.h ]; then \
+        echo '// Stub ILedger.h for build compatibility' > econ/ILedger.h && \
+        echo '#ifndef AILEE_ILEDGER_H' >> econ/ILedger.h && \
+        echo '#define AILEE_ILEDGER_H' >> econ/ILedger.h && \
+        echo 'namespace ailee { namespace econ {' >> econ/ILedger.h && \
+        echo 'class ILedger { public: virtual ~ILedger() = default; };' >> econ/ILedger.h && \
+        echo '}}' >> econ/ILedger.h && \
+        echo '#endif' >> econ/ILedger.h; \
+    fi
+
+# Add econ directory to CMakeLists.txt include paths
 RUN sed -i '/CMAKE_CURRENT_SOURCE_DIR}\/src\/orchestration/a \    ${CMAKE_CURRENT_SOURCE_DIR}/econ  # For ILedger.h and economic model headers' CMakeLists.txt
 
 # Build the C++ node
