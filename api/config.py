@@ -95,6 +95,54 @@ class Settings(BaseSettings):
         description="Application description"
     )
     
+    # Bitcoin RPC Configuration
+    bitcoin_rpc_url: str = Field(
+        default="https://localhost:8332",
+        description="Primary Bitcoin RPC endpoint URL"
+    )
+    bitcoin_rpc_user: Optional[str] = Field(
+        default=None,
+        description="Bitcoin RPC username (use secrets manager in production)"
+    )
+    bitcoin_rpc_password: Optional[str] = Field(
+        default=None,
+        description="Bitcoin RPC password (use secrets manager in production)"
+    )
+    bitcoin_rpc_use_tls: bool = Field(
+        default=True,
+        description="Use TLS for Bitcoin RPC connections"
+    )
+    bitcoin_rpc_verify_tls: bool = Field(
+        default=True,
+        description="Verify TLS certificates for Bitcoin RPC"
+    )
+    bitcoin_rpc_timeout: int = Field(
+        default=30,
+        description="Bitcoin RPC request timeout in seconds"
+    )
+    bitcoin_rpc_failover_urls: Optional[str] = Field(
+        default=None,
+        description="Comma-separated list of failover Bitcoin RPC URLs"
+    )
+    
+    # TLS/SSL Configuration
+    tls_enabled: bool = Field(
+        default=False,
+        description="Enable TLS/SSL for the API server"
+    )
+    tls_cert_path: Optional[str] = Field(
+        default=None,
+        description="Path to TLS certificate file"
+    )
+    tls_key_path: Optional[str] = Field(
+        default=None,
+        description="Path to TLS private key file"
+    )
+    tls_ca_path: Optional[str] = Field(
+        default=None,
+        description="Path to TLS CA certificate file"
+    )
+    
     @field_validator("log_level")
     def validate_log_level(cls, v):
         """Validate log level is one of the allowed values"""
@@ -116,6 +164,35 @@ class Settings(BaseSettings):
         """Validate JWT secret is set if JWT is enabled"""
         if self.jwt_enabled and not self.jwt_secret:
             raise ValueError("jwt_secret must be set when jwt_enabled is True")
+        if self.jwt_enabled and self.jwt_secret and len(self.jwt_secret) < 32:
+            raise ValueError("jwt_secret must be at least 32 characters long for security")
+        return self
+    
+    @model_validator(mode='after')
+    def validate_tls_settings(self):
+        """Validate TLS configuration"""
+        if self.tls_enabled:
+            if not self.tls_cert_path or not self.tls_key_path:
+                raise ValueError("tls_cert_path and tls_key_path must be set when tls_enabled is True")
+        return self
+    
+    @model_validator(mode='after')
+    def validate_bitcoin_rpc_settings(self):
+        """Validate Bitcoin RPC configuration"""
+        # Warn if using RPC credentials without TLS
+        if self.bitcoin_rpc_user and self.bitcoin_rpc_password:
+            if not self.bitcoin_rpc_use_tls:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning("Bitcoin RPC credentials provided but TLS is disabled - this is insecure!")
+        
+        # Parse and validate failover URLs if provided
+        if self.bitcoin_rpc_failover_urls:
+            urls = [url.strip() for url in self.bitcoin_rpc_failover_urls.split(',')]
+            for url in urls:
+                if not url.startswith(('http://', 'https://')):
+                    raise ValueError(f"Invalid failover URL: {url}")
+        
         return self
     
     class Config:
