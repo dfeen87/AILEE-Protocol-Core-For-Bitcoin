@@ -10,13 +10,10 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
-COPY CMakeLists.txt cmake ./
-COPY include ./include/
-COPY src ./src/
-COPY config ./config/
+COPY . .
 
 RUN mkdir build && cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF && \
     make -j$(nproc) ailee_node
 
 FROM python:3.11-slim
