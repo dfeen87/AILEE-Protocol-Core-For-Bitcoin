@@ -1,6 +1,6 @@
 > I truly care about people’s hard-earned money. Because of that responsibility, I have decided to retire this repository.
 >
-> Over the course of developing this project, I’ve come to a clear conclusion: AI-generated code — especially in the context of blockchain and financial infrastructure — should not be >
+> Over the course of developing this project, I’ve come to a clear conclusion: AI-generated code — especially in the context of blockchain and financial infrastructure — should not be
 > trusted without deep, professional oversight. Blockchain systems directly interact with real economic value. Even minor architectural flaws, security gaps, or misunderstood edge cases > can result in irreversible loss.
 >
 > This repository serves as a strong conceptual and educational foundation for anyone interested in blockchain engineering. However, I must emphasize caution. Building secure, production-> grade blockchain applications — particularly anything operating as a Layer 2 on Bitcoin — requires extensive experience, dedicated teams, rigorous peer review, formal security audits, > and continuous testing. It demands patience, discipline, and a long-term commitment to validation and resilience.
@@ -8,7 +8,7 @@
 > While it is technically possible to build something meaningful in this space, doing so safely requires far more than rapid iteration or automated code generation. It requires careful
 > systems thinking, adversarial threat modeling, and deep understanding of cryptography, distributed consensus, and economic game theory.
 >
-> I am grateful for everything I learned during this project. The experience sharpened my understanding of both blockchain architecture and the limitations of AI-assisted development. I > am especially thankful that I reached this decision before attempting to deploy anything as an actual Bitcoin Layer 2.
+> I am grateful for everything I learned during this project. The experience sharpened my understanding of both blockchain architecture and the limitations of AI-assisted development. I > am especially thankful that I reached this decision before deploying anything as an actual Bitcoin Layer 2.
 >
 > My sincere hope is that developers take the time to build foundational knowledge themselves — to understand the code they write at a fundamental level — rather than relying heavily on > coding agents. Financial infrastructure deserves that level of care.
 >
