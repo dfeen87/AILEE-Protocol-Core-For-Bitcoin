@@ -191,12 +191,12 @@
             <div class="card">
                 <h2>API Endpoints</h2>
                 <ul class="endpoint-list">
-                    <li class="endpoint-item">GET /api/status</li>
-                    <li class="endpoint-item">GET /api/metrics</li>
-                    <li class="endpoint-item">GET /api/l2/state</li>
-                    <li class="endpoint-item">GET /api/orchestration/tasks</li>
-                    <li class="endpoint-item">GET /api/anchors/latest</li>
-                    <li class="endpoint-item">POST /api/orchestration/submit</li>
+                    <li class="endpoint-item">GET /status</li>
+                    <li class="endpoint-item">GET /metrics</li>
+                    <li class="endpoint-item">GET /l2/state</li>
+                    <li class="endpoint-item">GET /l2/anchors</li>
+                    <li class="endpoint-item">GET /trust/score</li>
+                    <li class="endpoint-item">GET /health</li>
                 </ul>
                 <button class="refresh-btn" onclick="loadAllData()">Refresh All</button>
             </div>
@@ -231,8 +231,9 @@
                 return;
             }
             
-            const isRunning = data.running !== undefined ? data.running : true;
-            const statusClass = isRunning ? 'status-online' : 'status-offline';
+            const statusClass = 'status-online';
+            const node = data.node || {};
+            const apiInfo = data.api || {};
             
             card.innerHTML = `
                 <h2>
@@ -241,30 +242,30 @@
                 </h2>
                 <div class="metric">
                     <span class="metric-label">Status</span>
-                    <span class="metric-value">${isRunning ? 'Running' : 'Stopped'}</span>
+                    <span class="metric-value">Running</span>
                 </div>
-                ${data.version ? `
+                ${node.version ? `
                 <div class="metric">
                     <span class="metric-label">Version</span>
-                    <span class="metric-value">${data.version}</span>
+                    <span class="metric-value">${node.version}</span>
                 </div>
                 ` : ''}
-                ${data.network ? `
+                ${node.environment ? `
                 <div class="metric">
-                    <span class="metric-label">Network</span>
-                    <span class="metric-value">${data.network}</span>
+                    <span class="metric-label">Environment</span>
+                    <span class="metric-value">${node.environment}</span>
                 </div>
                 ` : ''}
-                ${data.uptime_seconds !== undefined ? `
+                ${node.uptime_seconds !== undefined ? `
                 <div class="metric">
                     <span class="metric-label">Uptime</span>
-                    <span class="metric-value">${formatUptime(data.uptime_seconds)}</span>
+                    <span class="metric-value">${formatUptime(node.uptime_seconds)}</span>
                 </div>
                 ` : ''}
-                ${data.last_anchor_hash ? `
+                ${node.id ? `
                 <div class="metric">
-                    <span class="metric-label">Last Anchor</span>
-                    <span class="metric-value" style="font-size: 0.8em;">${data.last_anchor_hash.substring(0, 16)}...</span>
+                    <span class="metric-label">Node ID</span>
+                    <span class="metric-value" style="font-size: 0.8em;">${node.id.substring(0, 16)}...</span>
                 </div>
                 ` : ''}
             `;
@@ -277,33 +278,34 @@
                 return;
             }
             
-            const perf = data.performance || {};
-            const stats = data.statistics || {};
+            const nodeMetrics = data.node_metrics || {};
+            const systemMetrics = data.system_metrics || {};
+            const l2Metrics = data.l2_metrics || {};
             
             card.innerHTML = `
                 <h2>Performance Metrics</h2>
-                ${perf.current_tps !== undefined ? `
+                ${nodeMetrics.requests_per_second !== undefined ? `
                 <div class="metric">
-                    <span class="metric-label">Current TPS</span>
-                    <span class="metric-value">${perf.current_tps.toFixed(2)}</span>
+                    <span class="metric-label">Requests/sec</span>
+                    <span class="metric-value">${nodeMetrics.requests_per_second.toFixed(2)}</span>
                 </div>
                 ` : ''}
-                ${perf.pending_tasks !== undefined ? `
+                ${nodeMetrics.avg_response_time_ms !== undefined ? `
                 <div class="metric">
-                    <span class="metric-label">Pending Tasks</span>
-                    <span class="metric-value">${perf.pending_tasks}</span>
+                    <span class="metric-label">Avg Response Time</span>
+                    <span class="metric-value">${nodeMetrics.avg_response_time_ms.toFixed(1)}ms</span>
                 </div>
                 ` : ''}
-                ${stats.total_transactions !== undefined ? `
+                ${systemMetrics.cpu_usage_percent !== undefined ? `
                 <div class="metric">
-                    <span class="metric-label">Total Transactions</span>
-                    <span class="metric-value">${stats.total_transactions.toLocaleString()}</span>
+                    <span class="metric-label">CPU Usage</span>
+                    <span class="metric-value">${systemMetrics.cpu_usage_percent.toFixed(1)}%</span>
                 </div>
                 ` : ''}
-                ${stats.total_blocks !== undefined ? `
+                ${systemMetrics.memory_used_percent !== undefined ? `
                 <div class="metric">
-                    <span class="metric-label">Total Blocks</span>
-                    <span class="metric-value">${stats.total_blocks.toLocaleString()}</span>
+                    <span class="metric-label">Memory Usage</span>
+                    <span class="metric-value">${systemMetrics.memory_used_percent.toFixed(1)}%</span>
                 </div>
                 ` : ''}
                 <div class="metric">
@@ -320,34 +322,39 @@
                 return;
             }
             
+            const state = data.state || {};
+            const health = data.health || 'unknown';
+            
             card.innerHTML = `
                 <h2>Layer-2 State</h2>
-                ${data.protocol ? `
+                ${health ? `
                 <div class="metric">
-                    <span class="metric-label">Protocol</span>
-                    <span class="metric-value">${data.protocol}</span>
+                    <span class="metric-label">Health Status</span>
+                    <span class="metric-value">${health}</span>
                 </div>
                 ` : ''}
-                ${data.layer ? `
+                ${state.block_height !== undefined ? `
                 <div class="metric">
-                    <span class="metric-label">Layer</span>
-                    <span class="metric-value">${data.layer}</span>
+                    <span class="metric-label">Block Height</span>
+                    <span class="metric-value">${state.block_height.toLocaleString()}</span>
                 </div>
                 ` : ''}
-                ${data.ledger ? `
+                ${state.total_transactions !== undefined ? `
                 <div class="metric">
-                    <span class="metric-label">Ledger Status</span>
-                    <span class="metric-value">${data.ledger.status || 'Unknown'}</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-label">Ledger Type</span>
-                    <span class="metric-value">${data.ledger.type || 'Unknown'}</span>
+                    <span class="metric-label">Total Transactions</span>
+                    <span class="metric-value">${state.total_transactions.toLocaleString()}</span>
                 </div>
                 ` : ''}
-                ${data.description ? `
+                ${state.last_anchor_height !== undefined ? `
                 <div class="metric">
-                    <span class="metric-label">Description</span>
-                    <span class="metric-value" style="font-size: 0.85em;">${data.description}</span>
+                    <span class="metric-label">Last Anchor Height</span>
+                    <span class="metric-value">${state.last_anchor_height.toLocaleString()}</span>
+                </div>
+                ` : ''}
+                ${state.state_root ? `
+                <div class="metric">
+                    <span class="metric-label">State Root</span>
+                    <span class="metric-value" style="font-size: 0.8em;">${state.state_root.substring(0, 16)}...</span>
                 </div>
                 ` : ''}
             `;
@@ -369,25 +376,15 @@
         
         async function loadAllData() {
             // Load status
-            const status = await fetchData('/api/status');
+            const status = await fetchData('/status');
             renderStatus(status);
             
-            // Combine status and metrics for rendering
-            if (status && status.statistics) {
-                renderMetrics({
-                    performance: {
-                        current_tps: status.statistics.current_tps || 0,
-                        pending_tasks: status.statistics.pending_tasks || 0
-                    },
-                    statistics: status.statistics
-                });
-            } else {
-                const metrics = await fetchData('/api/metrics');
-                renderMetrics(metrics);
-            }
+            // Load metrics
+            const metrics = await fetchData('/metrics');
+            renderMetrics(metrics);
             
             // Load L2 state
-            const l2State = await fetchData('/api/l2/state');
+            const l2State = await fetchData('/l2/state');
             renderL2State(l2State);
         }
         

@@ -9,6 +9,8 @@ from fastapi import APIRouter
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 
+from api.l2_client import get_ailee_client
+
 router = APIRouter()
 
 
@@ -22,15 +24,26 @@ class MetricsResponse(BaseModel):
 
 async def get_current_metrics() -> MetricsResponse:
     """
-    Get current node metrics (async for consistency with route handlers)
-    
-    Returns mock metrics for standalone API testing.
-    In production, this would query actual AILEE-Core metrics.
+    Get current node metrics from C++ AILEE-Core node
     """
-    import psutil
-    import os
+    client = get_ailee_client()
     
-    # Get system metrics
+    # Try to get real metrics from C++ node
+    cpp_metrics = await client.get_metrics()
+    
+    if cpp_metrics:
+        # Parse and return C++ node metrics
+        # The C++ node returns metrics in a different format, adapt it
+        return MetricsResponse(
+            node_metrics=cpp_metrics.get("performance", {}),
+            system_metrics={},  # C++ node doesn't expose system metrics via this endpoint
+            l2_metrics={},
+            timestamp=cpp_metrics.get("timestamp", datetime.now(timezone.utc).isoformat())
+        )
+    
+    # Fallback: Get system metrics only (C++ node not available)
+    import psutil
+    
     try:
         cpu_percent = psutil.cpu_percent(interval=0.1)
         memory = psutil.virtual_memory()
@@ -44,7 +57,6 @@ async def get_current_metrics() -> MetricsResponse:
             "disk_available_gb": round(disk.free / (1024 * 1024 * 1024), 2)
         }
     except Exception:
-        # Fallback if psutil metrics fail
         system_metrics = {
             "cpu_usage_percent": 0.0,
             "memory_used_percent": 0.0,
@@ -53,27 +65,10 @@ async def get_current_metrics() -> MetricsResponse:
             "disk_available_gb": 0.0
         }
     
-    # Mock node metrics (would come from AILEE-Core)
-    node_metrics = {
-        "requests_per_second": 12.5,
-        "avg_response_time_ms": 45.2,
-        "trust_score_computations": 1234.0,
-        "validations_performed": 567.0,
-        "uptime_hours": 24.5
-    }
-    
-    # Mock L2 metrics
-    l2_metrics = {
-        "current_block_height": 12345,
-        "pending_transactions": 42,
-        "anchors_created": 100,
-        "state_updates": 5000
-    }
-    
     return MetricsResponse(
-        node_metrics=node_metrics,
+        node_metrics={"warning": "C++ node not available"},
         system_metrics=system_metrics,
-        l2_metrics=l2_metrics,
+        l2_metrics={},
         timestamp=datetime.now(timezone.utc).isoformat()
     )
 
@@ -160,15 +155,7 @@ async def get_metrics():
     """
     Get Node Metrics (JSON format)
     
-    Returns comprehensive node performance metrics including:
-    - Node-specific metrics (requests, computations, validations)
-    - System resource metrics (CPU, memory, disk)
-    - Layer-2 metrics (blocks, transactions, anchors)
-    
-    This endpoint is:
-    - Read-only (no state modification)
-    - Safe (no side effects)
-    - Lightweight (minimal overhead)
+    Returns comprehensive node performance metrics from C++ AILEE-Core node
     
     Returns:
         Current node metrics with timestamp
@@ -182,10 +169,6 @@ async def get_prometheus_metrics_endpoint():
     Get Node Metrics (Prometheus format)
     
     Returns metrics in Prometheus text exposition format for scraping.
-    This endpoint is compatible with Prometheus monitoring systems.
-    
-    In production, this would call the C++ PrometheusExporter to get
-    real-time metrics from the AILEE-Core node.
     
     Returns:
         Metrics in Prometheus text format

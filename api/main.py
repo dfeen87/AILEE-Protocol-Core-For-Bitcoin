@@ -12,7 +12,8 @@ from datetime import datetime, timezone
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -63,6 +64,20 @@ async def lifespan(app: FastAPI):
     if settings.rate_limit_enabled:
         logger.info(f"   └─ Limit: {settings.rate_limit_requests} requests per {settings.rate_limit_window}s")
     
+    # Check C++ node connection
+    from api.l2_client import get_ailee_client
+    client = get_ailee_client()
+    cpp_node_url = client.base_url
+    is_healthy = await client.health_check()
+    
+    logger.info("")
+    logger.info("🔗 C++ AILEE-Core Node Connection:")
+    logger.info(f"   └─ URL: {cpp_node_url}")
+    logger.info(f"   └─ Status: {'✅ Connected' if is_healthy else '❌ Not Available'}")
+    
+    if not is_healthy:
+        logger.warning("⚠️  API will run in standalone mode (no real L2 data)")
+    
     logger.info("")
     logger.info("✅ Deterministic initialization complete")
     logger.info("✅ Configuration loaded and validated")
@@ -80,6 +95,11 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("")
     logger.info("🛑 Shutting down AILEE-Core API Server...")
+    
+    # Close C++ node client
+    from api.l2_client import close_ailee_client
+    await close_ailee_client()
+    
     uptime = time.time() - startup_time
     logger.info(f"⏱️  Total uptime: {uptime:.2f} seconds")
     logger.info("✅ Graceful shutdown complete")
@@ -168,12 +188,54 @@ app.include_router(trust.router, prefix="/trust", tags=["Trust"])
 app.include_router(l2.router, prefix="/l2", tags=["Layer-2"])
 app.include_router(metrics.router, tags=["Metrics"])
 
+# Mount static files (web dashboard)
+# Serve index.html at root, other static files at /web
+import os
+web_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web")
+if os.path.exists(web_dir):
+    app.mount("/web", StaticFiles(directory=web_dir), name="web")
+
 
 # Root endpoint
 @app.get("/", include_in_schema=False)
 async def root():
     """
-    Root endpoint - API information
+    Root endpoint - Serve web dashboard if available, otherwise return API info
+    """
+    import os
+    web_index = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "index.html")
+    if os.path.exists(web_index):
+        return FileResponse(web_index)
+    
+    # Fallback to JSON API info if web dashboard not available
+    return {
+        "name": settings.app_name,
+        "version": settings.app_version,
+        "description": settings.app_description,
+        "node_id": settings.node_id,
+        "environment": settings.env,
+        "documentation": {
+            "openapi": "/openapi.json",
+            "swagger": "/docs",
+            "redoc": "/redoc"
+        },
+        "endpoints": {
+            "health": "/health",
+            "status": "/status",
+            "trust_score": "/trust/score",
+            "trust_validate": "/trust/validate",
+            "l2_state": "/l2/state",
+            "l2_anchors": "/l2/anchors",
+            "metrics": "/metrics"
+        },
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+
+@app.get("/api", include_in_schema=True)
+async def api_info():
+    """
+    API information endpoint
     
     Returns:
         Basic information about the AILEE-Core REST API
