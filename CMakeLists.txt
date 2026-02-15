@@ -115,6 +115,7 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/network
     ${CMAKE_CURRENT_SOURCE_DIR}/src/metrics
     ${CMAKE_CURRENT_SOURCE_DIR}/src/orchestration
+    ${CMAKE_CURRENT_SOURCE_DIR}/econ  # For ILedger.h and economic model headers
     ${OPENSSL_INCLUDE_DIR}
     ${CURL_INCLUDE_DIRS}
     ${JSONCPP_INCLUDE_DIRS}
