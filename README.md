@@ -495,6 +495,7 @@ AILEE-Core is **NOT**:
 
 ### Architecture & Design
 - **[Architecture Overview](docs/ARCHITECTURE_CONCEPTUAL.md)**: System design
+- **[L2 Protocol Specification](docs/L2_PROTOCOL_SPECIFICATION.md)**: Complete L2 protocol answers ⭐ NEW
 - **[Ambient AI + VCP Integration](docs/AMBIENT_VCP_INTEGRATION.md)**: Complete integration guide ⭐ NEW
 - **[L1-L2 Infrastructure](docs/L1_TO_L2_Infrastructure.md)**: Bitcoin anchoring
 - **[Verification Model](docs/VERIFICATION.md)**: Security and trust
@@ -504,7 +505,7 @@ AILEE-Core is **NOT**:
 - **[Adapters](docs/ADAPTERS.md)**: Multi-chain integration
 - **[Transaction API](docs/TRANSACTION_API.md)**: Submit and query transactions ⭐ NEW
 - **[Web Integration](docs/WEB_INTEGRATION.md)**: HTTP API and dashboard
-- **[Recovery Guide](docs/RECOVERY_GUIDE.md)**: Recovery protocols
+- **[Recovery Guide](docs/NODE_CRASH_RECOVERY.md)**: Node crash recovery procedures ⭐ NEW
 - **[Security](docs/SECURITY_AND_POWER.md)**: Power model and safety
 - **[libp2p Integration](docs/LIBP2P_INTEGRATION.md)**: P2P networking with libp2p C++ bindings ⭐ NEW
 - **[P2P Networking](docs/NEXT_PHASE_FEATURES.md#-3-p2p-networking-layer)**: Distributed networking
