@@ -81,7 +81,7 @@ async def get_l2_state():
             "state": {
                 "state_root": state_root,
                 "block_height": 0,  # Not yet available from C++
-                "total_transactions": balance_count,  # Use balance count as transaction approximation
+                "total_transactions": balance_count,  # Note: Using balance count as proxy until actual tx tracking is implemented
                 "last_anchor_height": 0,  # Not yet available from C++
                 "timestamp": timestamp
             },

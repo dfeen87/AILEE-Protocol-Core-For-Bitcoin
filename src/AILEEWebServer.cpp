@@ -232,12 +232,13 @@ private:
                         auto ledgerSnapshot = iledger->snapshot();
                         
                         // Create a minimal L2StateSnapshot with just ledger data
+                        // Note: bridge and orchestration fields are left as default (empty vectors)
+                        // as we don't have access to SidechainBridge and Engine components here
                         ailee::l2::L2StateSnapshot snapshot;
                         auto now = std::chrono::system_clock::now();
                         snapshot.snapshotTimestampMs = std::chrono::duration_cast<std::chrono::milliseconds>(
                             now.time_since_epoch()).count();
                         snapshot.ledger = ledgerSnapshot;
-                        // Leave bridge and orchestration empty as we don't have access to them
                         
                         // Compute state root from snapshot
                         std::string stateRoot = ailee::l2::computeL2StateRoot(snapshot);
