@@ -291,7 +291,7 @@ The database is stored on a Fly.io volume to survive restarts:
 
 **Create the volume:**
 ```bash
-fly volumes create ailee_data --region iad --size 1 -a ailee-protocol-core-for-bitcoin
+fly volumes create ailee_data --region iad --size 10 -a ailee-protocol-core-for-bitcoin
 ```
 
 ---

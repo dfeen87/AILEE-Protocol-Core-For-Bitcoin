@@ -6,7 +6,7 @@ Provides persistent storage for transactions and anchor events
 import logging
 import os
 from contextlib import asynccontextmanager
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 
 import aiosqlite
 
@@ -224,7 +224,7 @@ async def get_transactions_by_address(
     address: str,
     page: int = 1,
     page_size: int = 10
-) -> tuple[List[Dict[str, Any]], int]:
+) -> Tuple[List[Dict[str, Any]], int]:
     """
     Get transactions by address with pagination
     
@@ -265,7 +265,7 @@ async def get_transactions(
     page: int = 1,
     page_size: int = 10,
     status: Optional[str] = None
-) -> tuple[List[Dict[str, Any]], int]:
+) -> Tuple[List[Dict[str, Any]], int]:
     """
     Get all transactions with pagination and optional status filter
     
@@ -373,7 +373,7 @@ async def get_anchor_by_height(height: int) -> Optional[Dict[str, Any]]:
 async def get_anchors(
     page: int = 1,
     page_size: int = 10
-) -> tuple[List[Dict[str, Any]], int]:
+) -> Tuple[List[Dict[str, Any]], int]:
     """
     Get all anchor events with pagination
     

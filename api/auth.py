@@ -84,7 +84,10 @@ async def verify_api_key(
     api_key = get_api_key()
     
     if credentials.credentials != api_key:
-        logger.warning(f"Invalid API key attempt from credentials")
+        logger.warning(
+            f"Invalid API key attempt - "
+            f"key_prefix={credentials.credentials[:8] if len(credentials.credentials) >= 8 else 'too_short'}"
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing API key",
