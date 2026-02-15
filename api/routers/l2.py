@@ -54,9 +54,6 @@ async def get_l2_state():
     
     Returns:
         Current L2 state snapshot with health status
-    
-    Raises:
-        HTTPException: 503 if C++ node is unavailable
     """
     client = get_ailee_client()
     
@@ -78,6 +75,8 @@ async def get_l2_state():
         state_root = hashlib.sha256(state_data.encode()).hexdigest()
         
         # Return structured state from C++ node
+        # Note: block_height, total_transactions, and last_anchor_height will be 0 
+        # until the C++ node implements blockchain state tracking
         return {
             "state": {
                 "state_root": state_root,
@@ -89,16 +88,21 @@ async def get_l2_state():
             "health": health_status
         }
     
-    # C++ node not available - return 503 instead of 200 with zeros
-    from fastapi import HTTPException
+    # C++ node not available - return fallback data
     import logging
     logger = logging.getLogger(__name__)
     logger.warning("C++ AILEE-Core node unavailable for L2 state")
     
-    raise HTTPException(
-        status_code=503,
-        detail="C++ AILEE-Core node is unavailable. L2 state cannot be retrieved."
-    )
+    return {
+        "state": {
+            "state_root": "",
+            "block_height": 0,
+            "total_transactions": 0,
+            "last_anchor_height": 0,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        },
+        "health": "cpp_node_unavailable"
+    }
 
 
 @router.get("/anchors", response_model=AnchorsResponse)

@@ -224,25 +224,9 @@ async def get_metrics():
 
     Returns:
         Current node metrics with timestamp
-    
-    Raises:
-        HTTPException: 503 if C++ node is unavailable
     """
     try:
-        metrics = await get_current_metrics()
-        
-        # Check if we got fallback/zero data (indicates C++ node unavailable)
-        if (metrics.node_metrics.get("requests_per_second", 0) == 0 and 
-            metrics.node_metrics.get("avg_response_time_ms", 0) == 0 and
-            all(v == 0 for v in metrics.l2_metrics.values())):
-            # Return 503 Service Unavailable with meaningful error
-            from fastapi import HTTPException
-            raise HTTPException(
-                status_code=503,
-                detail="C++ AILEE-Core node is unavailable. Metrics cannot be retrieved."
-            )
-        
-        return metrics
+        return await get_current_metrics()
     except Exception as e:
         # Log the error and re-raise
         import logging

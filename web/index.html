@@ -215,12 +215,6 @@
             try {
                 const response = await fetch(`${API_BASE}${endpoint}`);
                 if (!response.ok) {
-                    // Handle HTTP errors
-                    if (response.status === 503) {
-                        const errorData = await response.json().catch(() => ({}));
-                        console.warn(`${endpoint} unavailable (503):`, errorData.detail || 'Service unavailable');
-                        return { error: 503, message: errorData.detail || 'Service temporarily unavailable' };
-                    }
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 return await response.json();
@@ -284,12 +278,6 @@
                 return;
             }
             
-            // Check for 503 error (service unavailable)
-            if (data.error === 503) {
-                card.innerHTML = `<h2>Performance Metrics</h2><div class="error">C++ Node Unavailable: ${data.message || 'Service temporarily unavailable'}</div>`;
-                return;
-            }
-            
             const nodeMetrics = data.node_metrics || {};
             const systemMetrics = data.system_metrics || {};
             const l2Metrics = data.l2_metrics || {};
@@ -337,12 +325,6 @@
             const card = document.getElementById('l2-state-card');
             if (!data) {
                 card.innerHTML = '<h2>Layer-2 State</h2><div class="error">Failed to load L2 state</div>';
-                return;
-            }
-            
-            // Check for 503 error (service unavailable)
-            if (data.error === 503) {
-                card.innerHTML = `<h2>Layer-2 State</h2><div class="error">C++ Node Unavailable: ${data.message || 'Service temporarily unavailable'}</div>`;
                 return;
             }
             
