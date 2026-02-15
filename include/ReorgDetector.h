@@ -122,12 +122,14 @@ private:
     // Optional callback for reorg events
     std::function<void(const ReorgEvent&)> reorgCallback_;
 
+public:
     // Persistent storage keys
     static constexpr const char* kBlockHashPrefix = "block:";
     static constexpr const char* kAnchorPrefix = "anchor:";
     static constexpr const char* kReorgEventPrefix = "reorg:";
     static constexpr const char* kReorgCounterKey = "reorg_counter";
 
+private:
     // Helper methods for serialization/deserialization
     std::string serializeAnchor(const AnchorCommitmentRecord& anchor) const;
     std::optional<AnchorCommitmentRecord> deserializeAnchor(const std::string& data) const;

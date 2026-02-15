@@ -1,5 +1,5 @@
 #include "ReorgDetector.h"
-#include "minigtest.h"
+#include "gtest/gtest.h"
 
 #include <filesystem>
 #include <chrono>
@@ -22,7 +22,10 @@ TEST(ReorgDetector, InitializeAndClose) {
     ailee::l1::ReorgDetector detector(dbPath);
     
     std::string err;
-    EXPECT_TRUE(detector.initialize(&err)) << "Failed to initialize: " << err;
+    EXPECT_TRUE(detector.initialize(&err));
+    if (!err.empty()) {
+        std::cerr << "Failed to initialize: " << err << "\n";
+    }
     
     detector.close();
     cleanupTestDb(dbPath);
@@ -105,7 +108,10 @@ TEST(ReorgDetector, RegisterAndRetrieveAnchor) {
     anchor.status = ailee::l1::AnchorStatus::PENDING;
     anchor.l2StateRoot = "stateroot789";
     
-    EXPECT_TRUE(detector.registerAnchor(anchor, &err)) << err;
+    EXPECT_TRUE(detector.registerAnchor(anchor, &err));
+    if (!err.empty()) {
+        std::cerr << "Register anchor error: " << err << "\n";
+    }
     
     // Retrieve the anchor
     auto retrieved = detector.getAnchorStatus("anchor123");
@@ -294,7 +300,10 @@ TEST(ReorgDetector, PruneOldBlocks) {
     }
     
     // Prune keeping only last 10
-    EXPECT_TRUE(detector.pruneOldBlocks(10, &err)) << err;
+    EXPECT_TRUE(detector.pruneOldBlocks(10, &err));
+    if (!err.empty()) {
+        std::cerr << "Prune error: " << err << "\n";
+    }
     
     // Check that old blocks are gone
     EXPECT_FALSE(detector.getBlockHashAtHeight(100).has_value());

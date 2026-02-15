@@ -410,6 +410,10 @@ if(BUILD_TESTS)
             src/l1/ReorgDetector.cpp
         )
         
+        target_include_directories(reorg_detector_tests PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/minigtest
+        )
+        
         target_link_libraries(reorg_detector_tests
             PRIVATE
             ${RocksDB_LIBRARIES}
