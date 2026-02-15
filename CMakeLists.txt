@@ -279,7 +279,7 @@ endif()
 
 # Link RocksDB if found (for persistent storage)
 if(RocksDB_FOUND)
-    target_link_libraries(ailee_node PRIVATE ${RocksDB_LIBRARIES})
+    target_link_libraries(ailee_node PRIVATE ${RocksDB_LIBRARIES} rocksdb)
     target_compile_definitions(ailee_node PRIVATE AILEE_HAS_ROCKSDB=1)
     message(STATUS "RocksDB support enabled")
 else()
@@ -342,7 +342,7 @@ endif()
 
 # Link RocksDB to library as well
 if(RocksDB_FOUND)
-    target_link_libraries(ailee_adapters PRIVATE ${RocksDB_LIBRARIES})
+    target_link_libraries(ailee_adapters PRIVATE ${RocksDB_LIBRARIES} rocksdb)
     target_compile_definitions(ailee_adapters PRIVATE AILEE_HAS_ROCKSDB=1)
 endif()
 
