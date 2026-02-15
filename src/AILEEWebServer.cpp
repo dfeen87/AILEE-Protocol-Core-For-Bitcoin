@@ -6,6 +6,7 @@
 #include "Ledger.h"
 #include "L2State.h"
 #include "BlockProducer.h"
+#include "Mempool.h"
 #include "third_party/httplib.h"
 #include "nlohmann/json.hpp"
 
@@ -82,6 +83,10 @@ public:
 
     void setBlockProducerRef(l2::BlockProducer* producer) {
         block_producer_ = producer;
+    }
+
+    void setMempoolRef(l2::Mempool* mempool) {
+        mempool_ = mempool;
     }
 
 private:
@@ -324,6 +329,77 @@ private:
             }
         });
 
+        // Transaction submission endpoint (POST)
+        server_->Post("/api/transactions/submit", [this](const httplib::Request& req, httplib::Response& res) {
+            try {
+                if (!mempool_) {
+                    res.status = 503;
+                    json error = {
+                        {"error", "Service Unavailable"},
+                        {"message", "Mempool not initialized"}
+                    };
+                    res.set_content(error.dump(), "application/json");
+                    return;
+                }
+                
+                json request_body = json::parse(req.body);
+                
+                // Validate required fields
+                if (!request_body.contains("from_address") || 
+                    !request_body.contains("to_address") || 
+                    !request_body.contains("amount") ||
+                    !request_body.contains("tx_hash")) {
+                    res.status = 400;
+                    json error = {
+                        {"error", "Invalid request"},
+                        {"message", "from_address, to_address, amount, and tx_hash are required"}
+                    };
+                    res.set_content(error.dump(), "application/json");
+                    return;
+                }
+                
+                // Create transaction
+                l2::Transaction tx;
+                tx.txHash = request_body["tx_hash"].get<std::string>();
+                tx.fromAddress = request_body["from_address"].get<std::string>();
+                tx.toAddress = request_body["to_address"].get<std::string>();
+                tx.amount = request_body["amount"].get<std::uint64_t>();
+                tx.data = request_body.value("data", "");
+                tx.status = "pending";
+                tx.blockHeight = 0;
+                
+                // Get timestamp
+                auto now = std::chrono::system_clock::now();
+                auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    now.time_since_epoch()).count();
+                tx.timestampMs = static_cast<std::uint64_t>(ms);
+                
+                // Add to mempool
+                mempool_->addTransaction(tx);
+                
+                std::cout << "[WebServer] Transaction added to mempool: " << tx.txHash.substr(0, 16) 
+                          << "... from " << tx.fromAddress << " to " << tx.toAddress 
+                          << " amount " << tx.amount << std::endl;
+                
+                json response = {
+                    {"status", "accepted"},
+                    {"tx_hash", tx.txHash},
+                    {"message", "Transaction submitted to mempool"}
+                };
+                
+                res.status = 202;
+                res.set_content(response.dump(), "application/json");
+                
+            } catch (const std::exception& e) {
+                res.status = 400;
+                json error = {
+                    {"error", "Invalid request"},
+                    {"message", e.what()}
+                };
+                res.set_content(error.dump(), "application/json");
+            }
+        });
+
         // 404 handler
         server_->set_error_handler([](const httplib::Request&, httplib::Response& res) {
             json error = {
@@ -344,6 +420,7 @@ private:
     Orchestrator* orchestrator_ = nullptr;
     Ledger* ledger_ = nullptr;
     l2::BlockProducer* block_producer_ = nullptr;
+    l2::Mempool* mempool_ = nullptr;
 };
 
 // Public API implementation
@@ -381,6 +458,10 @@ void AILEEWebServer::setLedgerRef(Ledger* ledger) {
 
 void AILEEWebServer::setBlockProducerRef(l2::BlockProducer* producer) {
     pImpl->setBlockProducerRef(producer);
+}
+
+void AILEEWebServer::setMempoolRef(l2::Mempool* mempool) {
+    pImpl->setMempoolRef(mempool);
 }
 
 } // namespace ailee

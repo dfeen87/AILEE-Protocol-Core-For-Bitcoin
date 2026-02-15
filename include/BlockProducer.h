@@ -10,17 +10,22 @@
 
 namespace ailee::l2 {
 
+// Forward declaration
+class Mempool;
+
 /**
  * BlockProducer - Time-based block production for L2 chain
  * 
  * Produces blocks at a configurable interval (default: 1 second)
  * Tracks block height, transaction count, and anchor commitments
+ * Pulls transactions from the mempool and includes them in blocks
  */
 class BlockProducer {
 public:
     struct Config {
         std::uint64_t blockIntervalMs = 1000;    // 1 block per second
         std::uint64_t commitmentInterval = 100;   // Anchor every 100 blocks
+        std::uint64_t maxTransactionsPerBlock = 1000; // Max transactions per block
     };
 
     struct State {
@@ -28,6 +33,7 @@ public:
         std::uint64_t totalTransactions = 0;
         std::uint64_t lastAnchorHeight = 0;
         std::uint64_t lastBlockTimestampMs = 0;
+        std::uint64_t pendingTransactions = 0;
     };
 
     explicit BlockProducer(const Config& config);
@@ -40,7 +46,10 @@ public:
     // Get current state (thread-safe)
     State getState() const;
 
-    // Called by other systems to report transactions
+    // Set the mempool reference (must be called before start)
+    void setMempool(Mempool* mempool);
+
+    // Called by other systems to report transactions (deprecated - use mempool directly)
     void recordTransaction();
 
 private:
@@ -54,6 +63,8 @@ private:
     
     std::atomic<bool> running_{false};
     std::unique_ptr<std::thread> producerThread_;
+    
+    Mempool* mempool_{nullptr}; // Non-owning pointer to mempool
 };
 
 } // namespace ailee::l2

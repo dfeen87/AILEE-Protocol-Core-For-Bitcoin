@@ -130,14 +130,35 @@ async def submit_transaction(tx: TransactionInput):
         tx_hash = compute_transaction_hash(tx_data)
         tx_data["tx_hash"] = tx_hash
         
-        # Store transaction (in production, this would go to the C++ node)
+        # Store transaction locally for querying (in production, this would go to the C++ node)
         _transaction_store.append(tx_data)
         
-        # Try to notify C++ node about the transaction
+        # Submit transaction to C++ node's mempool
         client = get_ailee_client()
-        cpp_state = await client.get_l2_state()
+        try:
+            # Send transaction to C++ mempool endpoint
+            import httpx
+            async with httpx.AsyncClient(timeout=5.0) as http_client:
+                cpp_response = await http_client.post(
+                    f"{client.base_url}/api/transactions/submit",
+                    json={
+                        "from_address": tx.from_address,
+                        "to_address": tx.to_address,
+                        "amount": tx.amount,
+                        "data": tx.data or "",
+                        "tx_hash": tx_hash
+                    }
+                )
+                if cpp_response.status_code == 202:
+                    logger.info(f"Transaction submitted to C++ mempool: {tx_hash[:16]}...")
+                else:
+                    logger.warning(f"C++ mempool returned status {cpp_response.status_code}")
+        except Exception as e:
+            logger.warning(f"Failed to submit to C++ mempool (will retry): {e}")
         
+        # Get current block height from C++ node
         block_height = None
+        cpp_state = await client.get_l2_state()
         if cpp_state:
             # Get current block height from C++ node
             block_height = cpp_state.get("block_height", 0)

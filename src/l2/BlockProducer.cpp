@@ -1,4 +1,5 @@
 #include "BlockProducer.h"
+#include "Mempool.h"
 
 #include <chrono>
 #include <sstream>
@@ -52,7 +53,19 @@ void BlockProducer::stop() {
 
 BlockProducer::State BlockProducer::getState() const {
     std::lock_guard<std::mutex> lock(stateMutex_);
-    return state_;
+    State stateCopy = state_;
+    
+    // Update pending transaction count from mempool if available
+    if (mempool_) {
+        stateCopy.pendingTransactions = mempool_->getPendingCount();
+    }
+    
+    return stateCopy;
+}
+
+void BlockProducer::setMempool(Mempool* mempool) {
+    mempool_ = mempool;
+    log("INFO", "BlockProducer mempool reference set");
 }
 
 void BlockProducer::recordTransaction() {
@@ -97,11 +110,32 @@ void BlockProducer::produceBlock() {
         now.time_since_epoch()).count();
     state_.lastBlockTimestampMs = static_cast<std::uint64_t>(nowMs);
 
-    // Log block production (every 10 blocks to avoid spam)
-    if (state_.blockHeight % 10 == 0 || state_.blockHeight <= 5) {
+    // Pull transactions from mempool if available
+    std::size_t txsInBlock = 0;
+    if (mempool_) {
+        auto transactions = mempool_->getPendingTransactions(config_.maxTransactionsPerBlock);
+        txsInBlock = transactions.size();
+        
+        if (txsInBlock > 0) {
+            // Confirm transactions in this block
+            std::vector<std::string> txHashes;
+            txHashes.reserve(txsInBlock);
+            for (const auto& tx : transactions) {
+                txHashes.push_back(tx.txHash);
+            }
+            mempool_->confirmTransactions(txHashes, state_.blockHeight);
+            
+            // Update total transaction count
+            state_.totalTransactions += txsInBlock;
+        }
+    }
+
+    // Log block production (every 10 blocks to avoid spam, or if block contains transactions)
+    if (state_.blockHeight % 10 == 0 || state_.blockHeight <= 5 || txsInBlock > 0) {
         std::ostringstream oss;
         oss << "Block #" << state_.blockHeight << " produced"
-            << " (txs: " << state_.totalTransactions << ")";
+            << " (txs in block: " << txsInBlock
+            << ", total txs: " << state_.totalTransactions << ")";
         log("INFO", oss.str());
     }
 }
