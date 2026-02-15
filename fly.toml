@@ -16,7 +16,7 @@ primary_region = 'iad'
   # NEVER put credentials in this file (public repository!)
 
 [http_service]
-  internal_port = 8080
+  internal_port = 8000
   force_https = true
   auto_stop_machines = false  # CRITICAL: Never auto-stop for production Layer-2
   auto_start_machines = true

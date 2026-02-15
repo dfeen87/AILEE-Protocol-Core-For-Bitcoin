@@ -75,16 +75,16 @@ async def get_l2_state():
             "health": cpp_state.get("ledger", {}).get("status", "unknown")
         }
     
-    # C++ node not available - return API-only mode status
+    # C++ node not available
     return {
         "state": {
-            "state_root": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "state_root": "",
             "block_height": 0,
             "total_transactions": 0,
             "last_anchor_height": 0,
             "timestamp": datetime.now(timezone.utc).isoformat()
         },
-        "health": "api_only_mode"
+        "health": "cpp_node_unavailable"
     }
 
 
