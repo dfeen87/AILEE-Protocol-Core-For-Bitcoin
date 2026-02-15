@@ -346,9 +346,9 @@ uvicorn api.main:app --host 0.0.0.0 --port 8080
 
 The `pyproject.toml` includes configuration for development tools:
 
-- **Black** (code formatter): 120 char line length
-- **Ruff** (linter): Python 3.8+ compatible
-- **MyPy** (type checker): Strict type checking
+- **Black** (code formatter): 120 char line length, Python 3.9-3.12
+- **Ruff** (linter): Python 3.9+ compatible
+- **MyPy** (type checker): Python 3.9+, strict type checking
 - **Pytest** (test runner): Test discovery and configuration
 
 ---
