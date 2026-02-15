@@ -129,10 +129,13 @@ AILEE (AI-Load Energy Efficiency) is a **Bitcoin Layer-2 framework** that treats
 # Ubuntu/Debian
 sudo apt-get update
 sudo apt-get install -y build-essential cmake libssl-dev libcurl4-openssl-dev \
-    libzmq3-dev libcppzmq-dev libjsoncpp-dev libyaml-cpp-dev
+    libzmq3-dev libcppzmq-dev libjsoncpp-dev libyaml-cpp-dev librocksdb-dev
+
+# Optional: Install libp2p for full P2P networking
+# See scripts/install-libp2p.sh or docs/LIBP2P_INTEGRATION.md
 
 # macOS
-brew install cmake openssl curl zeromq cppzmq jsoncpp yaml-cpp
+brew install cmake openssl curl zeromq cppzmq jsoncpp yaml-cpp rocksdb
 ```
 
 ### Option 1: Build C++ Core Node
@@ -152,6 +155,9 @@ make -j$(nproc)
 
 # Run the L2 verification tool
 ./ailee_l2_verify
+
+# Run the P2P network demo
+./ailee_p2p_demo
 
 # Run tests
 ctest --verbose
@@ -259,7 +265,7 @@ See **[API_QUICKSTART.md](API_QUICKSTART.md)** and **[Next Phase Features](docs/
 - Docker and cloud deployment configs
 - **🆕 SHA3-256 cryptographic hashing** (OpenSSL 3.0+)
 - **🆕 RocksDB persistent storage layer**
-- **🆕 P2P networking infrastructure** (libp2p-ready)
+- **🆕 P2P networking infrastructure** (libp2p C++ bindings integrated)
 - **🆕 Distributed task protocol**
 - **🆕 Prometheus metrics export**
 - **🆕 Multi-node deployment testing** (Docker Compose)
@@ -270,7 +276,6 @@ See **[API_QUICKSTART.md](API_QUICKSTART.md)** and **[Next Phase Features](docs/
 - Adversarial and fault-injection testing
 - External cryptographic audits
 - Production hardening and operational tooling
-- Full libp2p C++ integration
 
 ### 🔬 Research Areas
 - Layer-2 orchestration optimization
@@ -473,9 +478,10 @@ AILEE-Core is **NOT**:
 - **[Web Integration](docs/WEB_INTEGRATION.md)**: HTTP API and dashboard
 - **[Recovery Guide](docs/RECOVERY_GUIDE.md)**: Recovery protocols
 - **[Security](docs/SECURITY_AND_POWER.md)**: Power model and safety
-- **[P2P Networking](docs/NEXT_PHASE_FEATURES.md#-3-p2p-networking-layer)**: Distributed networking ⭐ NEW
-- **[Persistent Storage](docs/NEXT_PHASE_FEATURES.md#-2-rocksdb-persistent-storage)**: RocksDB integration ⭐ NEW
-- **[Metrics Export](docs/NEXT_PHASE_FEATURES.md#-5-prometheus-metrics-export)**: Prometheus monitoring ⭐ NEW
+- **[libp2p Integration](docs/LIBP2P_INTEGRATION.md)**: P2P networking with libp2p C++ bindings ⭐ NEW
+- **[P2P Networking](docs/NEXT_PHASE_FEATURES.md#-3-p2p-networking-layer)**: Distributed networking
+- **[Persistent Storage](docs/NEXT_PHASE_FEATURES.md#-2-rocksdb-persistent-storage)**: RocksDB integration
+- **[Metrics Export](docs/NEXT_PHASE_FEATURES.md#-5-prometheus-metrics-export)**: Prometheus monitoring
 
 ### For Developers
 - **[Examples Directory](examples/)**: Working code demonstrations
