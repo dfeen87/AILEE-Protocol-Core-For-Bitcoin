@@ -8,35 +8,38 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
-#include <cstring> // For std::strlen
+#include <cstring> 
 #include <optional>
+
+const std::size_t prefixLen = std::strlen(ReorgDetector::kBlockHashPrefix);
 
 namespace ailee::l1 {
 
-// Anonymous namespace for internal helpers
 namespace {
 
 // Helper to create a key for block hash storage
-std::string makeBlockKey(std::uint64_t height) {
+[[maybe_unused]] std::string makeBlockKey(std::uint64_t height) {
     std::ostringstream oss;
-    oss << ReorgDetector::kBlockHashPrefix << std::setw(20) << std::setfill('0') << height;
+    oss << ReorgDetector::kBlockHashPrefix 
+        << std::setw(20) << std::setfill('0') << height;
     return oss.str();
 }
 
 // Helper to create a key for anchor storage
-std::string makeAnchorKey(const std::string& anchorHash) {
+[[maybe_unused]] std::string makeAnchorKey(const std::string& anchorHash) {
     return std::string(ReorgDetector::kAnchorPrefix) + anchorHash;
 }
 
 // Helper to create a key for reorg event storage
 std::string makeReorgEventKey(std::uint64_t eventId) {
     std::ostringstream oss;
-    oss << ReorgDetector::kReorgEventPrefix << std::setw(20) << std::setfill('0') << eventId;
+    oss << ReorgDetector::kReorgEventPrefix 
+        << std::setw(20) << std::setfill('0') << eventId;
     return oss.str();
 }
 
 // Parse height from block key
-std::optional<std::uint64_t> parseHeightFromKey(const std::string& key) {
+[[maybe_unused]] std::optional<std::uint64_t> parseHeightFromKey(const std::string& key) {
     const std::size_t prefixLen = std::strlen(ReorgDetector::kBlockHashPrefix);
     if (key.size() <= prefixLen) {
         return std::nullopt;
