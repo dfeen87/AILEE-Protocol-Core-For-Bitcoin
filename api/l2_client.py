@@ -25,10 +25,10 @@ class AILEECoreClient:
         Initialize client
         
         Args:
-            base_url: Base URL of C++ node (defaults to env var AILEE_NODE_URL or localhost:9090)
+            base_url: Base URL of C++ node (defaults to env var AILEE_NODE_URL or localhost:8080)
             timeout: Request timeout in seconds
         """
-        self.base_url = base_url or os.getenv("AILEE_NODE_URL", "http://localhost:9090")
+        self.base_url = base_url or os.getenv("AILEE_NODE_URL", "http://localhost:8080")
         self.timeout = timeout
         self.client = httpx.AsyncClient(timeout=self.timeout, follow_redirects=True)
         
