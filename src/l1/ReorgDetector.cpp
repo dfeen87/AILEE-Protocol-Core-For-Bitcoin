@@ -11,11 +11,11 @@
 #include <cstring> 
 #include <optional>
 
-const std::size_t prefixLen = std::strlen(ReorgDetector::kBlockHashPrefix);
-
 namespace ailee::l1 {
 
 namespace {
+
+const std::size_t prefixLen = std::strlen(ReorgDetector::kBlockHashPrefix);
 
 // Helper to create a key for block hash storage
 [[maybe_unused]] std::string makeBlockKey(std::uint64_t height) {
@@ -40,7 +40,6 @@ std::string makeReorgEventKey(std::uint64_t eventId) {
 
 // Parse height from block key
 [[maybe_unused]] std::optional<std::uint64_t> parseHeightFromKey(const std::string& key) {
-    const std::size_t prefixLen = std::strlen(ReorgDetector::kBlockHashPrefix);
     if (key.size() <= prefixLen) {
         return std::nullopt;
     }
@@ -52,8 +51,6 @@ std::string makeReorgEventKey(std::uint64_t eventId) {
 }
 
 } // namespace (anonymous)
-
-} // namespace ailee::l1
 
 ReorgDetector::ReorgDetector(const std::string& dbPath,
                              std::uint64_t confirmationThreshold,
@@ -91,7 +88,7 @@ void ReorgDetector::close() {
 }
 
 bool ReorgDetector::trackBlock(std::uint64_t height, const std::string& blockHash, 
-                              std::uint64_t timestamp) {
+                              std::uint64_t /*timestamp*/) {
     if (!db_) {
         return false;
     }
