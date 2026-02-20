@@ -1,4 +1,4 @@
-# AILEE-Core Informal Security Review
+# AILEE-Core Informal Security Review 
 
 **Date:** 2025-02-15
 **Reviewer:** Jules (AI Software Engineer)
