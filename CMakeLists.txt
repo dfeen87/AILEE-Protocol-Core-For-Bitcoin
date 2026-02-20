@@ -72,7 +72,14 @@ find_package(Threads REQUIRED)
 # 8. RocksDB (Optional - for persistent storage)
 find_package(RocksDB QUIET)
 if(RocksDB_FOUND)
-    message(STATUS "RocksDB found: ${RocksDB_LIBRARIES}")
+    message(STATUS "RocksDB found via find_package")
+    if(TARGET RocksDB::rocksdb)
+        set(ROCKSDB_TARGET RocksDB::rocksdb)
+    elseif(TARGET rocksdb::rocksdb)
+        set(ROCKSDB_TARGET rocksdb::rocksdb)
+    elseif(TARGET rocksdb)
+        set(ROCKSDB_TARGET rocksdb)
+    endif()
 else()
     # Try pkg-config
     if(PKG_CONFIG_FOUND)
@@ -283,7 +290,16 @@ endif()
 
 # Link RocksDB if found (for persistent storage)
 if(RocksDB_FOUND)
-    target_link_libraries(ailee_node PRIVATE ${RocksDB_LIBRARIES} rocksdb)
+    if(DEFINED ROCKSDB_TARGET)
+        target_link_libraries(ailee_node PRIVATE ${ROCKSDB_TARGET})
+    else()
+        # Fallback to libraries if no target found
+        if("${RocksDB_LIBRARIES}" STREQUAL "")
+            target_link_libraries(ailee_node PRIVATE rocksdb)
+        else()
+            target_link_libraries(ailee_node PRIVATE ${RocksDB_LIBRARIES})
+        endif()
+    endif()
     target_compile_definitions(ailee_node PRIVATE AILEE_HAS_ROCKSDB=1)
     message(STATUS "RocksDB support enabled")
 else()
@@ -346,7 +362,15 @@ endif()
 
 # Link RocksDB to library as well
 if(RocksDB_FOUND)
-    target_link_libraries(ailee_adapters PRIVATE ${RocksDB_LIBRARIES} rocksdb)
+    if(DEFINED ROCKSDB_TARGET)
+        target_link_libraries(ailee_adapters PRIVATE ${ROCKSDB_TARGET})
+    else()
+        if("${RocksDB_LIBRARIES}" STREQUAL "")
+            target_link_libraries(ailee_adapters PRIVATE rocksdb)
+        else()
+            target_link_libraries(ailee_adapters PRIVATE ${RocksDB_LIBRARIES})
+        endif()
+    endif()
     target_compile_definitions(ailee_adapters PRIVATE AILEE_HAS_ROCKSDB=1)
 endif()
 
@@ -414,10 +438,18 @@ if(BUILD_TESTS)
             ${CMAKE_CURRENT_SOURCE_DIR}/tests/minigtest
         )
         
+        if(DEFINED ROCKSDB_TARGET)
+            target_link_libraries(reorg_detector_tests PRIVATE ${ROCKSDB_TARGET})
+        else()
+            if("${RocksDB_LIBRARIES}" STREQUAL "")
+                target_link_libraries(reorg_detector_tests PRIVATE rocksdb)
+            else()
+                target_link_libraries(reorg_detector_tests PRIVATE ${RocksDB_LIBRARIES})
+            endif()
+        endif()
+
         target_link_libraries(reorg_detector_tests
             PRIVATE
-            ${RocksDB_LIBRARIES}
-            rocksdb
             GTest::gtest
             GTest::gtest_main
         )
