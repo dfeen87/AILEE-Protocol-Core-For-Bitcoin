@@ -5,7 +5,7 @@ Safe, deterministic configuration loading with validation
 
 import os
 from typing import Optional
-from pydantic import Field, field_validator, model_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -43,8 +43,9 @@ class Settings(BaseSettings):
         description="Host to bind the API server"
     )
     port: int = Field(
-        default_factory=lambda: int(os.getenv("PORT", "8000")),
-        description="Port to bind the API server (reads PORT env var as fallback when AILEE_PORT is not set)"
+        default=8080,
+        validation_alias=AliasChoices('PORT', 'AILEE_PORT'),
+        description="Port to bind the API server (reads PORT env var first, then AILEE_PORT, defaults to 8080)"
     )
     
     # CORS

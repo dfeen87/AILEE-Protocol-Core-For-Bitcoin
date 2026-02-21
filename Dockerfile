@@ -95,18 +95,18 @@ else\n\
     echo "C++ node started on :${AILEE_WEB_SERVER_PORT}"\n\
 fi\n\
 \n\
-# Python API: bind to PORT provided by Railway; default to 8000 if unset.\n\
-API_PORT=${PORT:-8000}\n\
+# Python API: bind to PORT provided by Railway; default to 8080 if unset.\n\
+API_PORT=${PORT:-8080}\n\
 echo "Starting Python API on :${API_PORT} (PORT=${PORT:-unset})..."\n\
 export AILEE_PORT=${API_PORT}\n\
 export AILEE_NODE_URL="http://localhost:${AILEE_WEB_SERVER_PORT}"\n\
 exec uvicorn api.main:app --host 0.0.0.0 --port ${API_PORT} --log-level info' > /app/start.sh && \
     chmod +x /app/start.sh
-EXPOSE 8000
+EXPOSE 8080
 
 # start-period=60s: allows the C++ node (3s sleep) + Python API (db init, etc.) to fully start.
 # retries=5 with interval=30s gives 2.5 minutes of retry before marking unhealthy.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
-    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
 
 CMD ["/app/start.sh"]
