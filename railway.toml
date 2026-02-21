@@ -1,5 +1,6 @@
 [deploy]
 startCommand = "/app/start.sh"
+postDeployCommand = "/app/post_deploy.sh"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ALWAYS"
