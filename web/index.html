@@ -389,7 +389,8 @@
             }
             
             _currentStatus = data;
-            const statusClass = 'status-online';
+            const isOffline = !!(data.warning || (data.node && data.node.mode === 'api_only'));
+            const statusClass = isOffline ? 'status-offline' : 'status-online';
             const node = data.node || {};
             const apiInfo = data.api || {};
             
@@ -401,18 +402,18 @@
                 </h2>
                 <div class="metric">
                     <span class="metric-label">Status</span>
-                    <span class="metric-value">Running</span>
+                    <span class="metric-value">${isOffline ? 'Offline' : 'Running'}</span>
                 </div>
                 ${node.version ? `
                 <div class="metric">
                     <span class="metric-label">Version</span>
-                    <span class="metric-value">${node.version}</span>
+                    <span class="metric-value">${escapeHtml(String(node.version))}</span>
                 </div>
                 ` : ''}
                 ${node.environment ? `
                 <div class="metric">
                     <span class="metric-label">Environment</span>
-                    <span class="metric-value">${node.environment}</span>
+                    <span class="metric-value">${escapeHtml(String(node.environment))}</span>
                 </div>
                 ` : ''}
                 ${node.uptime_seconds !== undefined ? `
@@ -424,7 +425,7 @@
                 ${node.id ? `
                 <div class="metric">
                     <span class="metric-label">Node ID</span>
-                    <span class="metric-value" style="font-size: 0.8em;">${node.id.substring(0, 16)}...</span>
+                    <span class="metric-value" style="font-size: 0.8em;">${escapeHtml(String(node.id).substring(0, 16))}...</span>
                 </div>
                 ` : ''}
                 <div class="node-actions">

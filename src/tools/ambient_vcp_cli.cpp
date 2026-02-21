@@ -81,7 +81,13 @@ int main(int argc, char** argv) {
         if (arg == "--node-id" && i + 1 < argc) {
             nodeId = argv[++i];
         } else if (arg == "--interval" && i + 1 < argc) {
-            intervalSecs = std::stoi(argv[++i]);
+            try {
+                intervalSecs = std::stoi(argv[++i]);
+                if (intervalSecs <= 0) throw std::out_of_range("interval must be > 0");
+            } catch (const std::exception& e) {
+                std::cerr << "Error: --interval requires a positive integer (" << e.what() << ")\n";
+                return 1;
+            }
         } else if (arg == "--help" || arg == "-h") {
             printUsage(argv[0]);
             return 0;
