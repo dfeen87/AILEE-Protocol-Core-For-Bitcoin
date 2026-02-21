@@ -29,6 +29,8 @@
 #include <thread>
 #include <atomic>
 #include <condition_variable>
+#include <map>
+#include <cstring>
 
 namespace ambient {
 
@@ -58,7 +60,7 @@ inline uint64_t timestampMs() {
  */
 struct EnergyProof {
     std::string meterSerialNumber;
-    uint64_t timestampMs;
+    uint64_t proofTimestampMs;  // renamed from timestampMs to avoid shadowing the free function
     double kWhGenerated;
     double kWhToGrid;
     double wasteHeatRecovered;
@@ -101,8 +103,8 @@ struct EnergyProof {
         // Check timestamp is recent (within 5 minutes)
         uint64_t currentTime = timestampMs();
         uint64_t fiveMinutes = 5 * 60 * 1000;
-        if (currentTime < timestampMs || 
-            (currentTime - timestampMs) > fiveMinutes) {
+        if (currentTime < proofTimestampMs || 
+            (currentTime - proofTimestampMs) > fiveMinutes) {
             return false;
         }
         
@@ -146,9 +148,9 @@ public:
         contrib.proofs.push_back(proof);
         
         if (contrib.firstContribution == 0) {
-            contrib.firstContribution = proof.timestampMs;
+            contrib.firstContribution = proof.proofTimestampMs;
         }
-        contrib.lastContribution = proof.timestampMs;
+        contrib.lastContribution = proof.proofTimestampMs;
         
         recordIncident("ENERGY_VERIFIED", 
             "Meter: " + proof.meterSerialNumber + 
@@ -223,9 +225,9 @@ public:
         
         // Step 1: Verify all signatures
         std::vector<TelemetrySample> validSamples;
-        for (const auto& signed : samples) {
-            if (verifySignature(signed)) {
-                validSamples.push_back(signed.sample);
+        for (const auto& st : samples) {
+            if (verifySignature(st)) {
+                validSamples.push_back(st.sample);
             }
         }
         
@@ -297,10 +299,10 @@ public:
     }
 
 private:
-    bool verifySignature(const SignedTelemetry& signed) const {
+    bool verifySignature(const SignedTelemetry& st) const {
         // In production: Use ECDSA verification
         // Verify node signed the telemetry data
-        return !signed.nodeSignature.empty() && !signed.nodePublicKey.empty();
+        return !st.nodeSignature.empty() && !st.nodePublicKey.empty();
     }
     
     double calculateMedian(std::vector<double> values) const {
@@ -392,22 +394,15 @@ public:
           energyTelemetry_(std::make_shared<EnergyTelemetry>()) {}
 
     void ingestTelemetry(const TelemetrySample& sample) {
-        std::lock_guard<std::mutex> lock(mu_);
-        lastSample_ = sample;
+        // Delegate to base class for lastSample_, safeMode_, ZK proof
+        AmbientNode::ingestTelemetry(sample);
+        // Additionally maintain rolling history for scoring
         history_.addSample(sample);
-
-        if (sample.energy.temperatureC > policy_.maxTemperatureC ||
-            sample.compute.latencyMs > policy_.maxLatencyMs) {
-            safeMode_.store(true);
-        } else {
-            safeMode_.store(false);
+        // Cache the ZK proof stub from the base class result
+        auto proof = lastProof();
+        if (proof.has_value()) {
+            lastZKProof_ = proof.value();
         }
-
-        auto proof = zkEngine_.generateProof(
-            id_.pubkey + std::to_string(timestampMs()), 
-            std::to_string(sample.compute.cpuUtilization)
-        );
-        lastZKProof_ = proof;
     }
     
     /**
@@ -429,14 +424,17 @@ public:
         const std::string& modelId, 
         const std::vector<float>& miniBatch
     ) {
-        std::lock_guard<std::mutex> lock(mu_);
         FederatedUpdate up;
-        up.modelId = modelId;
-        up.privacy = lastSample_.privacy;
+        up.taskId = modelId;
+        auto lastSample = last();
+        double epsilon = lastSample.has_value() ? lastSample->privacy.epsilon : 1.0;
+        up.epsilonSpent = epsilon;
 
         float sum = std::accumulate(miniBatch.begin(), miniBatch.end(), 0.0f);
-        sum += static_cast<float>(randomNoise(1.0 / lastSample_.privacy.epsilon));
-        up.gradient = {sum};
+        sum += static_cast<float>(randomNoise(1.0 / epsilon));
+        // Store gradient as raw bytes in deltaBytes
+        up.deltaBytes.resize(sizeof(float));
+        std::memcpy(up.deltaBytes.data(), &sum, sizeof(float));
         return up;
     }
 
@@ -496,13 +494,13 @@ public:
         for (auto* node : nodes_) {
             auto last = node->last();
             if (last.has_value()) {
-                ConsensusMechanism::SignedTelemetry signed;
-                signed.sample = *last;
-                signed.nodePublicKey = node->id().pubkey;
-                signed.signatureTimestamp = timestampMs();
+                ConsensusMechanism::SignedTelemetry st;
+                st.sample = *last;
+                st.nodePublicKey = node->id().pubkey;
+                st.signatureTimestamp = timestampMs();
                 // In production: Actually sign with node's private key
-                signed.nodeSignature = {0x01, 0x02, 0x03};
-                samples.push_back(signed);
+                st.nodeSignature = {0x01, 0x02, 0x03};
+                samples.push_back(st);
             }
         }
         
@@ -615,7 +613,7 @@ TokenReward calculateTokenReward(
     double computeContribution = sample.compute.cpuUtilization;
     double efficiencyMultiplier = 1.0 + 
         computeContribution / std::max(0.01, sample.energy.inputPowerW);
-    double reputationMultiplier = sample.node.reputationScore;
+    double reputationMultiplier = 1.0;  // reputation tracked separately in Reputation::score
 
     reward.tokenAmount = computeContribution * 
                         baseRewardRate * 
