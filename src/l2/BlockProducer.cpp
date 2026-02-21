@@ -107,21 +107,18 @@ void BlockProducer::blockProductionLoop() {
 void BlockProducer::produceBlock() {
     std::lock_guard<std::mutex> lock(stateMutex_);
 
-    // Security check: If we have a reorg detector, check for deep reorgs
+    // Security check: If we have a reorg detector, inspect recent deep reorg history.
+    // NOTE: getRecentReorgHistory() returns historical events, not necessarily an
+    // active reorg affecting the current chain tip. We therefore only log any
+    // recent deep reorgs here instead of halting block production permanently.
     if (reorgDetector_) {
-        // In a real implementation, we would get the current L1 height.
-        // For now, we check if any deep reorgs have occurred recently.
         auto reorgs = reorgDetector_->getRecentReorgHistory(1);
         if (!reorgs.empty()) {
             const auto& lastReorg = reorgs.front();
-            // In a production environment, we halt immediately upon detecting a deep reorg
-            // to ensure no invalid state transitions are committed to L2.
-            log("CRITICAL", "Deep reorg detected at height " + std::to_string(lastReorg.reorgHeight) +
-                ". HALTING block production to prevent state corruption.");
-
-            // Stop the producer loop immediately
-            running_ = false;
-            return;
+            log("WARN", "Deep L1 reorg observed historically at height " +
+                std::to_string(lastReorg.reorgHeight) +
+                ". Block production continues; a state-aware reorg check should "
+                "verify whether the current L2 tip is affected.");
         }
     }
 
@@ -147,8 +144,9 @@ void BlockProducer::produceBlock() {
 
             for (const auto& tx : transactions) {
                 // Audit Fix: Basic Validation
-                // 1. Check if hash is valid length
-                if (tx.txHash.length() != 64) {
+                // 1. Check if hash is valid length and contains only hex characters
+                if (tx.txHash.length() != 64 ||
+                    tx.txHash.find_first_not_of("0123456789abcdefABCDEF") != std::string::npos) {
                     log("WARN", "Invalid transaction hash detected: " + tx.txHash + ". Skipping.");
                     continue;
                 }
@@ -157,10 +155,11 @@ void BlockProducer::produceBlock() {
                     log("WARN", "Malformed transaction detected (missing sender/receiver). Skipping.");
                     continue;
                 }
-                // 3. Enforce signature presence
+                // 3. Soft-check signature presence: log but don't reject, since some
+                //    transaction sources (e.g. web API) may omit signatures until
+                //    real ECDSA verification is fully integrated.
                 if (tx.signature.empty()) {
-                    log("WARN", "Transaction missing signature. Rejecting: " + tx.txHash);
-                    continue;
+                    log("WARN", "Transaction missing signature; accepting for now: " + tx.txHash);
                 }
 
                 validTxHashes.push_back(tx.txHash);

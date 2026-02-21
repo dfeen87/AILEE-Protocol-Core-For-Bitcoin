@@ -26,6 +26,7 @@
 #include <chrono>
 #include <iomanip>
 #include <sstream>
+#include <ctime>
 #include "ReorgDetector.h"
 
 namespace ailee {
@@ -124,6 +125,7 @@ private:
     std::atomic<bool> running_;
     std::string endpoint_;
     int reconnect_attempts_ = 0;
+    std::atomic<uint64_t> zmqBlockSeq_{0};
     ailee::l1::ReorgDetector* reorgDetector_ = nullptr;
 
     // Helper: Convert Raw Bytes to Hex String (for Logs/Bridge)
@@ -156,13 +158,19 @@ private:
             
             // If ReorgDetector is connected, track this block
             if (reorgDetector_) {
-                // In a real implementation, we would fetch the height from RPC.
-                // For now, we assume this is the next block and use a placeholder or previous+1.
-                // Since ZMQ 'hashblock' doesn't give height, we track it as height=0 (unknown)
-                // or just log it. The ReorgDetector handles unknown heights gracefully or expects them.
-                // Here, we just log tracking to show integration.
-                // reorgDetector_->trackBlock(0, blockHash, std::time(nullptr));
-                std::cout << "[ZMQ -> ReorgDetector] Tracking new block hash: " << blockHash << std::endl;
+                // ZMQ 'hashblock' does not carry the block height; we use a local
+                // sequential counter as a best-effort approximation until an RPC
+                // call can supply the real height.
+                uint64_t approxHeight = ++zmqBlockSeq_;
+                uint64_t ts = static_cast<uint64_t>(std::time(nullptr));
+                auto reorgEvent = reorgDetector_->detectReorg(approxHeight, blockHash, ts);
+                if (reorgEvent) {
+                    std::cout << "[ZMQ -> ReorgDetector] Potential reorg detected at approx height "
+                              << approxHeight << "!" << std::endl;
+                } else {
+                    reorgDetector_->trackBlock(approxHeight, blockHash, ts);
+                    std::cout << "[ZMQ -> ReorgDetector] Tracked new block hash: " << blockHash << std::endl;
+                }
             }
 
             // Trigger AILEE TPS Re-calibration

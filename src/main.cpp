@@ -744,7 +744,7 @@ private:
                 log(LogLevel::INFO, "ReorgDetector initialized successfully at " + dbPath);
             } else {
                 log(LogLevel::WARN, "ReorgDetector initialization failed: " + err +
-                    " (Running with reduced L1 security)");
+                    " (L1 reorg protection completely disabled)");
                 reorgDetector_.reset();
             }
         } catch (const std::exception& e) {
