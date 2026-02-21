@@ -91,39 +91,40 @@ public:
 
 private:
     void setupRoutes() {
-        // CORS middleware
-        if (config_.enable_cors) {
-            server_->set_pre_routing_handler([](const httplib::Request& req, httplib::Response& res) {
+        // Combined pre-routing handler: CORS headers first, then API key auth.
+        // Both are applied in one handler because httplib only keeps the last
+        // set_pre_routing_handler registration; registering two handlers would
+        // silently discard the first (CORS), leaving the browser unable to
+        // reach the API when authentication is also enabled.
+        server_->set_pre_routing_handler([this](const httplib::Request& req, httplib::Response& res) {
+            // Apply CORS headers on every response when CORS is enabled.
+            if (config_.enable_cors) {
                 res.set_header("Access-Control-Allow-Origin", "*");
                 res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
                 res.set_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-Key");
-                
+
                 if (req.method == "OPTIONS") {
                     res.status = 200;
                     return httplib::Server::HandlerResponse::Handled;
                 }
-                return httplib::Server::HandlerResponse::Unhandled;
-            });
-        }
+            }
 
-        // API key authentication middleware
-        if (!config_.api_key.empty()) {
-            server_->set_pre_routing_handler([this](const httplib::Request& req, httplib::Response& res) {
-                if (req.path.find("/api/") == 0) {
-                    auto api_key = req.get_header_value("X-API-Key");
-                    if (api_key != config_.api_key) {
-                        res.status = 401;
-                        json error_response = {
-                            {"error", "Unauthorized"},
-                            {"message", "Invalid or missing API key"}
-                        };
-                        res.set_content(error_response.dump(), "application/json");
-                        return httplib::Server::HandlerResponse::Handled;
-                    }
+            // Enforce API key on /api/* routes when a key is configured.
+            if (!config_.api_key.empty() && req.path.find("/api/") == 0) {
+                auto api_key = req.get_header_value("X-API-Key");
+                if (api_key != config_.api_key) {
+                    res.status = 401;
+                    json error_response = {
+                        {"error", "Unauthorized"},
+                        {"message", "Invalid or missing API key"}
+                    };
+                    res.set_content(error_response.dump(), "application/json");
+                    return httplib::Server::HandlerResponse::Handled;
                 }
-                return httplib::Server::HandlerResponse::Unhandled;
-            });
-        }
+            }
+
+            return httplib::Server::HandlerResponse::Unhandled;
+        });
 
         // Serve the web dashboard
         server_->Get("/", [](const httplib::Request&, httplib::Response& res) {
@@ -431,8 +432,9 @@ AILEEWebServer::AILEEWebServer(const WebServerConfig& config)
 AILEEWebServer::~AILEEWebServer() = default;
 
 bool AILEEWebServer::start() {
-    running_ = true;
-    return pImpl->start();
+    bool started = pImpl->start();
+    if (started) running_ = true;
+    return started;
 }
 
 void AILEEWebServer::stop() {
