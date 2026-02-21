@@ -30,6 +30,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install Python 3.11 and runtime dependencies
 # Note: Using Ubuntu 22.04 for both build and runtime stages ensures
 # binary compatibility for shared libraries (libjsoncpp25, libyaml-cpp0.7, librocksdb6.11)
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3.11 python3-pip python3.11-venv \
     curl libssl3 libcurl4 libzmq5 libjsoncpp25 \
@@ -71,6 +73,12 @@ set -e\n\
 # Railway mounts volumes as root at runtime, so we must run as root here.\n\
 mkdir -p /data\n\
 \n\
+echo "--- System Diagnostics ---"\n\
+ulimit -a\n\
+free -m\n\
+df -h\n\
+echo "--------------------------"\n\
+\n\
 # Pin the C++ node to port 8181 so it never conflicts with the Railway-assigned\n\
 # PORT variable (Railway typically assigns 8080 or a dynamic port for HTTP traffic).\n\
 export AILEE_WEB_SERVER_PORT=8181\n\
@@ -87,18 +95,18 @@ else\n\
     echo "C++ node started on :${AILEE_WEB_SERVER_PORT}"\n\
 fi\n\
 \n\
-# Python API: bind to PORT provided by Railway; default to 8000 if unset.\n\
-API_PORT=${PORT:-8000}\n\
+# Python API: bind to PORT provided by Railway; default to 8080 if unset.\n\
+API_PORT=${PORT:-8080}\n\
 echo "Starting Python API on :${API_PORT} (PORT=${PORT:-unset})..."\n\
 export AILEE_PORT=${API_PORT}\n\
 export AILEE_NODE_URL="http://localhost:${AILEE_WEB_SERVER_PORT}"\n\
 exec uvicorn api.main:app --host 0.0.0.0 --port ${API_PORT} --log-level info' > /app/start.sh && \
     chmod +x /app/start.sh
-EXPOSE 8000
+EXPOSE 8080
 
 # start-period=60s: allows the C++ node (3s sleep) + Python API (db init, etc.) to fully start.
 # retries=5 with interval=30s gives 2.5 minutes of retry before marking unhealthy.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
-    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
 
 CMD ["/app/start.sh"]
