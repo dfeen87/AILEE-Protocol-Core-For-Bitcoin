@@ -43,7 +43,7 @@ class Settings(BaseSettings):
         description="Host to bind the API server"
     )
     port: int = Field(
-        default=8080,
+        default=8000,
         description="Port to bind the API server"
     )
     
