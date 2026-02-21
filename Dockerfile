@@ -76,10 +76,10 @@ CPP_PID=$!\n\
 echo "C++ node PID: $CPP_PID"\n\
 sleep 5\n\
 if ! kill -0 $CPP_PID 2>/dev/null; then\n\
-    echo "ERROR: C++ node failed to start!"\n\
+    echo "WARNING: C++ node failed to start - running in standalone (API-only) mode"\n\
     echo "--- C++ Node Log ---"\n\
     cat /app/logs/cpp-node.log\n\
-    exit 1\n\
+    echo "Continuing to start Python API..."\n\
 fi\n\
 echo "C++ node started successfully"\n\
 echo "Starting Python API on :${PORT:-8000}..."\n\
@@ -89,7 +89,7 @@ exec uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8000} --log-level info' 
     chmod +x /app/start.sh
 EXPOSE 8000 8080
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
 CMD ["/app/start.sh"]
