@@ -58,4 +58,4 @@ The web dashboard is available at the root URL of your deployed application.
 ## Troubleshooting
 
 *   **Node Offline**: Check `fly logs`. If the ZMQ connection fails, the node might log an error but keep running.
-*   **Reorg Warnings**: If connected to a volatile testnet, you might see "Deep reorg detected" logs. This is normal and proves the security module is working.
+*   **Reorg Warnings**: If connected to a volatile testnet, you might see "Deep reorg observed" WARN logs. This is normal and proves the reorg detection module is working correctly.
