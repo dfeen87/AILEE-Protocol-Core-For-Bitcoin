@@ -70,26 +70,45 @@ set -e\n\
 # Ensure /data directory exists and is writable.\n\
 # Railway mounts volumes as root at runtime, so we must run as root here.\n\
 mkdir -p /data\n\
-echo "Starting C++ node on :8080..."\n\
+\n\
+# Pin the C++ node to its fixed internal port so it is never affected by\n\
+# the Railway-assigned PORT variable.\n\
+export AILEE_WEB_SERVER_PORT=8080\n\
+echo "Starting C++ node on :${AILEE_WEB_SERVER_PORT}..."\n\
 ./ailee_node > /app/logs/cpp-node.log 2>&1 &\n\
 CPP_PID=$!\n\
 echo "C++ node PID: $CPP_PID"\n\
-sleep 5\n\
+sleep 3\n\
 if ! kill -0 $CPP_PID 2>/dev/null; then\n\
-    echo "ERROR: C++ node failed to start!"\n\
+    echo "WARNING: C++ node failed to start - running in standalone (API-only) mode"\n\
     echo "--- C++ Node Log ---"\n\
     cat /app/logs/cpp-node.log\n\
-    exit 1\n\
+else\n\
+    echo "C++ node started on :${AILEE_WEB_SERVER_PORT}"\n\
 fi\n\
-echo "C++ node started successfully"\n\
-echo "Starting Python API on :${PORT:-8000}..."\n\
-export AILEE_PORT=${PORT:-8000}\n\
-export AILEE_NODE_URL="http://localhost:8080"\n\
-exec uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8000} --log-level info' > /app/start.sh && \
+\n\
+# Python API: bind to PORT provided by Railway; default to 8000 if unset.\n\
+# Guard: never bind to 8080 which is reserved for the C++ node.\n\
+API_PORT=${PORT:-8000}\n\
+if [ "$API_PORT" = "8080" ]; then\n\
+    echo "WARNING: PORT=8080 conflicts with C++ node - Python API will use 8000"\n\
+    API_PORT=8000\n\
+fi\n\
+echo "Starting Python API on :${API_PORT} (PORT=${PORT:-unset})..."\n\
+export AILEE_PORT=${API_PORT}\n\
+export AILEE_NODE_URL="http://localhost:${AILEE_WEB_SERVER_PORT}"\n\
+# Write the resolved port to a file so the HEALTHCHECK can find it without\n\
+# duplicating the PORT=8080 guard logic.\n\
+echo "${API_PORT}" > /tmp/api.port\n\
+exec uvicorn api.main:app --host 0.0.0.0 --port ${API_PORT} --log-level info' > /app/start.sh && \
     chmod +x /app/start.sh
-EXPOSE 8000 8080
+EXPOSE 8080
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+# start-period=60s: allows the C++ node (3s sleep) + Python API (db init, etc.) to fully start.
+# retries=5 with interval=30s gives 2.5 minutes of retry before marking unhealthy.
+# The HEALTHCHECK reads /tmp/api.port written by start.sh to avoid duplicating the
+# PORT=8080 guard logic.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
+    CMD curl -f http://localhost:$(cat /tmp/api.port 2>/dev/null || echo 8000)/health || exit 1
 
 CMD ["/app/start.sh"]
