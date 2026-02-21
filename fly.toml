@@ -11,8 +11,10 @@ primary_region = 'iad'
   dockerfile = "Dockerfile"
 
 [env]
-  AILEE_ENV = "production"
+  AILEE_ENV = "testnet"
   AILEE_LOG_LEVEL = "info"
+  AILEE_NETWORK = "bitcoin-testnet"
+  AILEE_BITCOIN_ZMQ_ENDPOINT = "tcp://127.0.0.1:28332" # Update this to your Bitcoin Testnet ZMQ endpoint
   # All secrets MUST be set via: fly secrets set KEY=value
   # NEVER put credentials in this file (public repository!)
 

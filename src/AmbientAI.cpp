@@ -14,10 +14,44 @@
 #include <stdexcept>
 #include <iostream>
 #include <openssl/sha.h>
+#include <openssl/ecdsa.h>
+#include <openssl/obj_mac.h>
+#include <openssl/ec.h>
+#include <openssl/evp.h>
+#include <openssl/pem.h>
 
 namespace ambient {
 
 namespace {
+
+// Real ECDSA Signature Verification
+[[maybe_unused]] bool verifyECDSASignature(const std::string& pubKeyPem, const std::string& message, const std::string& signature) {
+    // In a real implementation, we parse the PEM public key and verify the signature.
+    // This function demonstrates the cryptographic flow.
+
+    // 1. Create BIO from PEM string
+    BIO* bio = BIO_new_mem_buf(pubKeyPem.c_str(), -1);
+    if (!bio) return false;
+
+    // 2. Read EC Public Key
+    EC_KEY* ecKey = PEM_read_bio_EC_PUBKEY(bio, NULL, NULL, NULL);
+    BIO_free(bio);
+    if (!ecKey) return false;
+
+    // 3. Compute Hash of Message
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256(reinterpret_cast<const unsigned char*>(message.data()), message.size(), hash);
+
+    // 4. Verify Signature (assuming signature is raw bytes here for simplicity,
+    //    though usually it's DER or base64 encoded)
+    //    Note: 'signature' string should be the DER encoded signature bytes.
+    int result = ECDSA_verify(0, hash, SHA256_DIGEST_LENGTH,
+                              reinterpret_cast<const unsigned char*>(signature.data()),
+                              signature.size(), ecKey);
+
+    EC_KEY_free(ecKey);
+    return (result == 1);
+}
 
 std::string sha256Hex(const std::string& input) {
     unsigned char hash[SHA256_DIGEST_LENGTH];
