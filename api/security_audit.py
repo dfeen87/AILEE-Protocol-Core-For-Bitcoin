@@ -111,8 +111,17 @@ class SecurityAuditLogger:
         self.enable_console = enable_console
         self.enable_hash_chain = enable_hash_chain
         
-        # Create log directory if it doesn't exist
-        self.log_file.parent.mkdir(parents=True, exist_ok=True)
+        # Create log directory if it doesn't exist; fall back to /tmp on permission errors
+        try:
+            self.log_file.parent.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            fallback = Path("/tmp/ailee-security-audit.log")
+            logging.getLogger(__name__).warning(
+                "Cannot create audit log directory %s — falling back to %s",
+                self.log_file.parent,
+                fallback,
+            )
+            self.log_file = fallback
         
         # Set up file logger
         self.logger = logging.getLogger("ailee.security.audit")

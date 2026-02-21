@@ -107,7 +107,7 @@ async def get_l2_state():
     
     return {
         "state": {
-            "state_root": "",
+            "state_root": "0" * 64,
             "block_height": 0,
             "total_transactions": 0,
             "last_anchor_height": 0,
