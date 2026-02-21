@@ -135,6 +135,17 @@ class Settings(BaseSettings):
         description="Comma-separated list of failover Bitcoin RPC URLs"
     )
     
+    # Keepalive Configuration
+    keepalive_enabled: bool = Field(
+        default=True,
+        description="Enable background keepalive task to prevent idle platform suspension"
+    )
+    keepalive_interval_seconds: int = Field(
+        default=240,
+        gt=30,
+        description="Interval in seconds between keepalive pings (default: 4 minutes, minimum: 31s)"
+    )
+
     # TLS/SSL Configuration
     tls_enabled: bool = Field(
         default=False,
