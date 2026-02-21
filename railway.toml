@@ -3,7 +3,7 @@ startCommand = "/app/start.sh"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ALWAYS"
-postDeployCommand = "curl -sf http://localhost:${PORT:-8080}/health"
+postDeployCommand = "/app/post_deploy.sh"
 
 [env]
   AILEE_ENV = "testnet"
