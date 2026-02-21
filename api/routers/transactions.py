@@ -138,26 +138,21 @@ async def submit_transaction(
         tx_hash = compute_transaction_hash(tx_data)
         tx_data["tx_hash"] = tx_hash
         
-        # Submit transaction to C++ node's mempool
+        # Submit transaction to C++ node's mempool via the shared client so
+        # that SSL verification settings and availability tracking are applied.
         client = get_ailee_client()
         try:
-            # Send transaction to C++ mempool endpoint
-            import httpx
-            async with httpx.AsyncClient(timeout=5.0) as http_client:
-                cpp_response = await http_client.post(
-                    f"{client.base_url}/api/transactions/submit",
-                    json={
-                        "from_address": tx.from_address,
-                        "to_address": tx.to_address,
-                        "amount": tx.amount,
-                        "data": tx.data or "",
-                        "tx_hash": tx_hash
-                    }
-                )
-                if cpp_response.status_code == 202:
-                    logger.info(f"Transaction submitted to C++ mempool: {tx_hash[:16]}...")
-                else:
-                    logger.warning(f"C++ mempool returned status {cpp_response.status_code}")
+            cpp_response = await client.submit_transaction({
+                "from_address": tx.from_address,
+                "to_address": tx.to_address,
+                "amount": tx.amount,
+                "data": tx.data or "",
+                "tx_hash": tx_hash,
+            })
+            if cpp_response is not None:
+                logger.info(f"Transaction submitted to C++ mempool: {tx_hash[:16]}...")
+            else:
+                logger.warning(f"C++ mempool unavailable; transaction stored locally only")
         except Exception as e:
             logger.warning(f"Failed to submit to C++ mempool (will retry): {e}")
         

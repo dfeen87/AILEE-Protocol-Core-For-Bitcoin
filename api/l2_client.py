@@ -240,12 +240,61 @@ class AILEECoreClient:
             self._last_check_time = time.time()
             return None
     
+    async def submit_transaction(self, tx_payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Submit a transaction to the C++ node's mempool.
+
+        Uses the shared httpx client so that SSL verification settings and
+        timeout configuration are consistent with all other requests made
+        through this client.
+
+        Args:
+            tx_payload: Transaction fields expected by the C++ node
+                        (from_address, to_address, amount, data, tx_hash).
+
+        Returns:
+            Parsed JSON object returned by the C++ endpoint on success
+            (e.g. ``{"status": "accepted", "tx_hash": "...", "message": "..."}``),
+            or None on any error or when the node is unavailable.
+        """
+        if not await self._check_and_update_availability():
+            return None
+
+        try:
+            response = await self.client.post(
+                f"{self.base_url}/api/transactions/submit",
+                json=tx_payload,
+            )
+            response.raise_for_status()
+            self._consecutive_failures = 0
+            return response.json()
+        except httpx.HTTPError as e:
+            self._consecutive_failures += 1
+            if self._consecutive_failures <= self._max_log_failures:
+                logger.error(f"Failed to submit transaction to C++ node: {e}")
+            elif self._consecutive_failures == self._max_log_failures + 1:
+                logger.warning("Suppressing further C++ node connection errors (node appears unavailable)")
+            self._node_available = False
+            self._last_check_time = time.time()
+            return None
+        except Exception as e:
+            self._consecutive_failures += 1
+            if self._consecutive_failures <= self._max_log_failures:
+                logger.error(f"Unexpected error submitting transaction: {e}")
+            elif self._consecutive_failures == self._max_log_failures + 1:
+                logger.warning("Suppressing further C++ node connection errors (node appears unavailable)")
+            self._node_available = False
+            self._last_check_time = time.time()
+            return None
+
     async def health_check(self) -> bool:
         """Check if C++ node is healthy"""
         try:
-            response = await self.client.get(f"{self.base_url}/api/health", timeout=2.0)
+            response = await self.client.get(
+                f"{self.base_url}/api/health", timeout=self._health_check_timeout
+            )
             return response.status_code == 200
-        except:
+        except Exception:
             return False
     
     async def close(self):
