@@ -57,7 +57,7 @@ RUN useradd -m -u 1000 ailee && \
 COPY --chown=ailee:ailee api/ ./api/
 COPY --chown=ailee:ailee web/ ./web/
 
-# Optional post-deploy script (Render will run it if configured)
+# Optional post-deploy script
 COPY --chown=ailee:ailee scripts/railway_post_deploy.sh /app/post_deploy.sh
 RUN chmod +x /app/post_deploy.sh
 
@@ -67,9 +67,10 @@ COPY --from=cpp-builder --chown=ailee:ailee /build/config ./config
 RUN chmod +x ./ailee_node
 
 # ============================
-# Start Script
+# Start Script (Heredoc Safe)
 # ============================
-RUN echo '#!/bin/bash
+RUN cat << 'EOF' > /app/start.sh
+#!/bin/bash
 set -e
 
 mkdir -p /data
@@ -99,7 +100,9 @@ export AILEE_PORT=${API_PORT}
 export AILEE_NODE_URL="http://localhost:${AILEE_WEB_SERVER_PORT}"
 
 exec uvicorn api.main:app --host 0.0.0.0 --port ${API_PORT} --log-level info
-' > /app/start.sh && chmod +x /app/start.sh
+EOF
+
+RUN chmod +x /app/start.sh
 
 EXPOSE 8080
 
