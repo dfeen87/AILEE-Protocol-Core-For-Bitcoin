@@ -7,6 +7,8 @@ Production-ready FastAPI implementation with deterministic, safe, read-only endp
 import asyncio
 import logging
 import os
+import platform
+import psutil
 import sys
 import time
 from contextlib import asynccontextmanager
@@ -85,6 +87,8 @@ async def lifespan(app: FastAPI):
     logger.info(f"Version: {settings.app_version}")
     logger.info(f"Environment: {settings.env}")
     logger.info(f"Node ID: {settings.node_id}")
+    logger.info(f"System: {platform.platform()}")
+    logger.info(f"Python: {sys.version.split()[0]}")
     logger.info("=" * 80)
     logger.info("")
     logger.info("🚀 Starting AILEE-Core API Server...")
@@ -196,6 +200,15 @@ async def lifespan(app: FastAPI):
     
     uptime = time.time() - startup_time
     logger.info(f"⏱️  Total uptime: {uptime:.2f} seconds")
+    
+    # Log memory usage at shutdown
+    try:
+        process = psutil.Process()
+        mem_info = process.memory_info()
+        logger.info(f"🧠 Memory at shutdown: {mem_info.rss / 1024 / 1024:.2f} MB")
+    except Exception:
+        pass
+        
     logger.info("✅ Graceful shutdown complete")
     logger.info("=" * 80)
 
