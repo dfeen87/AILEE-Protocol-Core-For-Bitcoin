@@ -112,6 +112,18 @@ if(NOT RocksDB_FOUND)
     endif()
 endif()
 
+# Manual fallback: locate rocksdb library and headers directly via CMake search
+if(NOT RocksDB_FOUND)
+    find_library(ROCKSDB_LIBRARY_PATH NAMES rocksdb)
+    find_path(ROCKSDB_HEADER_PATH rocksdb/db.h)
+    if(ROCKSDB_LIBRARY_PATH AND ROCKSDB_HEADER_PATH)
+        set(RocksDB_FOUND TRUE)
+        set(ROCKSDB_LINK_LIBS ${ROCKSDB_LIBRARY_PATH})
+        include_directories(${ROCKSDB_HEADER_PATH})
+        message(STATUS "RocksDB found via manual search: ${ROCKSDB_LIBRARY_PATH}")
+    endif()
+endif()
+
 # 9. libp2p (Optional - for P2P networking)
 # Add cmake module path for custom FindLibp2p
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
