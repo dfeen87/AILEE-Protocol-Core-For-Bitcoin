@@ -7,7 +7,7 @@
 [![CMake](https://img.shields.io/badge/CMake-3.10+-blue.svg)](https://cmake.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Python-green.svg)](https://fastapi.tiangolo.com/)
 [![Bitcoin](https://img.shields.io/badge/Bitcoin-Layer--2-orange.svg)](https://bitcoin.org/)
-[![Status](https://img.shields.io/badge/Status-Production--Ready%20Framework-green.svg)](https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin)
+[![Status](https://img.shields.io/badge/Status-Research%20%2F%20Pre--Production-yellow.svg)](https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin)
 
 **[Documentation](docs/)** | **[Quick Start](#-quick-start)** | **[API Reference](API_QUICKSTART.md)** | **[Architecture](docs/ARCHITECTURE_CONCEPTUAL.md)** | **[Contributing](docs/CONTRIBUTING.md)**
 
@@ -30,28 +30,28 @@
 
 ## 🎯 Overview
 
-**AILEE-Core** is a **secure and powerful** Bitcoin Layer-2 orchestration and verification framework. It leverages ambient AI for intelligent task scheduling and a robust, recovery-first design to extend Bitcoin's capabilities without modifying its consensus rules.
+**AILEE-Core** is a Bitcoin Layer-2 orchestration and verification framework. It leverages ambient AI for intelligent task scheduling and a recovery-first design to extend Bitcoin's capabilities without modifying its consensus rules.
 
-We are confident in this technology's ability to provide a scalable, energy-efficient, and verifiable Layer 2 solution. By anchoring state deterministically to Bitcoin and employing advanced reorg protection, AILEE ensures that your L2 operations remain secure even in the volatile environment of a proof-of-work blockchain.
+> ⚠️ **Important**: This repository is a **research and pre-production framework** and is **NOT ready for mainnet deployment**. The codebase contains multiple components that are mocked or stubbed (ZK proofs, full ECDSA signature verification, federated networking). Do not use this software to manage real funds or production assets. Please review `AUDIT_REPORT.md` for a full list of known limitations. The author genuinely cares about people's hard-earned money — AI-generated code should not be trusted without deep, professional oversight.
 
-> **Note**: This repository provides a **Production-Ready Architecture**. While the core logic for orchestration, reorg protection, and state management is complete, certain cryptographic primitives (like ZK proofs) are currently implemented as mocks to facilitate high-throughput testing. These must be replaced with real circuits (e.g., libsnark, Halo2) before mainnet deployment.
+> **Note**: Certain cryptographic primitives (like ZK proofs) are currently implemented as mocks to facilitate development and testing. These must be replaced with real circuits (e.g., libsnark, Halo2) and thoroughly audited before any mainnet deployment.
 
 ### Why AILEE?
 
-1.  **Secure by Design**: Built-in reorg protection and circuit breakers ensure system integrity.
-2.  **Powerful Orchestration**: Ambient AI optimizes task distribution across a decentralized mesh.
-3.  **Verifiable**: Zero-Knowledge (ZK) proofs and deterministic state commitments allow for trust-minimized verification.
+1.  **Reorg Awareness**: Built-in reorg detection logs L1 reorganizations to protect L2 state.
+2.  **Orchestration Framework**: Ambient AI optimizes task distribution across a decentralized mesh.
+3.  **Verifiable (in progress)**: Zero-Knowledge (ZK) proof scaffolding and deterministic state commitments allow for trust-minimized verification once real circuits are integrated.
 4.  **Bitcoin-Native**: Respects Bitcoin as the ultimate settlement layer.
 
 ---
 
 ## ✨ Key Features
 
-### 🛡️ Secure Reorg Protection (New)
+### 🛡️ Reorg Detection
 - **RocksDB-Backed Persistence**: Tracks Bitcoin block history and reorg events with high performance.
-- **Deep Reorg Detection**: Automatically detects and handles deep blockchain reorganizations (>6 blocks).
-- **State Safety**: Prevents L2 state corruption by halting block production during detected instability.
-- **Integration**: Tightly coupled with the Block Producer to ensure no unsafe blocks are minted during L1 turbulence.
+- **Deep Reorg Detection**: Detects deep blockchain reorganizations (>6 blocks) and logs warnings.
+- **State Safety**: Logs reorg events to allow operators to verify L2 state against the new L1 chain.
+- **Integration**: Wired to the Bitcoin ZMQ listener for real-time block tracking.
 
 ### 🧠 Ambient AI Orchestration
 - **Intelligent Task Scheduling**: Weighted, round-robin, least-loaded, and latency-aware strategies.
@@ -141,6 +141,10 @@ ctest --verbose
 │  │ Orchestration│  │  Reorg       │  │  Federated         │  │
 │  │ & Scheduling │  │  Detector    │  │  Learning          │  │
 │  └──────────────┘  └──────────────┘  └────────────────────┘  │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │            Ambient AI Telemetry & Byzantine Detection    │  │
+│  └──────────────────────────────────────────────────────────┘  │
 │                                                                 │
 │  ┌──────────────────────────────────────────────────────────┐  │
 │  │              L2 State & Ledger Management                │  │

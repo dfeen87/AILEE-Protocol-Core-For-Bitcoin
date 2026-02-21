@@ -164,7 +164,7 @@ class Settings(BaseSettings):
     @field_validator("env")
     def validate_env(cls, v):
         """Validate environment is one of the allowed values"""
-        allowed = ["production", "staging", "development"]
+        allowed = ["production", "staging", "development", "testnet"]
         if v.lower() not in allowed:
             raise ValueError(f"env must be one of {allowed}")
         return v.lower()
