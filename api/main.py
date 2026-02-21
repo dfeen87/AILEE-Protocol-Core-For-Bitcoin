@@ -60,6 +60,7 @@ async def lifespan(app: FastAPI):
     logger.info("")
     logger.info("🚀 Starting AILEE-Core API Server...")
     logger.info(f"📍 Binding to {settings.host}:{settings.port}")
+    logger.info(f"   └─ PORT env var: {os.getenv('PORT', 'not set')} | AILEE_PORT env var: {os.getenv('AILEE_PORT', 'not set')}")
     logger.info(f"🔒 JWT Auth: {'Enabled' if settings.jwt_enabled else 'Disabled'}")
     logger.info(f"🌐 CORS: {'Enabled' if settings.cors_enabled else 'Disabled'}")
     logger.info(f"⏱️  Rate Limiting: {'Enabled' if settings.rate_limit_enabled else 'Disabled'}")
