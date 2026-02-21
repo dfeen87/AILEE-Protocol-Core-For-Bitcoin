@@ -79,10 +79,10 @@ if ! kill -0 $CPP_PID 2>/dev/null; then\n\
     exit 1\n\
 fi\n\
 echo "C++ node started successfully"\n\
-echo "Starting Python API on :8000..."\n\
-export AILEE_PORT=8000\n\
+echo "Starting Python API on :${PORT:-8000}..."\n\
+export AILEE_PORT=${PORT:-8000}\n\
 export AILEE_NODE_URL="http://localhost:8080"\n\
-exec uvicorn api.main:app --host 0.0.0.0 --port 8000 --log-level info' > /app/start.sh && \
+exec uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8000} --log-level info' > /app/start.sh && \
     chmod +x /app/start.sh && chown ailee:ailee /app/start.sh
 
 USER ailee

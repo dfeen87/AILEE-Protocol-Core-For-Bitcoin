@@ -43,8 +43,8 @@ class Settings(BaseSettings):
         description="Host to bind the API server"
     )
     port: int = Field(
-        default=8000,
-        description="Port to bind the API server"
+        default_factory=lambda: int(os.getenv("PORT", "8000")),
+        description="Port to bind the API server (reads PORT env var as fallback when AILEE_PORT is not set)"
     )
     
     # CORS
