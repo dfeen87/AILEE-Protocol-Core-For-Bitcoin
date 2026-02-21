@@ -64,7 +64,7 @@ async def _keepalive_loop(interval: int) -> None:
                 response = await client.get(
                     f"http://127.0.0.1:{settings.port}/health"
                 )
-            logger.debug(
+            logger.info(
                 "💓 Keepalive ping – status %s", response.status_code
             )
         except (httpx.RequestError, httpx.HTTPStatusError) as exc:
