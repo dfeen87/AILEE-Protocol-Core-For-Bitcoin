@@ -88,7 +88,6 @@ Documentation = "https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin/tree
 Repository = "https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin"
 Issues = "https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin/issues"
 Changelog = "https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin/blob/main/CHANGELOG.md"
-"Live Demo" = "https://ailee-protocol-core-for-bitcoin.fly.dev/"
 
 [tool.setuptools]
 packages = ["api", "api.routers"]
