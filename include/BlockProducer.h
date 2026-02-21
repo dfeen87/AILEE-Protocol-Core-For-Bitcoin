@@ -8,6 +8,12 @@
 #include <string>
 #include <thread>
 
+namespace ailee {
+    namespace l1 {
+        class ReorgDetector;
+    }
+}
+
 namespace ailee::l2 {
 
 // Forward declaration
@@ -49,6 +55,9 @@ public:
     // Set the mempool reference (must be called before start)
     void setMempool(Mempool* mempool);
 
+    // Set the reorg detector reference
+    void setReorgDetector(ailee::l1::ReorgDetector* detector);
+
     // Called by other systems to report transactions (deprecated - use mempool directly)
     void recordTransaction();
 
@@ -65,6 +74,7 @@ private:
     std::unique_ptr<std::thread> producerThread_;
     
     Mempool* mempool_{nullptr}; // Non-owning pointer to mempool
+    ailee::l1::ReorgDetector* reorgDetector_{nullptr}; // Non-owning pointer
 };
 
 } // namespace ailee::l2

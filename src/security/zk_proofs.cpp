@@ -10,6 +10,7 @@
 #include <chrono>
 #include <functional>
 #include <openssl/sha.h>
+#include <thread>
 
 namespace ailee::zk {
 
@@ -71,10 +72,15 @@ Proof ZKEngine::generateProofWithTimestamp(const std::string& taskId,
 }
 
 // -----------------------------
-// Verify Proof (stub)
+// Verify Proof (Simulated)
 // -----------------------------
 bool ZKEngine::verifyProof(const Proof& proof) {
     if (proof.proofData.empty() || proof.publicInput.empty()) return false;
+
+    // Simulate ZK-SNARK verification cost (typically 2-10ms on modern CPUs)
+    // This makes performance benchmarks more realistic.
+    // TODO: Replace with libsnark::r1cs_gg_ppzksnark_verifier_strong_IC when integrating real circuits.
+    std::this_thread::sleep_for(std::chrono::milliseconds(3));
 
     const std::string expected = sha256Hex(proof.publicInput + ":" + std::to_string(proof.timestampMs));
     bool valid = (proof.proofData == expected);

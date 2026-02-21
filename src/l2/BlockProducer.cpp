@@ -1,5 +1,6 @@
 #include "BlockProducer.h"
 #include "Mempool.h"
+#include "ReorgDetector.h"
 
 #include <chrono>
 #include <sstream>
@@ -68,6 +69,11 @@ void BlockProducer::setMempool(Mempool* mempool) {
     log("INFO", "BlockProducer mempool reference set");
 }
 
+void BlockProducer::setReorgDetector(ailee::l1::ReorgDetector* detector) {
+    reorgDetector_ = detector;
+    log("INFO", "BlockProducer reorg detector set");
+}
+
 void BlockProducer::recordTransaction() {
     std::lock_guard<std::mutex> lock(stateMutex_);
     state_.totalTransactions++;
@@ -101,6 +107,24 @@ void BlockProducer::blockProductionLoop() {
 void BlockProducer::produceBlock() {
     std::lock_guard<std::mutex> lock(stateMutex_);
 
+    // Security check: If we have a reorg detector, check for deep reorgs
+    if (reorgDetector_) {
+        // In a real implementation, we would get the current L1 height.
+        // For now, we check if any deep reorgs have occurred recently.
+        auto reorgs = reorgDetector_->getRecentReorgHistory(1);
+        if (!reorgs.empty()) {
+            const auto& lastReorg = reorgs.front();
+            // In a production environment, we halt immediately upon detecting a deep reorg
+            // to ensure no invalid state transitions are committed to L2.
+            log("CRITICAL", "Deep reorg detected at height " + std::to_string(lastReorg.reorgHeight) +
+                ". HALTING block production to prevent state corruption.");
+
+            // Stop the producer loop immediately
+            running_ = false;
+            return;
+        }
+    }
+
     // Increment block height
     state_.blockHeight++;
 
@@ -117,16 +141,36 @@ void BlockProducer::produceBlock() {
         txsInBlock = transactions.size();
         
         if (txsInBlock > 0) {
-            // Confirm transactions in this block
-            std::vector<std::string> txHashes;
-            txHashes.reserve(txsInBlock);
+            // Validate and confirm transactions
+            std::vector<std::string> validTxHashes;
+            validTxHashes.reserve(txsInBlock);
+
             for (const auto& tx : transactions) {
-                txHashes.push_back(tx.txHash);
+                // Audit Fix: Basic Validation
+                // 1. Check if hash is valid length
+                if (tx.txHash.length() != 64) {
+                    log("WARN", "Invalid transaction hash detected: " + tx.txHash + ". Skipping.");
+                    continue;
+                }
+                // 2. Check if sender/receiver present (basic sanity)
+                if (tx.fromAddress.empty() || tx.toAddress.empty()) {
+                    log("WARN", "Malformed transaction detected (missing sender/receiver). Skipping.");
+                    continue;
+                }
+                // 3. Enforce signature presence
+                if (tx.signature.empty()) {
+                    log("WARN", "Transaction missing signature. Rejecting: " + tx.txHash);
+                    continue;
+                }
+
+                validTxHashes.push_back(tx.txHash);
             }
-            mempool_->confirmTransactions(txHashes, state_.blockHeight);
-            
-            // Update total transaction count
-            state_.totalTransactions += txsInBlock;
+
+            if (!validTxHashes.empty()) {
+                mempool_->confirmTransactions(validTxHashes, state_.blockHeight);
+                // Update total transaction count
+                state_.totalTransactions += validTxHashes.size();
+            }
         }
     }
 

@@ -16,6 +16,7 @@
 #include <mutex>
 #include <memory>
 #include <fstream>
+#include <filesystem>
 
 // Core Protocol Headers
 #include "ailee_tps_engine.h"
@@ -36,6 +37,7 @@
 #include "BitcoinZMQListener.h"
 #include "BitcoinRPCClient.h"
 #include "Global_Seven.h"
+#include "ReorgDetector.h"
 
 // Advanced Computing
 #include "runtime/WasmEngine.h"
@@ -296,7 +298,13 @@ public:
         if (cfg_.enableOrchestration) {
             initOrchestrationEngine();
         }
+
+        // Initialize Reorg Detector (Security)
+        initReorgDetector();
         
+        // Initialize ZMQ Listener and connect to ReorgDetector
+        initZMQListener();
+
         // Initialize block producer (L2 chain component)
         initBlockProducer();
         
@@ -692,9 +700,50 @@ private:
     std::unique_ptr<ailee::AILEEWebServer> webServer_;
     std::unique_ptr<ailee::l2::BlockProducer> blockProducer_;
     std::unique_ptr<ailee::l2::Mempool> mempool_;
+    std::unique_ptr<ailee::l1::ReorgDetector> reorgDetector_;
+    std::unique_ptr<ailee::BitcoinZMQListener> zmqListener_;
     std::atomic<bool> shutdownCalled_;
     std::chrono::steady_clock::time_point startTime_;
     
+    void initZMQListener() {
+        try {
+            zmqListener_ = std::make_unique<ailee::BitcoinZMQListener>();
+
+            if (reorgDetector_) {
+                zmqListener_->setReorgDetector(reorgDetector_.get());
+                log(LogLevel::INFO, "ZMQ Listener connected to ReorgDetector");
+            }
+
+            // In a real deployment, we would call zmqListener_->start() in a separate thread.
+            // For this implementation, we just initialize it.
+            zmqListener_->init();
+        } catch (const std::exception& e) {
+            log(LogLevel::ERROR, "Failed to initialize ZMQ Listener: " + std::string(e.what()));
+        }
+    }
+
+    void initReorgDetector() {
+        try {
+            // Ensure data directory exists
+            std::filesystem::create_directories("data");
+            log(LogLevel::INFO, "Created data directory at " + std::filesystem::absolute("data").string());
+
+            std::string dbPath = "data/reorg_db";
+            reorgDetector_ = std::make_unique<ailee::l1::ReorgDetector>(dbPath);
+
+            std::string err;
+            if (reorgDetector_->initialize(&err)) {
+                log(LogLevel::INFO, "ReorgDetector initialized successfully at " + dbPath);
+            } else {
+                log(LogLevel::WARN, "ReorgDetector initialization failed: " + err +
+                    " (Running with reduced L1 security)");
+                reorgDetector_.reset();
+            }
+        } catch (const std::exception& e) {
+            log(LogLevel::ERROR, "Failed to initialize ReorgDetector: " + std::string(e.what()));
+        }
+    }
+
     void initOrchestrationEngine() {
         try {
             auto orchConfig = ailee::sched::createDefaultConfig();
@@ -798,6 +847,11 @@ private:
             // Wire mempool to block producer
             blockProducer_->setMempool(mempool_.get());
             
+            // Wire reorg detector to block producer
+            if (reorgDetector_) {
+                blockProducer_->setReorgDetector(reorgDetector_.get());
+            }
+
             log(LogLevel::INFO, "Block producer initialized (interval: " + 
                 std::to_string(blockConfig.blockIntervalMs) + "ms, anchor every " + 
                 std::to_string(blockConfig.commitmentInterval) + " blocks)");
