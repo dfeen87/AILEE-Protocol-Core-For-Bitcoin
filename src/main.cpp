@@ -184,7 +184,9 @@ struct Config {
     // Node identity
     std::string nodeId            = "node-001";
     std::string region            = "us-east";
-    
+    std::string network           = "bitcoin-mainnet";
+    std::string bitcoinZmqEndpoint = "tcp://127.0.0.1:28332";
+
     bool validate() const {
         if (tpsSimNodes < 10 || tpsSimNodes > 10000) {
             log(LogLevel::ERROR, "Invalid tpsSimNodes: " + std::to_string(tpsSimNodes));
@@ -261,7 +263,13 @@ static Config loadConfigFromEnv() {
     if (const char* region = std::getenv("AILEE_REGION")) {
         c.region = region;
     }
-    
+    if (const char* network = std::getenv("AILEE_NETWORK")) {
+        c.network = network;
+    }
+    if (const char* zmq = std::getenv("AILEE_BITCOIN_ZMQ_ENDPOINT")) {
+        c.bitcoinZmqEndpoint = zmq;
+    }
+
     // Monitoring
     if (const char* logPath = std::getenv("AILEE_LOG_PATH")) {
         c.logPath = logPath;
@@ -707,7 +715,7 @@ private:
     
     void initZMQListener() {
         try {
-            zmqListener_ = std::make_unique<ailee::BitcoinZMQListener>();
+            zmqListener_ = std::make_unique<ailee::BitcoinZMQListener>(cfg_.bitcoinZmqEndpoint);
 
             if (reorgDetector_) {
                 zmqListener_->setReorgDetector(reorgDetector_.get());
@@ -799,7 +807,7 @@ private:
                 status.running = true;
                 status.version = "2.0.0";
                 status.uptime_seconds = uptime;
-                status.network = "bitcoin-mainnet";
+                status.network = cfg_.network;
                 status.total_transactions = 0;
                 status.total_blocks = 0;
                 status.current_tps = 0.0;
