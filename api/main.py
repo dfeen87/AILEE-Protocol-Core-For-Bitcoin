@@ -4,6 +4,7 @@ Bitcoin Layer-2 Trust Oracle
 Production-ready FastAPI implementation with deterministic, safe, read-only endpoints
 """
 
+import asyncio
 import logging
 import os
 import sys
@@ -15,6 +16,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
+import httpx
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -39,6 +41,33 @@ audit_logger = get_audit_logger(log_file=settings.audit_log_path)
 
 # Global state
 startup_time = None
+
+
+async def _keepalive_loop(interval: int) -> None:
+    """
+    Background keepalive task.
+
+    Periodically pings the server's own health endpoint so that PaaS platforms
+    (Fly.io, Railway, etc.) do not consider the process idle and suspend or stop
+    the machine.  Any connection or HTTP errors are caught and logged at DEBUG
+    level so they never disrupt normal operation.
+
+    Args:
+        interval: Seconds to sleep between each ping.
+    """
+    await asyncio.sleep(interval)  # initial delay – let startup complete first
+    while True:
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(
+                    f"http://127.0.0.1:{settings.port}/health"
+                )
+            logger.debug(
+                "💓 Keepalive ping – status %s", response.status_code
+            )
+        except (httpx.RequestError, httpx.HTTPStatusError) as exc:
+            logger.debug("💓 Keepalive ping failed (non-critical): %s", exc)
+        await asyncio.sleep(interval)
 
 
 @asynccontextmanager
@@ -129,12 +158,30 @@ async def lifespan(app: FastAPI):
     logger.info("")
     
     startup_time = time.time()
-    
+
+    # Start keepalive background task
+    keepalive_task = None
+    if settings.keepalive_enabled:
+        logger.info(
+            f"💓 Starting keepalive task (interval: {settings.keepalive_interval_seconds}s)"
+        )
+        keepalive_task = asyncio.create_task(
+            _keepalive_loop(settings.keepalive_interval_seconds)
+        )
+
     yield
-    
+
     # Shutdown
     logger.info("")
     logger.info("🛑 Shutting down AILEE-Core API Server...")
+
+    # Cancel keepalive task
+    if keepalive_task is not None:
+        keepalive_task.cancel()
+        try:
+            await keepalive_task
+        except asyncio.CancelledError:
+            pass
     
     # Close database
     try:
