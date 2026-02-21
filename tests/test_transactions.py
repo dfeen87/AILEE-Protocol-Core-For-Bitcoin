@@ -9,7 +9,7 @@ from api.main import app
 client = TestClient(app)
 
 
-def test_submit_transaction():
+def test_submit_transaction(auth_headers):
     """Test submitting a valid transaction"""
     response = client.post(
         "/transactions/submit",
@@ -18,7 +18,8 @@ def test_submit_transaction():
             "to_address": "bob",
             "amount": 1000,
             "data": "Test payment"
-        }
+        },
+        headers=auth_headers,
     )
     
     assert response.status_code == 200
@@ -31,7 +32,7 @@ def test_submit_transaction():
     assert "timestamp" in data
 
 
-def test_submit_transaction_same_address():
+def test_submit_transaction_same_address(auth_headers):
     """Test that submitting to same address fails"""
     response = client.post(
         "/transactions/submit",
@@ -39,14 +40,15 @@ def test_submit_transaction_same_address():
             "from_address": "alice",
             "to_address": "alice",
             "amount": 100
-        }
+        },
+        headers=auth_headers,
     )
     
     assert response.status_code == 400
     assert "same address" in response.json()["detail"]
 
 
-def test_submit_transaction_invalid_amount():
+def test_submit_transaction_invalid_amount(auth_headers):
     """Test that invalid amount fails validation"""
     response = client.post(
         "/transactions/submit",
@@ -54,13 +56,14 @@ def test_submit_transaction_invalid_amount():
             "from_address": "alice",
             "to_address": "bob",
             "amount": 0
-        }
+        },
+        headers=auth_headers,
     )
     
     assert response.status_code == 422  # Pydantic validation error
 
 
-def test_list_transactions():
+def test_list_transactions(auth_headers):
     """Test listing all transactions"""
     # Submit a transaction first
     client.post(
@@ -69,7 +72,8 @@ def test_list_transactions():
             "from_address": "alice",
             "to_address": "bob",
             "amount": 500
-        }
+        },
+        headers=auth_headers,
     )
     
     # List transactions
@@ -82,7 +86,7 @@ def test_list_transactions():
     assert "page_size" in data
 
 
-def test_get_transaction_by_hash():
+def test_get_transaction_by_hash(auth_headers):
     """Test getting a transaction by hash"""
     # Submit a transaction
     submit_response = client.post(
@@ -91,7 +95,8 @@ def test_get_transaction_by_hash():
             "from_address": "alice",
             "to_address": "charlie",
             "amount": 750
-        }
+        },
+        headers=auth_headers,
     )
     tx_hash = submit_response.json()["tx_hash"]
     
@@ -112,7 +117,7 @@ def test_get_nonexistent_transaction():
     assert "not found" in response.json()["detail"]
 
 
-def test_get_transactions_by_address():
+def test_get_transactions_by_address(auth_headers):
     """Test getting transactions for an address"""
     # Submit transactions
     client.post(
@@ -121,7 +126,8 @@ def test_get_transactions_by_address():
             "from_address": "alice",
             "to_address": "bob",
             "amount": 100
-        }
+        },
+        headers=auth_headers,
     )
     client.post(
         "/transactions/submit",
@@ -129,7 +135,8 @@ def test_get_transactions_by_address():
             "from_address": "bob",
             "to_address": "charlie",
             "amount": 200
-        }
+        },
+        headers=auth_headers,
     )
     
     # Get Alice's transactions
@@ -148,7 +155,7 @@ def test_get_transactions_by_address():
     assert data["total_count"] >= 2
 
 
-def test_transaction_pagination():
+def test_transaction_pagination(auth_headers):
     """Test transaction list pagination"""
     # Submit multiple transactions
     for i in range(5):
@@ -158,7 +165,8 @@ def test_transaction_pagination():
                 "from_address": f"user{i}",
                 "to_address": f"user{i+1}",
                 "amount": 100 * (i + 1)
-            }
+            },
+            headers=auth_headers,
         )
     
     # Get first page
@@ -176,7 +184,7 @@ def test_transaction_pagination():
     assert data["page"] == 2
 
 
-def test_transaction_hash_deterministic():
+def test_transaction_hash_deterministic(auth_headers):
     """Test that transaction hash is deterministic"""
     tx_data = {
         "from_address": "alice",
@@ -187,8 +195,8 @@ def test_transaction_hash_deterministic():
     
     # Submit same transaction twice should produce different hashes
     # (because timestamp is different)
-    response1 = client.post("/transactions/submit", json=tx_data)
-    response2 = client.post("/transactions/submit", json=tx_data)
+    response1 = client.post("/transactions/submit", json=tx_data, headers=auth_headers)
+    response2 = client.post("/transactions/submit", json=tx_data, headers=auth_headers)
     
     # Hashes should be different due to different timestamps
     assert response1.json()["tx_hash"] != response2.json()["tx_hash"]
