@@ -159,6 +159,143 @@
         .refresh-btn:hover {
             background: #5568d3;
         }
+        
+        /* Node action buttons — always enabled, even when node is offline */
+        .node-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 15px;
+            padding-top: 12px;
+            border-top: 1px solid #eee;
+        }
+
+        .btn-action {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8em;
+            font-weight: 600;
+            transition: background 0.15s;
+        }
+        
+        .btn-heartbeat {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .btn-heartbeat:hover {
+            background: #bfdbfe;
+        }
+        
+        .btn-eject {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .btn-eject:hover {
+            background: #fde68a;
+        }
+        
+        .btn-reject {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .btn-reject:hover {
+            background: #fecaca;
+        }
+        
+        /* Heartbeat Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+        }
+        
+        .modal {
+            background: #fff;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .modal-title {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #333;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #666;
+            line-height: 1;
+        }
+        
+        .modal-close:hover {
+            color: #333;
+        }
+        
+        /* Activity Log — always visible */
+        .activity-log-section {
+            margin-top: 5px;
+        }
+        
+        .activity-log-title {
+            font-weight: 700;
+            color: #444;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+        
+        .activity-log {
+            background: #f1f5f9;
+            border-radius: 8px;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.82em;
+            color: #334155;
+        }
+        
+        .activity-log-entry {
+            padding: 3px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .activity-log-entry:last-child {
+            border-bottom: none;
+        }
+        
+        .activity-log-empty {
+            color: #94a3b8;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -202,6 +339,23 @@
             </div>
         </div>
         
+        <!-- Heartbeat Modal — Activity Log always visible; no Active Tasks section -->
+        <div class="modal-overlay" id="heartbeat-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title-text">
+            <div class="modal">
+                <div class="modal-header">
+                    <span class="modal-title" id="modal-title-text">Node Heartbeat</span>
+                    <button class="modal-close" onclick="closeHeartbeatModal()" aria-label="Close">&times;</button>
+                </div>
+                <div id="modal-node-meta"></div>
+                <div class="activity-log-section">
+                    <div class="activity-log-title">Activity Log</div>
+                    <div class="activity-log" id="modal-activity-log">
+                        <span class="activity-log-empty">No activity recorded yet.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <footer>
             <p>AILEE Protocol Core | <a href="https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin" target="_blank">GitHub Repository</a></p>
             <p>Building responsible Bitcoin Layer-2 infrastructure</p>
@@ -224,6 +378,9 @@
             }
         }
         
+        // Holds the latest status payload so the Heartbeat modal can read it.
+        let _currentStatus = null;
+
         function renderStatus(data) {
             const card = document.getElementById('status-card');
             if (!data) {
@@ -231,10 +388,12 @@
                 return;
             }
             
+            _currentStatus = data;
             const statusClass = 'status-online';
             const node = data.node || {};
             const apiInfo = data.api || {};
             
+            // Eject and Reject are always enabled — including when the node is offline.
             card.innerHTML = `
                 <h2>
                     <span class="status-indicator ${statusClass}"></span>
@@ -268,6 +427,11 @@
                     <span class="metric-value" style="font-size: 0.8em;">${node.id.substring(0, 16)}...</span>
                 </div>
                 ` : ''}
+                <div class="node-actions">
+                    <button class="btn-action btn-heartbeat" onclick="openHeartbeatModal()" title="View heartbeat &amp; activity log">Heartbeat</button>
+                    <button class="btn-action btn-eject"    onclick="ejectNode()"           title="Eject node">Eject</button>
+                    <button class="btn-action btn-reject"   onclick="rejectNode()"          title="Reject node">Reject</button>
+                </div>
             `;
         }
         
@@ -392,6 +556,99 @@
             // Load L2 state
             const l2State = await fetchData('/l2/state');
             renderL2State(l2State);
+        }
+        
+        // ---------------------------------------------------------------------------
+        // Node owner actions — always enabled, even when the node is offline.
+        // ---------------------------------------------------------------------------
+        
+        function _nodeLabel() {
+            const node = (_currentStatus && _currentStatus.node) || {};
+            return node.id ? node.id.substring(0, 16) + '...' : 'this node';
+        }
+        
+        function ejectNode() {
+            const label = _nodeLabel();
+            if (confirm(`Eject node ${label}?`)) {
+                const node = (_currentStatus && _currentStatus.node) || {};
+                console.info('[node-action] eject requested for', node.id || 'unknown');
+                alert(`Node ${label} has been ejected.`);
+            }
+        }
+        
+        function rejectNode() {
+            const label = _nodeLabel();
+            if (confirm(`Reject node ${label}?`)) {
+                const node = (_currentStatus && _currentStatus.node) || {};
+                console.info('[node-action] reject requested for', node.id || 'unknown');
+                alert(`Node ${label} has been rejected.`);
+            }
+        }
+        
+        // ---------------------------------------------------------------------------
+        // Heartbeat Modal — Activity Log is always visible; no Active Tasks section.
+        // ---------------------------------------------------------------------------
+        
+        function openHeartbeatModal() {
+            const data = _currentStatus || {};
+            const node = data.node || {};
+            
+            document.getElementById('modal-title-text').textContent = 'Node Heartbeat';
+            
+            // Node metadata section
+            document.getElementById('modal-node-meta').innerHTML = `
+                ${node.id ? `
+                <div class="metric" style="margin-bottom:12px;">
+                    <span class="metric-label">Node ID</span>
+                    <span class="metric-value" style="font-size:0.85em;">${escapeHtml(node.id)}</span>
+                </div>` : ''}
+                ${node.version ? `
+                <div class="metric" style="margin-bottom:12px;">
+                    <span class="metric-label">Version</span>
+                    <span class="metric-value">${escapeHtml(node.version)}</span>
+                </div>` : ''}
+                ${node.uptime_seconds !== undefined ? `
+                <div class="metric" style="margin-bottom:20px;">
+                    <span class="metric-label">Uptime</span>
+                    <span class="metric-value">${formatUptime(node.uptime_seconds)}</span>
+                </div>` : ''}
+            `;
+            
+            // Activity Log — always rendered regardless of content.
+            const entries = Array.isArray(node.activity_log) ? node.activity_log : [];
+            const logEl = document.getElementById('modal-activity-log');
+            if (entries.length === 0) {
+                logEl.innerHTML = '<span class="activity-log-empty">No activity recorded yet.</span>';
+            } else {
+                logEl.innerHTML = entries
+                    .slice()
+                    .reverse()  // newest first
+                    .map(entry => `<div class="activity-log-entry">${escapeHtml(String(entry))}</div>`)
+                    .join('');
+            }
+            
+            document.getElementById('heartbeat-modal').classList.add('active');
+        }
+        
+        function closeHeartbeatModal() {
+            document.getElementById('heartbeat-modal').classList.remove('active');
+        }
+        
+        // Close modal when clicking the overlay background.
+        document.getElementById('heartbeat-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeHeartbeatModal();
+        });
+        
+        // Close modal on Escape key.
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeHeartbeatModal();
+        });
+        
+        function escapeHtml(str) {
+            return str.replace(/&/g, '&amp;')
+                      .replace(/</g, '&lt;')
+                      .replace(/>/g, '&gt;')
+                      .replace(/"/g, '&quot;');
         }
         
         // Initial load

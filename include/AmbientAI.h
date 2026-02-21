@@ -95,6 +95,68 @@ struct Reputation {
     uint64_t disputes = 0;
 };
 
+// ================= Local Session Manager =================
+// Manages node session state locally, keeping the node "alive" even when
+// disconnected from the API endpoint.
+
+class LocalSessionManager {
+public:
+    struct SessionState {
+        std::string nodeId;
+        bool connected = false;
+        uint64_t sessionToken = 0;
+        std::chrono::system_clock::time_point lastActivity;
+        std::vector<std::string> activityLog;
+    };
+
+    explicit LocalSessionManager(const std::string& nodeId) {
+        state_.nodeId = nodeId;
+        state_.lastActivity = std::chrono::system_clock::now();
+    }
+
+    void recordActivity(const std::string& event) {
+        std::lock_guard<std::mutex> lock(mu_);
+        state_.lastActivity = std::chrono::system_clock::now();
+        state_.activityLog.push_back(event);
+        if (state_.activityLog.size() > kMaxLogEntries) {
+            state_.activityLog.erase(state_.activityLog.begin());
+        }
+    }
+
+    void setConnected(bool connected) {
+        std::lock_guard<std::mutex> lock(mu_);
+        state_.connected = connected;
+    }
+
+    bool isConnected() const {
+        std::lock_guard<std::mutex> lock(mu_);
+        return state_.connected;
+    }
+
+    SessionState getState() const {
+        std::lock_guard<std::mutex> lock(mu_);
+        return state_;
+    }
+
+    // Maintenance tick: keeps session alive even when disconnected from the API endpoint.
+    void runMaintenanceTick() {
+        std::lock_guard<std::mutex> lock(mu_);
+        state_.sessionToken++;
+        state_.lastActivity = std::chrono::system_clock::now();
+        if (!state_.connected) {
+            state_.activityLog.push_back("[offline-keepalive] session maintained");
+            if (state_.activityLog.size() > kMaxLogEntries) {
+                state_.activityLog.erase(state_.activityLog.begin());
+            }
+        }
+    }
+
+private:
+    static constexpr std::size_t kMaxLogEntries = 100;
+    mutable std::mutex mu_;
+    SessionState state_;
+};
+
 // ================= Safety / Circuit-Breaker Policy =================
 
 struct SafetyPolicy {
@@ -118,7 +180,8 @@ enum class NodeBehavior {
 class AmbientNode {
 public:
     explicit AmbientNode(NodeId id, SafetyPolicy policy)
-        : id_(std::move(id)), policy_(policy) {}
+        : id_(std::move(id)), policy_(policy),
+          sessionManager_(std::make_shared<LocalSessionManager>(id_.pubkey)) {}
 
     void ingestTelemetry(const TelemetrySample& sample) {
         std::lock_guard<std::mutex> lock(mu_);
@@ -189,6 +252,11 @@ public:
 
     NodeId id() const { return id_; }
 
+    // Returns a reference to the local session manager for this node.
+    // The session manager is intentionally excluded from serialization (see to_json).
+    LocalSessionManager& sessionManager() { return *sessionManager_; }
+    const LocalSessionManager& sessionManager() const { return *sessionManager_; }
+
     Reputation reputation() const {
         std::lock_guard<std::mutex> lock(mu_);
         return rep_;
@@ -227,6 +295,9 @@ private:
     ZKProofStub lastProof_;
     Reputation rep_{id_, 0.0, 0, 0};
     std::atomic<bool> safeMode_{false};
+    // sessionManager_ is excluded from serialization to avoid
+    // capturing transient local state in snapshots or wire formats.
+    std::shared_ptr<LocalSessionManager> sessionManager_;
 };
 
 // ================= MeshCoordinator Class =================
