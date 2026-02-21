@@ -3,3 +3,11 @@ startCommand = "/app/start.sh"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ALWAYS"
+postDeployCommand = "curl -sf http://localhost:${PORT:-8080}/health"
+
+[env]
+  AILEE_ENV = "testnet"
+  AILEE_LOG_LEVEL = "info"
+  AILEE_NETWORK = "bitcoin-testnet"
+  AILEE_BITCOIN_ZMQ_ENDPOINT = "tcp://127.0.0.1:28332"
+  AILEE_NODE_ID = "ailee-node-1"
