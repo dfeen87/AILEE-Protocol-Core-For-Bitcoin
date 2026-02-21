@@ -1,13 +1,13 @@
 [deploy]
 startCommand = "/app/start.sh"
-postDeployCommand = "/app/post_deploy.sh"
+postDeployCommand = "bash /app/post_deploy.sh"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ALWAYS"
 
 [env]
-  AILEE_ENV = "testnet"
-  AILEE_LOG_LEVEL = "info"
-  AILEE_NETWORK = "bitcoin-testnet"
-  AILEE_BITCOIN_ZMQ_ENDPOINT = "tcp://127.0.0.1:28332"
-  AILEE_NODE_ID = "ailee-node-1"
+AILEE_ENV = "testnet"
+AILEE_LOG_LEVEL = "info"
+AILEE_NETWORK = "bitcoin-testnet"
+AILEE_BITCOIN_ZMQ_ENDPOINT = "tcp://127.0.0.1:28332"
+AILEE_NODE_ID = "ailee-node-1"
