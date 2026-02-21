@@ -57,6 +57,8 @@ RUN useradd -m -u 1000 ailee && \
 # Copy application code
 COPY --chown=ailee:ailee api/ ./api/
 COPY --chown=ailee:ailee web/ ./web/
+COPY --chown=ailee:ailee scripts/railway_post_deploy.sh /app/post_deploy.sh
+RUN chmod +x /app/post_deploy.sh
 
 # Copy C++ node and config from build stage
 COPY --from=cpp-builder --chown=ailee:ailee /build/build/ailee_node ./ailee_node
