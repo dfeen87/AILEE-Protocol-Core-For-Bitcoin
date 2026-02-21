@@ -62,10 +62,13 @@ COPY --from=cpp-builder --chown=ailee:ailee /build/config ./config
 
 RUN chmod +x ./ailee_node
 
-# FIXED: Start script with proper port configuration
+# Start script: runs as root (no USER directive) so that it can always write
+# to /data even when Railway (or another platform) mounts a volume there at
+# runtime with root ownership, overriding the build-time chown.
 RUN echo '#!/bin/bash\n\
 set -e\n\
-# Ensure /data directory exists for database\n\
+# Ensure /data directory exists and is writable.\n\
+# Railway mounts volumes as root at runtime, so we must run as root here.\n\
 mkdir -p /data\n\
 echo "Starting C++ node on :8080..."\n\
 ./ailee_node > /app/logs/cpp-node.log 2>&1 &\n\
@@ -83,9 +86,7 @@ echo "Starting Python API on :${PORT:-8000}..."\n\
 export AILEE_PORT=${PORT:-8000}\n\
 export AILEE_NODE_URL="http://localhost:8080"\n\
 exec uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8000} --log-level info' > /app/start.sh && \
-    chmod +x /app/start.sh && chown ailee:ailee /app/start.sh
-
-USER ailee
+    chmod +x /app/start.sh
 EXPOSE 8000 8080
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
