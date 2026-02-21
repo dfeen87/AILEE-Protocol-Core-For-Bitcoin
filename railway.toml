@@ -3,7 +3,6 @@ startCommand = "/app/start.sh"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ALWAYS"
-postDeployCommand = "/app/post_deploy.sh"
 
 [env]
   AILEE_ENV = "testnet"
