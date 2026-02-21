@@ -30,6 +30,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install Python 3.11 and runtime dependencies
 # Note: Using Ubuntu 22.04 for both build and runtime stages ensures
 # binary compatibility for shared libraries (libjsoncpp25, libyaml-cpp0.7, librocksdb6.11)
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3.11 python3-pip python3.11-venv \
     curl libssl3 libcurl4 libzmq5 libjsoncpp25 \
@@ -70,6 +73,12 @@ set -e\n\
 # Ensure /data directory exists and is writable.\n\
 # Railway mounts volumes as root at runtime, so we must run as root here.\n\
 mkdir -p /data\n\
+\n\
+echo "--- System Diagnostics ---"\n\
+ulimit -a\n\
+free -m\n\
+df -h\n\
+echo "--------------------------"\n\
 \n\
 # Pin the C++ node to port 8181 so it never conflicts with the Railway-assigned\n\
 # PORT variable (Railway typically assigns 8080 or a dynamic port for HTTP traffic).\n\
