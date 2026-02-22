@@ -1,6 +1,7 @@
 # AILEE Protocol Core for Bitcoin: **Ambient AI + Bitcoin Layer-2 Orchestration Framework**
 
 *Building Intelligent, Verifiable, and Sustainable Bitcoin Infrastructure*
+> Mainnet Observer Deployment
 
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![C++ Standard](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://isocpp.org/)
