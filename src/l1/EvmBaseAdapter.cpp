@@ -151,7 +151,7 @@ struct EVMInternal {
         tlsEnabled = rpcEndpoint.rfind("https://", 0) == 0;
         rpcClient = std::make_unique<EvmJsonRpcClient>(rpcEndpoint, cfg.authUsername, cfg.authPassword);
 
-        auto resp = rpcClient->call("eth_chainId", Json::array(), onError);
+        auto resp = rpcClient->call("eth_chainId", Json::array({}), onError);
         if (!resp || !resp->contains("result")) {
             logEvt(Severity::Error, "EVM RPC chainId fetch failed", "RPC", onError);
             connectedRPC = false;
@@ -208,7 +208,7 @@ struct EVMInternal {
     bool estimateFees(ErrorCallback onError) {
         if (!connectedRPC || !rpcClient) return false;
 
-        auto tipResp = rpcClient->call("eth_maxPriorityFeePerGas", Json::array(), onError);
+        auto tipResp = rpcClient->call("eth_maxPriorityFeePerGas", Json::array({}), onError);
         if (tipResp && tipResp->contains("result")) {
             auto tipHex = (*tipResp)["result"].get<std::string>();
             if (auto parsedTip = parseHexU64(tipHex)) {
@@ -270,7 +270,7 @@ struct EVMInternal {
 
     std::optional<uint64_t> height() {
         if (!connectedRPC || !rpcClient) return std::nullopt;
-        auto resp = rpcClient->call("eth_blockNumber", Json::array(), nullptr);
+        auto resp = rpcClient->call("eth_blockNumber", Json::array({}), nullptr);
         if (!resp || !resp->contains("result")) return std::nullopt;
         auto hex = (*resp)["result"].get<std::string>();
         return parseHexU64(hex);
