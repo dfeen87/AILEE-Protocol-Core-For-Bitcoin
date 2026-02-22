@@ -21,6 +21,7 @@ RUN mkdir build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF && \
     make -j$(nproc) ailee_node
 
+
 # ============================
 # Stage 2 — Runtime Image
 # ============================
@@ -30,9 +31,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
-# Install Python 3.11 + runtime libs
+# Install Python 3.11 + runtime libs + build deps (REQUIRED for psutil)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3.11 python3-pip python3.11-venv \
+    gcc python3-dev build-essential \
     curl libssl3 libcurl4 libzmq5 libjsoncpp25 \
     libyaml-cpp0.7 librocksdb6.11 libstdc++6 procps \
     ca-certificates \
@@ -65,6 +67,7 @@ RUN chmod +x /app/post_deploy.sh
 COPY --from=cpp-builder --chown=ailee:ailee /build/build/ailee_node ./ailee_node
 COPY --from=cpp-builder --chown=ailee:ailee /build/config ./config
 RUN chmod +x ./ailee_node
+
 
 # ============================
 # Start Script (Heredoc Safe)
