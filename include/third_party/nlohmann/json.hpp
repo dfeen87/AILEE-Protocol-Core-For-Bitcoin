@@ -2,6 +2,7 @@
 
 #include <cctype>
 #include <cmath>
+#include <cstdint>
 #include <initializer_list>
 #include <map>
 #include <optional>
@@ -141,6 +142,11 @@ public:
         json j;
         j.data_ = array_t{init};
         return j;
+    }
+
+    static json number_unsigned(uint64_t value) {
+        // Note: stored as double; values > 2^53 lose precision (consistent with existing numeric constructors)
+        return json(static_cast<double>(value));
     }
 
     bool is_object() const { return std::holds_alternative<object_t>(data_); }
