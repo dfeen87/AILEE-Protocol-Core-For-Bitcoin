@@ -144,7 +144,10 @@ public:
             {"rewards", false}
         };
         auto resp = rpcClient_->call("getBlock",
-                                     nlohmann::json::array({slot, opts}),
+                                     nlohmann::json::array({
+                                         nlohmann::json::number_unsigned(slot),
+                                         opts
+                                     }),
                                      nullptr);
         if (!resp || !resp->contains("result") || (*resp)["result"].is_null()) {
             return std::nullopt;
