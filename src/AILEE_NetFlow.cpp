@@ -2,7 +2,7 @@
 // AILEE_NetFlow.cpp — Implementation for Hybrid Layer-2 Decentralized Internet
 // Integrates AmbientAI telemetry, ZK proof-of-bandwidth, token rewards, and relay scheduling
 
-#include "AILEE_NetFlow.h"
+#include "ailee_netflow.h"
 #include <chrono>
 #include <thread>
 #include <random>
