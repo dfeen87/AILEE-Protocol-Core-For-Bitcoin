@@ -240,7 +240,7 @@ struct AdapterConfig {
     std::string network;                // "mainnet", "testnet", "devnet"
     std::unordered_map<std::string, std::string> extra; // per‑chain params
     bool        enableTelemetry{true};
-    bool        readOnly{false};        // listen‑only
+    bool        readOnly{true};         // listen‑only (default: shadow/read-only mode)
     FeePolicy   feePolicy{};
     SlippagePolicy slippagePolicy{};
     double      minOracleConfidence{0.7};
