@@ -33,8 +33,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # Install Python 3.11 + runtime libs + build deps (REQUIRED for psutil)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.11 python3-pip python3.11-venv \
-    gcc python3-dev build-essential \
+    python3.11 python3-pip python3.11-venv python3.11-dev \
+    gcc build-essential \
     curl libssl3 libcurl4 libzmq5 libjsoncpp25 \
     libyaml-cpp0.7 librocksdb6.11 libstdc++6 procps \
     ca-certificates \
