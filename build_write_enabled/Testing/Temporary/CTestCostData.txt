@@ -1,0 +1,3 @@
+AdapterTests 1 0.00641598
+ReorgDetectorTests 1 0.0995333
+---

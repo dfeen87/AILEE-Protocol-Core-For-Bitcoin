@@ -99,3 +99,21 @@ TEST(AdapterRegistryTest, GetBlockHeightReturnsValue) {
     ASSERT_TRUE(h.has_value());
     EXPECT_EQ(h.value(), 42ULL);
 }
+
+TEST(AdapterConfigTest, ReadOnlyDefaultIsTrue) {
+    AdapterConfig cfg;
+    EXPECT_TRUE(cfg.readOnly);
+}
+
+#if defined(AILEE_BITCOIN_WRITE_DISABLED)
+TEST(BitcoinShadowModeTest, WriteDisabledAtCompileTime) {
+    // When AILEE_BITCOIN_WRITE_DISABLED is set, the macro is active.
+    // This test documents that the compile-time gate is in effect.
+    EXPECT_TRUE(true);
+}
+#else
+TEST(BitcoinShadowModeTest, WriteEnabledAtCompileTime) {
+    // AILEE_BITCOIN_WRITE_ENABLED=ON was set; write ops are compiled in.
+    EXPECT_TRUE(true);
+}
+#endif

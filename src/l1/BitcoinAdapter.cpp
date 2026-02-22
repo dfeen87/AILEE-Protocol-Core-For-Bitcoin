@@ -305,6 +305,13 @@ public:
         const std::vector<TxOut>& outputs,
         const std::unordered_map<std::string, std::string>& opts
     ) {
+#if defined(AILEE_BITCOIN_WRITE_DISABLED)
+        (void)rpc; (void)outputs; (void)opts;
+        throw std::runtime_error(
+            "Bitcoin write operations disabled at compile time "
+            "(AILEE_BITCOIN_WRITE_DISABLED). "
+            "Rebuild with -DAILEE_BITCOIN_WRITE_ENABLED=ON to enable.");
+#else
         // Get UTXOs
         Json::Value utxosJson = rpc.call("listunspent", Json::Value(Json::arrayValue));
         
@@ -365,6 +372,7 @@ public:
         }
 
         return signedTx["hex"].asString();
+#endif
     }
 };
 
@@ -515,6 +523,20 @@ public:
     bool broadcastRaw(const std::string& rawHex, 
                       std::string& outTxId,
                       ErrorCallback onError) {
+#if defined(AILEE_BITCOIN_WRITE_DISABLED)
+        (void)rawHex; (void)outTxId;
+        if (onError) {
+            onError(AdapterError{
+                Severity::Error,
+                "Bitcoin write operations disabled at compile time "
+                "(AILEE_BITCOIN_WRITE_DISABLED). "
+                "Rebuild with -DAILEE_BITCOIN_WRITE_ENABLED=ON to enable.",
+                "Broadcast",
+                -12
+            });
+        }
+        return false;
+#else
         try {
             // Check if already broadcast (idempotency)
             std::lock_guard<std::mutex> lock(broadcastMutex_);
@@ -550,6 +572,7 @@ public:
             }
             return false;
         }
+#endif
     }
 
     std::optional<NormalizedTx> fetchTx(const std::string& txid, ErrorCallback onError) {

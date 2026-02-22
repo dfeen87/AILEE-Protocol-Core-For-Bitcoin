@@ -397,6 +397,19 @@ elseif(ZeroMQ_LIBRARY)
 endif()
 
 # ============================================================================
+# Bitcoin Write Safety Gate
+# ============================================================================
+
+option(AILEE_BITCOIN_WRITE_ENABLED "Enable Bitcoin write operations (sendrawtransaction, sign, etc.)" OFF)
+if(NOT AILEE_BITCOIN_WRITE_ENABLED)
+    target_compile_definitions(ailee_node PRIVATE AILEE_BITCOIN_WRITE_DISABLED=1)
+    target_compile_definitions(ailee_adapters PRIVATE AILEE_BITCOIN_WRITE_DISABLED=1)
+    message(STATUS "Bitcoin write operations: DISABLED (shadow/read-only mode)")
+else()
+    message(STATUS "Bitcoin write operations: ENABLED")
+endif()
+
+# ============================================================================
 # Unit Tests (Optional)
 # ============================================================================
 
