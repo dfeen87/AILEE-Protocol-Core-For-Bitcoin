@@ -51,14 +51,7 @@ endif()
 find_package(cppzmq QUIET)
 
 # 4. JsonCpp (For RPC parsing in BitcoinAdapter)
-pkg_check_modules(JSONCPP jsoncpp)
-if(NOT JSONCPP_FOUND)
-    find_package(jsoncpp QUIET)
-    if(jsoncpp_FOUND)
-        set(JSONCPP_LIBRARIES jsoncpp_lib)
-        get_target_property(JSONCPP_INCLUDE_DIRS jsoncpp_lib INTERFACE_INCLUDE_DIRECTORIES)
-    endif()
-endif()
+find_package(jsoncpp CONFIG QUIET)
 
 # 5. nlohmann/json (Header-only JSON for multi-chain adapters)
 find_package(nlohmann_json QUIET)
@@ -157,7 +150,6 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/econ  # For ILedger.h and economic model headers
     ${OPENSSL_INCLUDE_DIR}
     ${CURL_INCLUDE_DIRS}
-    ${JSONCPP_INCLUDE_DIRS}
 )
 
 if(ZeroMQ_INCLUDE_DIR)
@@ -291,9 +283,13 @@ target_link_libraries(ailee_node
     OpenSSL::SSL
     OpenSSL::Crypto
     ${CURL_LIBRARIES}
-    ${JSONCPP_LIBRARIES}
     Threads::Threads
 )
+
+if(jsoncpp_FOUND)
+    target_link_libraries(ailee_node PRIVATE jsoncpp_lib)
+    target_compile_definitions(ailee_node PRIVATE AILEE_HAS_JSONCPP=1)
+endif()
 
 # --- 2. L2 Verification Tool ---
 add_executable(ailee_l2_verify
@@ -308,10 +304,6 @@ target_link_libraries(ailee_l2_verify
     OpenSSL::SSL
     OpenSSL::Crypto
 )
-
-if(JSONCPP_FOUND OR jsoncpp_FOUND)
-    target_compile_definitions(ailee_node PRIVATE AILEE_HAS_JSONCPP=1)
-endif()
 
 # Link yaml-cpp if found (for policy system)
 if(yaml-cpp_FOUND)
@@ -365,11 +357,11 @@ target_link_libraries(ailee_adapters
     OpenSSL::SSL
     OpenSSL::Crypto
     ${CURL_LIBRARIES}
-    ${JSONCPP_LIBRARIES}
     Threads::Threads
 )
 
-if(JSONCPP_FOUND OR jsoncpp_FOUND)
+if(jsoncpp_FOUND)
+    target_link_libraries(ailee_adapters PRIVATE jsoncpp_lib)
     target_compile_definitions(ailee_adapters PRIVATE AILEE_HAS_JSONCPP=1)
 endif()
 
@@ -525,7 +517,7 @@ if(ZeroMQ_FOUND)
     message(STATUS "     - Include:      ${ZeroMQ_INCLUDE_DIR}")
     message(STATUS "     - Library:      ${ZeroMQ_LIBRARY}")
 endif()
-message(STATUS "   JsonCpp:          ${JSONCPP_FOUND}")
+message(STATUS "   JsonCpp:          ${jsoncpp_FOUND}")
 message(STATUS "   yaml-cpp:         ${yaml-cpp_FOUND}")
 message(STATUS "-------------------------------------------------------------")
 message(STATUS "   Core Modules:     TPS Engine, Recovery, Gold Bridge")
