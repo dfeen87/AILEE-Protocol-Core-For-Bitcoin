@@ -185,7 +185,7 @@ public:
         
         // Improve reputation (max 100)
         if (data_.reputationScore < 100) {
-            data_.reputationScore = std::min(100UL, data_.reputationScore + 1);
+            data_.reputationScore = std::min<uint64_t>(100UL, data_.reputationScore + 1);
         }
     }
 
@@ -193,7 +193,7 @@ public:
         data_.missedSignatures++;
         
         // Degrade reputation
-        data_.reputationScore = std::max(0UL, data_.reputationScore - 5);
+        data_.reputationScore = std::max<uint64_t>(0UL, data_.reputationScore - 5);
         
         // Auto-deactivate after 10 missed signatures
         if (data_.missedSignatures >= 10) {

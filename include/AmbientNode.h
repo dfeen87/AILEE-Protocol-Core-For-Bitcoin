@@ -246,8 +246,8 @@ public:
     
     AmbientWorkerNode(const AmbientWorkerNode&) = delete;
     AmbientWorkerNode& operator=(const AmbientWorkerNode&) = delete;
-    AmbientWorkerNode(AmbientWorkerNode&&) noexcept = default;
-    AmbientWorkerNode& operator=(AmbientWorkerNode&&) noexcept = default;
+    AmbientWorkerNode(AmbientWorkerNode&&) noexcept = delete;
+    AmbientWorkerNode& operator=(AmbientWorkerNode&&) noexcept = delete;
     
     ~AmbientWorkerNode() override;
     

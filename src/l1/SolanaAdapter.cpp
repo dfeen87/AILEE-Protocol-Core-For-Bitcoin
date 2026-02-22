@@ -47,7 +47,7 @@ public:
         tlsEnabled_ = rpcEndpoint_.rfind("https://", 0) == 0;
         commitment_ = (cfg.network == "mainnet") ? "confirmed" : "processed";
         rpcClient_ = std::make_unique<JsonRpcClient>(rpcEndpoint_, cfg.authUsername, cfg.authPassword);
-        auto resp = rpcClient_->call("getHealth", nlohmann::json::array(), onError);
+        auto resp = rpcClient_->call("getHealth", nlohmann::json::array({}), onError);
         if (!resp || !resp->contains("result")) {
             connectedRPC_ = false;
             return false;

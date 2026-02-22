@@ -112,8 +112,8 @@ public:
     // Disable copy, allow move
     InMemoryLedger(const InMemoryLedger&) = delete;
     InMemoryLedger& operator=(const InMemoryLedger&) = delete;
-    InMemoryLedger(InMemoryLedger&&) noexcept = default;
-    InMemoryLedger& operator=(InMemoryLedger&&) noexcept = default;
+    InMemoryLedger(InMemoryLedger&&) noexcept = delete;
+    InMemoryLedger& operator=(InMemoryLedger&&) noexcept = delete;
     
     // Core operations with thread safety
     std::uint64_t balanceOf(const std::string& peerId) const override;

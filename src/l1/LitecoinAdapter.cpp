@@ -49,7 +49,7 @@ public:
                                                      cfg.authUsername,
                                                      cfg.authPassword,
                                                      "1.0");
-        auto resp = rpcClient_->call("getblockchaininfo", nlohmann::json::array(), onError);
+        auto resp = rpcClient_->call("getblockchaininfo", nlohmann::json::array({}), onError);
         if (!resp || !resp->contains("result")) {
             connectedRPC_ = false;
             return false;
@@ -71,7 +71,7 @@ public:
             logEvt(Severity::Error, "LTC heartbeat RPC not connected", "Listener", onError);
             return std::nullopt;
         }
-        auto resp = rpcClient_->call("getblockcount", nlohmann::json::array(), onError);
+        auto resp = rpcClient_->call("getblockcount", nlohmann::json::array({}), onError);
         if (!resp || !resp->contains("result")) return std::nullopt;
         return (*resp)["result"].get<uint64_t>();
     }

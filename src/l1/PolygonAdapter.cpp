@@ -43,7 +43,7 @@ public:
         rpcEndpoint_ = cfg.nodeEndpoint;
         tlsEnabled_ = rpcEndpoint_.rfind("https://", 0) == 0;
         rpcClient_ = std::make_unique<JsonRpcClient>(rpcEndpoint_, cfg.authUsername, cfg.authPassword);
-        auto resp = rpcClient_->call("eth_chainId", nlohmann::json::array(), onError);
+        auto resp = rpcClient_->call("eth_chainId", nlohmann::json::array({}), onError);
         if (!resp || !resp->contains("result")) {
             connectedRPC_ = false;
             return false;
@@ -90,7 +90,7 @@ public:
 
     bool estimateFees(ErrorCallback onError) {
         if (!connectedRPC_ || !rpcClient_) return false;
-        auto tipResp = rpcClient_->call("eth_maxPriorityFeePerGas", nlohmann::json::array(), onError);
+        auto tipResp = rpcClient_->call("eth_maxPriorityFeePerGas", nlohmann::json::array({}), onError);
         if (tipResp && tipResp->contains("result")) {
             auto parsed = parseHexU64((*tipResp)["result"].get<std::string>());
             if (parsed.has_value()) {
@@ -183,7 +183,7 @@ public:
             logEvt(Severity::Error, "POL heartbeat RPC not connected", "Listener", onError);
             return std::nullopt;
         }
-        auto resp = rpcClient_->call("eth_blockNumber", nlohmann::json::array(), onError);
+        auto resp = rpcClient_->call("eth_blockNumber", nlohmann::json::array({}), onError);
         if (!resp || !resp->contains("result")) return std::nullopt;
         return parseHexU64((*resp)["result"].get<std::string>());
     }

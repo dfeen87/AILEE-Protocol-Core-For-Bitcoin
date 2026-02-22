@@ -171,13 +171,13 @@ private:
                     json response = {
                         {"running", status.running},
                         {"version", status.version},
-                        {"uptime_seconds", status.uptime_seconds},
+                        {"uptime_seconds", json(static_cast<uint64_t>(status.uptime_seconds))},
                         {"network", status.network},
                         {"statistics", {
-                            {"total_transactions", status.total_transactions},
-                            {"total_blocks", status.total_blocks},
+                            {"total_transactions", json(static_cast<uint64_t>(status.total_transactions))},
+                            {"total_blocks", json(static_cast<uint64_t>(status.total_blocks))},
                             {"current_tps", status.current_tps},
-                            {"pending_tasks", status.pending_tasks}
+                            {"pending_tasks", json(static_cast<uint64_t>(status.pending_tasks))}
                         }},
                         {"last_anchor_hash", status.last_anchor_hash}
                     };
@@ -213,7 +213,7 @@ private:
                     NodeStatus status = status_callback_();
                     metrics["performance"] = {
                         {"current_tps", status.current_tps},
-                        {"pending_tasks", status.pending_tasks}
+                        {"pending_tasks", json(static_cast<uint64_t>(status.pending_tasks))}
                     };
                 } catch (...) {
                     // Ignore errors for metrics
@@ -241,9 +241,9 @@ private:
             // Add block producer state if available
             if (block_producer_) {
                 auto blockState = block_producer_->getState();
-                state["block_height"] = blockState.blockHeight;
-                state["total_transactions"] = blockState.totalTransactions;
-                state["last_anchor_height"] = blockState.lastAnchorHeight;
+                state["block_height"] = json(static_cast<uint64_t>(blockState.blockHeight));
+                state["total_transactions"] = json(static_cast<uint64_t>(blockState.totalTransactions));
+                state["last_anchor_height"] = json(static_cast<uint64_t>(blockState.lastAnchorHeight));
             } else {
                 // Fallback if block producer not initialized yet
                 state["block_height"] = 0;
@@ -257,7 +257,7 @@ private:
         // Orchestration tasks endpoint
         server_->Get("/api/orchestration/tasks", [this](const httplib::Request&, httplib::Response& res) {
             json tasks = {
-                {"tasks", json::array()},
+                {"tasks", json::array({})},
                 {"total", 0}
             };
             

@@ -162,8 +162,8 @@ public:
     
     AmbientRequesterClient(const AmbientRequesterClient&) = delete;
     AmbientRequesterClient& operator=(const AmbientRequesterClient&) = delete;
-    AmbientRequesterClient(AmbientRequesterClient&&) noexcept = default;
-    AmbientRequesterClient& operator=(AmbientRequesterClient&&) noexcept = default;
+    AmbientRequesterClient(AmbientRequesterClient&&) noexcept = delete;
+    AmbientRequesterClient& operator=(AmbientRequesterClient&&) noexcept = delete;
     
     ~AmbientRequesterClient() override;
     
