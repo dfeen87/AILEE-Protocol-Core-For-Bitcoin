@@ -13,6 +13,7 @@
 
 # Build folder
 build/
+build_write_enabled/
 bin/
 out/
 _codeql_build_dir/
