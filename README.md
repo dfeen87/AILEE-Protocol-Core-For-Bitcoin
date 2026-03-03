@@ -2,7 +2,6 @@
 
 *Building Intelligent, Verifiable, and Sustainable Bitcoin Infrastructure*
 
-[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![C++ Standard](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://isocpp.org/)
 [![CMake](https://img.shields.io/badge/CMake-3.10+-blue.svg)](https://cmake.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Python-green.svg)](https://fastapi.tiangolo.com/)
@@ -250,7 +249,7 @@ This project was developed with a combination of original ideas, hands‑on codi
 
 ## 📄 License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+This project is available for **non‑commercial use only** under the terms of the included LICENSE file. Commercial use requires a separate paid license.
 
 **Copyright © 2025 Don Michael Feeney Jr**
 
