@@ -48,6 +48,7 @@ static std::optional<bool> cmp(const std::string& op, double a, double b){
 static std::optional<bool> parse_or(const std::vector<Token>& toks, size_t& i, const EvalContext& ctx);
 
 static std::optional<bool> parse_comparison(const std::vector<Token>& toks, size_t& i, const EvalContext& ctx){
+  if (!ctx.vars) return std::nullopt;
   if (i>=toks.size()) return std::nullopt;
   std::string a = toks[i++].t;
   double av = is_number(a) ? to_number(a) : (ctx.vars->count(a)? ctx.vars->at(a) : NAN);
@@ -82,6 +83,7 @@ static std::optional<bool> parse_or(const std::vector<Token>& toks, size_t& i, c
 }
 
 std::optional<bool> eval_bool_expr(const std::string& expr, const EvalContext& ctx, std::string& error){
+  if (!ctx.vars) { error = "EvalContext::vars is null"; return std::nullopt; }
   auto toks = lex(expr); size_t i=0;
   auto r = parse_or(toks,i,ctx);
   if (!r || i!=toks.size()) { error = "invalid expression: "+expr; return std::nullopt; }

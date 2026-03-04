@@ -2,7 +2,7 @@
 
 #include "Global_Seven.h"
 #include <curl/curl.h>
-#include "third_party/nlohmann/json.hpp"
+#include "nlohmann/json.hpp"
 #include <optional>
 #include <string>
 

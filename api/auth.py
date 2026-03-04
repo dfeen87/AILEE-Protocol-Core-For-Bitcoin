@@ -3,6 +3,7 @@ API Key Authentication for AILEE-Core
 Protects write endpoints with Bearer token authentication.
 """
 
+import hmac
 import logging
 import os
 import secrets
@@ -40,7 +41,8 @@ def init_api_key() -> str:
         logger.warning("AILEE_API_KEY environment variable not set")
         logger.warning("Generated random API key for this session (in-memory only):")
         logger.warning("")
-        logger.warning(f"  {_api_key}")
+        logger.warning(f"  Key prefix (first 8 chars): {_api_key[:8]}...")
+        logger.warning("  Full key written to logs is intentionally omitted for security.")
         logger.warning("")
         logger.warning("Set AILEE_API_KEY in your hosting provider's environment variables panel.")
         logger.warning("=" * 80)
@@ -69,7 +71,7 @@ async def verify_api_key(
     """
     api_key = get_api_key()
 
-    if credentials.credentials != api_key:
+    if not hmac.compare_digest(credentials.credentials, api_key):
         logger.warning(
             f"Invalid API key attempt - "
             f"key_prefix={credentials.credentials[:8] if len(credentials.credentials) >= 8 else 'too_short'}"

@@ -20,6 +20,10 @@ public:
   ConfigReloader(ReloadOptions opt, ApplyFn apply, LogFn log);
   void tick(); // call periodically
 
+  // Reset the circuit breaker, clearing failure count and backoff state.
+  // Call this after resolving the underlying config issue to resume reloading.
+  void reset();
+
 private:
   ReloadOptions opt_;
   ApplyFn apply_;

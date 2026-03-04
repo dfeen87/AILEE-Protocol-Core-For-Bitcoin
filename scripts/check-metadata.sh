@@ -13,19 +13,22 @@ CMAKE_VERSION=$(grep "project(AILEE_Core VERSION" CMakeLists.txt | grep -oP '\d+
 PYPROJECT_VERSION=$(grep "^version = " pyproject.toml | grep -oP '\d+\.\d+\.\d+' || echo "NOT_FOUND")
 CITATION_VERSION=$(grep "^version: " CITATION.cff | grep -oP '\d+\.\d+\.\d+' || echo "NOT_FOUND")
 API_VERSION=$(grep -A 1 "app_version" api/config.py | grep "default=" | grep -oP '\d+\.\d+\.\d+' || echo "NOT_FOUND")
+WEBDEMO_VERSION=$(grep "status.version" examples/WebServerDemo.cpp | grep -oP '\d+\.\d+\.\d+' || echo "NOT_FOUND")
 
 echo "📌 Version Numbers:"
-echo "  CMakeLists.txt:  $CMAKE_VERSION"
-echo "  pyproject.toml:  $PYPROJECT_VERSION"
-echo "  CITATION.cff:    $CITATION_VERSION"
-echo "  api/config.py:   $API_VERSION"
+echo "  CMakeLists.txt:                $CMAKE_VERSION"
+echo "  pyproject.toml:                $PYPROJECT_VERSION"
+echo "  CITATION.cff:                  $CITATION_VERSION"
+echo "  api/config.py:                 $API_VERSION"
+echo "  examples/WebServerDemo.cpp:    $WEBDEMO_VERSION"
 echo ""
 
 # Check version consistency
 VERSION_MATCH=true
 if [ "$CMAKE_VERSION" != "$PYPROJECT_VERSION" ] || \
    [ "$PYPROJECT_VERSION" != "$CITATION_VERSION" ] || \
-   [ "$CITATION_VERSION" != "$API_VERSION" ]; then
+   [ "$CITATION_VERSION" != "$API_VERSION" ] || \
+   [ "$API_VERSION" != "$WEBDEMO_VERSION" ]; then
     VERSION_MATCH=false
 fi
 
