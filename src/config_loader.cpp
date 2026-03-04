@@ -2,7 +2,7 @@
 #include "config_loader.h"
 #include <fstream>
 #include <iostream>
-#include "third_party/nlohmann/json.hpp"
+#include "nlohmann/json.hpp"
 #include <sstream>
 #if __has_include(<toml++/toml.h>)
 #include <toml++/toml.h>
@@ -37,8 +37,12 @@ static std::optional<Config> parse_yaml(const std::string& text) {
     if (root["commitment_interval"]) cfg.commitment_interval = root["commitment_interval"].as<size_t>();
 
     if (root["signals"]) {
-      for (const auto& sig : root["signals"]) {
+      for (size_t idx = 0; idx < root["signals"].size(); ++idx) {
+        const auto& sig = root["signals"][idx];
         SignalSpec s;
+        if (!sig["name"]) { std::cerr << "YAML: signals[" << idx << "] missing 'name'\n"; return std::nullopt; }
+        if (!sig["source"]) { std::cerr << "YAML: signals[" << idx << "] missing 'source'\n"; return std::nullopt; }
+        if (!sig["window_ms"]) { std::cerr << "YAML: signals[" << idx << "] missing 'window_ms'\n"; return std::nullopt; }
         s.name = sig["name"].as<std::string>();
         s.source = sig["source"].as<std::string>();
         s.window_ms = sig["window_ms"].as<size_t>();
@@ -47,10 +51,14 @@ static std::optional<Config> parse_yaml(const std::string& text) {
     }
 
     if (root["metrics"]) {
-      for (const auto& met : root["metrics"]) {
+      for (size_t idx = 0; idx < root["metrics"].size(); ++idx) {
+        const auto& met = root["metrics"][idx];
         MetricSpec m;
+        if (!met["name"]) { std::cerr << "YAML: metrics[" << idx << "] missing 'name'\n"; return std::nullopt; }
+        if (!met["window_ms"]) { std::cerr << "YAML: metrics[" << idx << "] missing 'window_ms'\n"; return std::nullopt; }
+        if (!met["stride_ms"]) { std::cerr << "YAML: metrics[" << idx << "] missing 'stride_ms'\n"; return std::nullopt; }
         m.name = met["name"].as<std::string>();
-        m.type = met["type"].as<std::string>();
+        m.type = met["type"] ? met["type"].as<std::string>() : "";
         if (met["signals"]) {
           for (const auto& sig : met["signals"]) {
             m.signals.push_back(sig.as<std::string>());
@@ -63,13 +71,18 @@ static std::optional<Config> parse_yaml(const std::string& text) {
     }
 
     if (root["policies"]) {
-      for (const auto& pol : root["policies"]) {
+      for (size_t idx = 0; idx < root["policies"].size(); ++idx) {
+        const auto& pol = root["policies"][idx];
         PolicySpec p;
+        if (!pol["name"]) { std::cerr << "YAML: policies[" << idx << "] missing 'name'\n"; return std::nullopt; }
+        if (!pol["when"]) { std::cerr << "YAML: policies[" << idx << "] missing 'when'\n"; return std::nullopt; }
         p.name = pol["name"].as<std::string>();
         p.when = pol["when"].as<std::string>();
         if (pol["actions"]) {
-          for (const auto& act : pol["actions"]) {
+          for (size_t aidx = 0; aidx < pol["actions"].size(); ++aidx) {
+            const auto& act = pol["actions"][aidx];
             PolicyAction a;
+            if (!act["type"]) { std::cerr << "YAML: policies[" << idx << "].actions[" << aidx << "] missing 'type'\n"; return std::nullopt; }
             a.type = act["type"].as<std::string>();
             if (act["args"]) {
               for (const auto& arg : act["args"]) {
@@ -84,8 +97,11 @@ static std::optional<Config> parse_yaml(const std::string& text) {
     }
 
     if (root["pipelines"]) {
-      for (const auto& pipe : root["pipelines"]) {
+      for (size_t idx = 0; idx < root["pipelines"].size(); ++idx) {
+        const auto& pipe = root["pipelines"][idx];
         PipelineSpec ps;
+        if (!pipe["name"]) { std::cerr << "YAML: pipelines[" << idx << "] missing 'name'\n"; return std::nullopt; }
+        if (!pipe["enabled"]) { std::cerr << "YAML: pipelines[" << idx << "] missing 'enabled'\n"; return std::nullopt; }
         ps.name = pipe["name"].as<std::string>();
         ps.enabled = pipe["enabled"].as<bool>();
         cfg.pipelines.push_back(ps);
@@ -93,8 +109,11 @@ static std::optional<Config> parse_yaml(const std::string& text) {
     }
 
     if (root["outputs"]) {
-      for (const auto& out : root["outputs"]) {
+      for (size_t idx = 0; idx < root["outputs"].size(); ++idx) {
+        const auto& out = root["outputs"][idx];
         OutputSpec o;
+        if (!out["type"]) { std::cerr << "YAML: outputs[" << idx << "] missing 'type'\n"; return std::nullopt; }
+        if (!out["path"]) { std::cerr << "YAML: outputs[" << idx << "] missing 'path'\n"; return std::nullopt; }
         o.type = out["type"].as<std::string>();
         o.path = out["path"].as<std::string>();
         if (out["fields"]) {

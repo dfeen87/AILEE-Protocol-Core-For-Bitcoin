@@ -1,7 +1,7 @@
 // ailee_rpc_client.cpp
 #include "BitcoinRPCClient.h"
 #include <curl/curl.h>
-#include "third_party/nlohmann/json.hpp"
+#include "nlohmann/json.hpp"
 #include <iostream>
 
 using json = nlohmann::json;
@@ -14,6 +14,26 @@ BitcoinRPCClient::BitcoinRPCClient(const std::string& rpcUser,
     : rpcUser_(rpcUser), rpcPassword_(rpcPassword), rpcUrl_(rpcUrl) {}
 
 bool BitcoinRPCClient::broadcastCheckpoint(const std::string& hexTx) {
+    // Validate hexTx: must be non-empty, hex characters only, and within size limits
+    if (hexTx.empty()) {
+        std::cerr << "[Error] broadcastCheckpoint: hexTx is empty" << std::endl;
+        return false;
+    }
+    // Maximum raw transaction size: 400KB hex = 200KB binary
+    constexpr std::size_t kMaxHexTxLen = 400 * 1024;
+    if (hexTx.size() > kMaxHexTxLen) {
+        std::cerr << "[Error] broadcastCheckpoint: hexTx exceeds maximum size ("
+                  << hexTx.size() << " > " << kMaxHexTxLen << ")" << std::endl;
+        return false;
+    }
+    for (char c : hexTx) {
+        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) {
+            std::cerr << "[Error] broadcastCheckpoint: hexTx contains invalid character '"
+                      << c << "'" << std::endl;
+            return false;
+        }
+    }
+
     CURL* curl = curl_easy_init();
     if (!curl) {
         std::cerr << "[Error] Failed to init CURL" << std::endl;

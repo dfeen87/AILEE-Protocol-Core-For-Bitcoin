@@ -97,14 +97,8 @@ public:
     TunnelMode mode() const { return mode_; }
     RelayNode node() const { return node_; }
 
-    // Simulate sending bandwidth with optional onion routing
-    double relayBandwidth(double requestedMbps) {
-        std::lock_guard<std::mutex> lock(mu_);
-        if (!active_ || node_.advertisedBandwidthMbps <= 0) return 0.0;
-        double allocated = std::min(requestedMbps, node_.advertisedBandwidthMbps);
-        node_.advertisedBandwidthMbps -= allocated;
-        return allocated;
-    }
+    // Relay bandwidth with optional tunnel-mode penalty (implemented in AILEE_NetFlow.cpp).
+    double relayBandwidth(double requestedMbps);
 
 private:
     RelayNode node_;

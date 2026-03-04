@@ -43,9 +43,13 @@ public:
             
             if (config_.enable_ssl && !config_.ssl_cert_path.empty() 
                 && !config_.ssl_key_path.empty()) {
-                std::cout << "[WebServer] WARNING: SSL configured but not fully implemented yet" << std::endl;
-                std::cout << "[WebServer] Falling back to HTTP" << std::endl;
-                server_->listen(config_.host.c_str(), config_.port);
+                // ERROR: SSL was requested but is not fully implemented.
+                // Refusing to silently downgrade to plain HTTP — fail-closed.
+                std::cerr << "[WebServer] ERROR: SSL/TLS is configured but not fully implemented. "
+                             "Refusing to start in plain HTTP mode. "
+                             "Disable enable_ssl or provide a complete SSL implementation." << std::endl;
+                running_ = false;
+                return;
             } else {
                 server_->listen(config_.host.c_str(), config_.port);
             }
@@ -99,6 +103,9 @@ private:
         server_->set_pre_routing_handler([this](const httplib::Request& req, httplib::Response& res) {
             // Apply CORS headers on every response when CORS is enabled.
             if (config_.enable_cors) {
+                // SECURITY NOTE: Access-Control-Allow-Origin is set to "*" (wildcard).
+                // In production, restrict this to specific trusted origins by setting
+                // cors_origins in the WebServerConfig.
                 res.set_header("Access-Control-Allow-Origin", "*");
                 res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
                 res.set_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-Key");
@@ -375,8 +382,16 @@ private:
                     now.time_since_epoch()).count();
                 tx.timestampMs = static_cast<std::uint64_t>(ms);
                 
-                // Add to mempool
-                mempool_->addTransaction(tx);
+                // Add to mempool (returns false if duplicate)
+                if (!mempool_->addTransaction(tx)) {
+                    res.status = 409;
+                    json error = {
+                        {"error", "Conflict"},
+                        {"message", "Transaction with this hash already exists in mempool"}
+                    };
+                    res.set_content(error.dump(), "application/json");
+                    return;
+                }
                 
                 std::cout << "[WebServer] Transaction added to mempool: " << tx.txHash.substr(0, 16) 
                           << "... from " << tx.fromAddress << " to " << tx.toAddress 
@@ -432,13 +447,10 @@ AILEEWebServer::AILEEWebServer(const WebServerConfig& config)
 AILEEWebServer::~AILEEWebServer() = default;
 
 bool AILEEWebServer::start() {
-    bool started = pImpl->start();
-    if (started) running_ = true;
-    return started;
+    return pImpl->start();
 }
 
 void AILEEWebServer::stop() {
-    running_ = false;
     pImpl->stop();
 }
 

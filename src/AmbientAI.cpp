@@ -4,6 +4,7 @@
 // Byzantine fault detection, and system health metrics.
 
 #include "AmbientAI.h"
+#include "crypto_utils.h"
 #include "zk_proofs.h"
 #include <sstream>
 #include <iomanip>
@@ -19,30 +20,13 @@ namespace ambient {
 
 namespace {
 
-std::string sha256Hex(const std::string& input) {
-    unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256(reinterpret_cast<const unsigned char*>(input.data()), input.size(), hash);
-    std::string out;
-    out.reserve(2 * SHA256_DIGEST_LENGTH);
-    static const char* kHex = "0123456789abcdef";
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
-        out.push_back(kHex[hash[i] >> 4]);
-        out.push_back(kHex[hash[i] & 0x0F]);
-    }
-    return out;
+// Delegate to the shared utility in crypto_utils.h to avoid duplicate implementations.
+inline std::string sha256Hex(const std::string& input) {
+    return ailee::crypto::sha256_hex(input);
 }
 
-std::string sha256Hex(const std::vector<uint8_t>& input) {
-    unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256(reinterpret_cast<const unsigned char*>(input.data()), input.size(), hash);
-    std::string out;
-    out.reserve(2 * SHA256_DIGEST_LENGTH);
-    static const char* kHex = "0123456789abcdef";
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
-        out.push_back(kHex[hash[i] >> 4]);
-        out.push_back(kHex[hash[i] & 0x0F]);
-    }
-    return out;
+inline std::string sha256Hex(const std::vector<uint8_t>& input) {
+    return ailee::crypto::sha256_hex(input);
 }
 
 } // namespace

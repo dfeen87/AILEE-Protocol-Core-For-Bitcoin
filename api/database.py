@@ -12,8 +12,8 @@ import aiosqlite
 
 logger = logging.getLogger(__name__)
 
-# Database connection pool
-_db_pool: Optional[aiosqlite.Connection] = None
+# Single database connection (not a pool — see get_db() for concurrency notes)
+_db_connection: Optional[aiosqlite.Connection] = None
 
 
 # Schema version for migrations
@@ -27,7 +27,7 @@ async def init_database(db_path: str) -> None:
     Args:
         db_path: Path to SQLite database file
     """
-    global _db_pool
+    global _db_connection
     
     # Ensure directory exists
     db_dir = os.path.dirname(db_path)
@@ -36,12 +36,12 @@ async def init_database(db_path: str) -> None:
         logger.info(f"Created database directory: {db_dir}")
     
     # Connect to database
-    _db_pool = await aiosqlite.connect(db_path)
-    _db_pool.row_factory = aiosqlite.Row
+    _db_connection = await aiosqlite.connect(db_path)
+    _db_connection.row_factory = aiosqlite.Row
     
     # Enable WAL mode for better concurrency
-    await _db_pool.execute("PRAGMA journal_mode=WAL")
-    await _db_pool.execute("PRAGMA synchronous=NORMAL")
+    await _db_connection.execute("PRAGMA journal_mode=WAL")
+    await _db_connection.execute("PRAGMA synchronous=NORMAL")
     
     logger.info(f"Connected to database: {db_path}")
     
@@ -55,16 +55,16 @@ async def _init_schema() -> None:
     """Initialize database schema with migrations"""
     
     # Create schema_version table if it doesn't exist
-    await _db_pool.execute("""
+    await _db_connection.execute("""
         CREATE TABLE IF NOT EXISTS schema_version (
             version INTEGER PRIMARY KEY,
             applied_at TEXT NOT NULL
         )
     """)
-    await _db_pool.commit()
+    await _db_connection.commit()
     
     # Get current schema version
-    cursor = await _db_pool.execute("SELECT MAX(version) as version FROM schema_version")
+    cursor = await _db_connection.execute("SELECT MAX(version) as version FROM schema_version")
     row = await cursor.fetchone()
     current_version = row[0] if row[0] is not None else 0
     
@@ -85,7 +85,7 @@ async def _apply_migration_v1() -> None:
     logger.info("Applying migration v1...")
     
     # Create transactions table
-    await _db_pool.execute("""
+    await _db_connection.execute("""
         CREATE TABLE IF NOT EXISTS transactions (
             tx_hash TEXT PRIMARY KEY,
             from_address TEXT NOT NULL,
@@ -99,21 +99,21 @@ async def _apply_migration_v1() -> None:
     """)
     
     # Create indexes for transactions
-    await _db_pool.execute("""
+    await _db_connection.execute("""
         CREATE INDEX IF NOT EXISTS idx_from_address ON transactions(from_address)
     """)
-    await _db_pool.execute("""
+    await _db_connection.execute("""
         CREATE INDEX IF NOT EXISTS idx_to_address ON transactions(to_address)
     """)
-    await _db_pool.execute("""
+    await _db_connection.execute("""
         CREATE INDEX IF NOT EXISTS idx_status ON transactions(status)
     """)
-    await _db_pool.execute("""
+    await _db_connection.execute("""
         CREATE INDEX IF NOT EXISTS idx_block_height ON transactions(block_height)
     """)
     
     # Create anchor_events table
-    await _db_pool.execute("""
+    await _db_connection.execute("""
         CREATE TABLE IF NOT EXISTS anchor_events (
             anchor_height INTEGER PRIMARY KEY,
             state_root TEXT NOT NULL,
@@ -123,44 +123,49 @@ async def _apply_migration_v1() -> None:
     """)
     
     # Create index for anchor_events
-    await _db_pool.execute("""
+    await _db_connection.execute("""
         CREATE INDEX IF NOT EXISTS idx_bitcoin_txid ON anchor_events(bitcoin_txid)
     """)
     
     # Record migration
-    await _db_pool.execute(
+    await _db_connection.execute(
         "INSERT INTO schema_version (version, applied_at) VALUES (?, ?)",
         (1, datetime.now(timezone.utc).isoformat())
     )
     
-    await _db_pool.commit()
+    await _db_connection.commit()
     
     logger.info("Migration v1 applied successfully")
 
 
 async def close_database() -> None:
     """Close the database connection"""
-    global _db_pool
+    global _db_connection
     
-    if _db_pool:
-        await _db_pool.close()
-        _db_pool = None
+    if _db_connection:
+        await _db_connection.close()
+        _db_connection = None
         logger.info("Database connection closed")
 
 
 def get_db() -> aiosqlite.Connection:
     """
-    Get the database connection
-    
+    Get the database connection.
+
+    NOTE: This module uses a single global connection (not a pool). Under high
+    concurrent load this is a bottleneck. For horizontal scaling, replace this
+    with a proper connection factory or connection pool (e.g., aiosqlite with
+    asyncio.Queue or a dedicated async ORM).
+
     Returns:
         Database connection
         
     Raises:
         RuntimeError: If database is not initialized
     """
-    if _db_pool is None:
+    if _db_connection is None:
         raise RuntimeError("Database not initialized. Call init_database() first.")
-    return _db_pool
+    return _db_connection
 
 
 # Transaction operations

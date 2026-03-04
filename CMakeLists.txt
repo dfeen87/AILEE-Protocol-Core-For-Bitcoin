@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(AILEE_Core VERSION 1.2.1 LANGUAGES CXX)
+project(AILEE_Core VERSION 5.2.0 LANGUAGES CXX)
 
 # ============================================================================
 # Compiler & Standard Settings

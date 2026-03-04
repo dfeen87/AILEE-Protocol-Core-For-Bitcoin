@@ -6,7 +6,6 @@
 
 #include <string>
 #include <memory>
-#include <atomic>
 #include <functional>
 #include <map>
 #include <vector>
@@ -71,7 +70,6 @@ private:
     std::unique_ptr<Impl> pImpl;
     
     WebServerConfig config_;
-    std::atomic<bool> running_{false};
 };
 
 } // namespace ailee

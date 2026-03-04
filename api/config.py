@@ -92,7 +92,7 @@ class Settings(BaseSettings):
         description="Application name"
     )
     app_version: str = Field(
-        default="1.2.1",
+        default="5.2.0",
         description="Application version"
     )
     app_description: str = Field(
@@ -181,6 +181,19 @@ class Settings(BaseSettings):
             raise ValueError(f"env must be one of {allowed}")
         return v.lower()
     
+    @model_validator(mode='after')
+    def validate_cors_settings(self):
+        """Warn if CORS wildcard is used in production mode"""
+        if self.cors_enabled and "*" in self.cors_origins and self.env == "production":
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                "SECURITY WARNING: cors_origins contains '*' (wildcard) in production mode. "
+                "This allows any origin to make requests. "
+                "Set AILEE_CORS_ORIGINS to a comma-separated list of allowed origins."
+            )
+        return self
+
     @model_validator(mode='after')
     def validate_jwt_settings(self):
         """Validate JWT secret is set if JWT is enabled"""

@@ -10,7 +10,7 @@
 #include <memory>
 #include <optional>
 #include <curl/curl.h>
-#include "third_party/nlohmann/json.hpp"
+#include "nlohmann/json.hpp"
 
 namespace ailee {
 namespace global_seven {

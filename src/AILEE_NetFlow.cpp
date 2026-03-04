@@ -37,7 +37,7 @@ double NetFlowTunnel::relayBandwidth(double requestedMbps) {
         allocated *= 0.95; // small overhead
     }
 
-    node_.advertisedBandwidthMbps -= allocated;
+    node_.advertisedBandwidthMbps = std::max(0.0, node_.advertisedBandwidthMbps - allocated);
     node_.lastSeen = std::chrono::system_clock::now();
     return allocated;
 }

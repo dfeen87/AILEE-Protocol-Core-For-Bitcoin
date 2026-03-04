@@ -29,6 +29,7 @@
 #include <thread>
 #include <atomic>
 #include <condition_variable>
+#include <iostream>
 #include <map>
 #include <cstring>
 
@@ -83,8 +84,12 @@ struct EnergyProof {
             return false;
         }
         
-        // Placeholder: Real implementation would use OpenSSL ECDSA_verify
-        return true;
+        // TODO: SECURITY — Implement ECDSA verification using OpenSSL ECDSA_verify.
+        // This placeholder currently fails-closed (returns false) to prevent accepting
+        // unverified signatures. Replace with real ECDSA verification before production use.
+        std::cerr << "[WARNING] verifySignature(): ECDSA verification not implemented"
+                     " — returning false (fail-closed)" << std::endl;
+        return false;
     }
     
     bool verifyOracleAttestation() const {

@@ -4,9 +4,15 @@
 
 namespace ailee::l2 {
 
-void Mempool::addTransaction(const Transaction& tx) {
+bool Mempool::addTransaction(const Transaction& tx) {
     std::lock_guard<std::mutex> lock(mutex_);
+    // Reject duplicate transactions
+    if (txHashIndex_.count(tx.txHash)) {
+        return false;
+    }
+    txHashIndex_.insert(tx.txHash);
     pendingTransactions_.push_back(tx);
+    return true;
 }
 
 std::vector<Transaction> Mempool::getPendingTransactions(std::size_t maxCount) {
@@ -43,7 +49,8 @@ void Mempool::confirmTransactions(const std::vector<std::string>& txHashes, std:
             // Move to confirmed transactions
             confirmedTransactions_.push_back(*it);
             
-            // Remove from pending
+            // Remove from pending and hash index
+            txHashIndex_.erase(it->txHash);
             pendingTransactions_.erase(it);
         }
     }

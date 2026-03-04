@@ -4,6 +4,7 @@
 #include <deque>
 #include <mutex>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace ailee::l2 {
@@ -36,8 +37,9 @@ public:
     /**
      * Add a transaction to the mempool
      * @param tx Transaction to add
+     * @return true if the transaction was added, false if it was a duplicate
      */
-    void addTransaction(const Transaction& tx);
+    bool addTransaction(const Transaction& tx);
 
     /**
      * Get up to maxCount pending transactions from the mempool
@@ -69,6 +71,7 @@ private:
     mutable std::mutex mutex_;
     std::deque<Transaction> pendingTransactions_;
     std::deque<Transaction> confirmedTransactions_; // Keep recent confirmed txs for queries
+    std::unordered_set<std::string> txHashIndex_;   // Deduplication index
 };
 
 } // namespace ailee::l2
