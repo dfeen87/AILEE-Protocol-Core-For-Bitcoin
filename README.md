@@ -249,7 +249,7 @@ This project was developed with a combination of original ideas, hands‑on codi
 
 ## 📄 License
 
-This project is available for **non‑commercial use only** under the terms of the included LICENSE file. Commercial use requires a separate paid license.
+MIT
 
 **Copyright © 2025 Don Michael Feeney Jr**
 
