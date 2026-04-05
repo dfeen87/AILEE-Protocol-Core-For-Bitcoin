@@ -134,7 +134,8 @@ public:
                     {},
                     "No executor registered for task type",
                     static_cast<uint64_t>(std::chrono::system_clock::now().time_since_epoch().count()),
-                    0
+                    0,
+                    "" // proofHash
                 };
             }
             

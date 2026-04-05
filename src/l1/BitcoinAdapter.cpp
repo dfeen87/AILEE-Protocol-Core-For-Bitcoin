@@ -242,7 +242,8 @@ public:
             auto result = subscriber_.recv(topicMsg, zmq::recv_flags::none);
             if (!result) return false;
 
-            subscriber_.recv(dataMsg, zmq::recv_flags::none);
+            auto dataResult = subscriber_.recv(dataMsg, zmq::recv_flags::none);
+            (void)dataResult; // Explicitly ignoring the result
 
             topic = std::string(static_cast<char*>(topicMsg.data()), topicMsg.size());
             data.assign(static_cast<uint8_t*>(dataMsg.data()),

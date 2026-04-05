@@ -536,7 +536,8 @@ public:
                 {1200.0, 300.0, 55.0, 22.0, 350.0},          // energy
                 {35.0, 10.0, 5.0, 2048.0, 150.0, 40.0},      // compute
                 std::chrono::system_clock::now(),
-                {1.0, 1e-5}                                   // privacy
+                {1.0, 1e-5},                                  // privacy
+                ""                                            // cryptographicVerificationHash
             };
 
             // Sample telemetry for smartphone node
@@ -545,7 +546,8 @@ public:
                 {8.5, 1.2, 42.0, 22.0, 200.0},               // energy
                 {25.0, 20.0, 0.0, 512.0, 25.0, 30.0},        // compute
                 std::chrono::system_clock::now(),
-                {1.0, 1e-5}                                   // privacy
+                {1.0, 1e-5},                                  // privacy
+                ""                                            // cryptographicVerificationHash
             };
 
             nodeA.ingestTelemetry(sampleA);
@@ -979,6 +981,7 @@ public:
     };
     
     static HealthStatus checkHealth(const AILEEEngine& engine, const Config& cfg) {
+        (void)engine;
         HealthStatus health;
         
         // Check configuration
@@ -1011,6 +1014,8 @@ public:
 // Main entry point with enhanced error handling and metrics
 // ---------------------------------------------------------
 int main(int argc, char* argv[]) {
+    (void)argc;
+    (void)argv;
     // Install signal handlers first
     installSignalHandlers();
     

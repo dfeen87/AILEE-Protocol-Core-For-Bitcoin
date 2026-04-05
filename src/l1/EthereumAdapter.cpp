@@ -184,6 +184,7 @@ void EthereumAdapter::stop() {
 bool EthereumAdapter::broadcastTransaction(const std::vector<TxOut>& outputs,
                                            const std::unordered_map<std::string, std::string>& opts,
                                            std::string& outChainTxId) {
+    (void)outputs;
     if (!state_) return false;
     if (state_->cfg.readOnly) {
         state_->onError(AdapterError{Severity::Warn, "Read‑only mode; broadcast blocked", "Broadcast", -10});

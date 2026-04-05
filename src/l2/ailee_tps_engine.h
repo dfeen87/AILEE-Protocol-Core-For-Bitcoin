@@ -450,6 +450,7 @@ public:
         const TPSComponents& components,
         double targetTPS
     ) {
+        (void)metrics;
         AIParameters gradient = params;
         
         double currentTPS = components.enhancedTPS;
