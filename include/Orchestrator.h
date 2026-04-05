@@ -348,6 +348,7 @@ public:
     }
     
     void recordByzantineBehavior(const std::string& peerId, const std::string& reason) override {
+        (void)reason;
         std::lock_guard<std::mutex> lock(mutex_);
         auto& rep = reputations_[peerId];
         rep.byzantineBehaviors++;
@@ -415,6 +416,7 @@ public:
     }
     
     bool resetReputation(const std::string& peerId, const std::string& reason) override {
+        (void)reason;
         std::lock_guard<std::mutex> lock(mutex_);
         auto it = reputations_.find(peerId);
         if (it != reputations_.end()) {
@@ -493,6 +495,7 @@ public:
     }
     
     std::optional<double> getDistanceKm(const std::string& peerId) const override {
+        (void)peerId;
         // Would use geographic coordinates in production
         return std::nullopt;
     }

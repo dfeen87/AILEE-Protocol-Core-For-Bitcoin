@@ -298,6 +298,7 @@ public:
     }
 
     static bool verifyBurnProof(const BurnProof& proof, size_t minConfirmations) {
+        (void)minConfirmations; // Muted unused parameter warning
         // Verify burn address is provably unspendable
         if (!isValidBurnAddress(proof.burnAddress)) {
             return false;

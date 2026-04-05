@@ -31,7 +31,7 @@
 
 **AILEE-Core** is a Bitcoin Layer-2 orchestration and verification framework. It leverages ambient AI for intelligent task scheduling and a recovery-first design to extend Bitcoin's capabilities without modifying its consensus rules.
 
-> ⚠️ **Important**: This repository is a **research and pre-production framework** and is **NOT ready for mainnet deployment**. The codebase contains multiple components that are mocked or stubbed (ZK proofs, full ECDSA signature verification, federated networking). Do not use this software to manage real funds or production assets. Please review `AUDIT_REPORT.md` for a full list of known limitations. The author genuinely cares about people's hard-earned money — AI-generated code should not be trusted without deep, professional oversight.
+> ⚠️ **Important**: This repository is a **research and pre-production framework** and is **NOT ready for mainnet deployment**. The codebase contains multiple components that are mocked or stubbed (ZK proofs, full ECDSA signature verification, federated networking). Do not use this software to manage real funds or production assets. Please review `AUDIT_REPORT.md` for a full list of known limitations. Third-party auditing and professional oversight are strictly required prior to any production use.
 
 > **Note**: Certain cryptographic primitives (like ZK proofs) are currently implemented as mocks to facilitate development and testing. These must be replaced with real circuits (e.g., libsnark, Halo2) and thoroughly audited before any mainnet deployment.
 
@@ -249,8 +249,4 @@ This project was developed with a combination of original ideas, hands‑on codi
 
 ## 📄 License
 
-MIT
-
-**Copyright © 2025 Don Michael Feeney Jr**
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software to use, modify, and distribute it under the terms of the MIT License.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
