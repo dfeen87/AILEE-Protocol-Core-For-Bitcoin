@@ -604,5 +604,7 @@ if(NOT ZeroMQ_FOUND)
 endif()
 
 # Add fallback FFI implementation so the codebase compiles
-add_library(ailee_rust_ffi_fallback STATIC src/security/ailee_rust_ffi_fallback.cpp)
-target_include_directories(ailee_rust_ffi_fallback PUBLIC include)
+if(NOT AILEE_USE_RUST_PROVER)
+    add_library(ailee_rust_ffi_fallback STATIC src/security/ailee_rust_ffi_fallback.cpp)
+    target_include_directories(ailee_rust_ffi_fallback PUBLIC include)
+endif()
