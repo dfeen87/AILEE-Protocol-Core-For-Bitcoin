@@ -134,13 +134,13 @@ pub extern "C" fn free_halo2_proof_ffi(proof_ptr: *mut Halo2ProofOutput) {
         unsafe {
             let output = Box::from_raw(proof_ptr);
             if !output.proof_ptr.is_null() && output.proof_len > 0 {
-                let _ = Box::from_raw(std::slice::from_raw_parts_mut(
+                let _ = Box::<[u8]>::from_raw(std::ptr::slice_from_raw_parts_mut(
                     output.proof_ptr as *mut u8,
                     output.proof_len,
                 ));
             }
             if !output.commitment_ptr.is_null() && output.commitment_len > 0 {
-                let _ = Box::from_raw(std::slice::from_raw_parts_mut(
+                let _ = Box::<[u8]>::from_raw(std::ptr::slice_from_raw_parts_mut(
                     output.commitment_ptr as *mut u8,
                     output.commitment_len,
                 ));
