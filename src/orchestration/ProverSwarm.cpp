@@ -333,7 +333,8 @@ std::vector<std::string> ProverSwarm::checkTimeouts(std::uint64_t current_time_m
         auto job = *job_opt;
         if (job.completed || job.assigned_prover.empty()) continue;
 
-        if (current_time_ms - job.assigned_at_ms > config_.timeout_ms) {
+        if (job.assigned_at_ms != 0 && current_time_ms > job.assigned_at_ms &&
+            (current_time_ms - job.assigned_at_ms) > config_.timeout_ms) {
             timed_out_jobs.push_back(job_id);
 
             // Penalize the prover
