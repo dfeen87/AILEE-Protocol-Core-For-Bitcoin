@@ -153,6 +153,13 @@ TEST(BitVMInterpreterTest, TestPushData124) {
     EXPECT_TRUE(state2.execution_success);
     EXPECT_EQ(state2.stack.size(), 1);
     EXPECT_EQ(state2.stack[0], (std::vector<uint8_t>{0xaa, 0xbb, 0xcc}));
+
+    // OP_PUSHDATA4 0x04 0x00 0x00 0x00 0xAA 0xBB 0xCC 0xDD (push 4 bytes, little endian length)
+    std::vector<uint8_t> script3 = {0x4e, 0x04, 0x00, 0x00, 0x00, 0xaa, 0xbb, 0xcc, 0xdd};
+    auto state3 = interpreter.execute(script3);
+    EXPECT_TRUE(state3.execution_success);
+    EXPECT_EQ(state3.stack.size(), 1);
+    EXPECT_EQ(state3.stack[0], (std::vector<uint8_t>{0xaa, 0xbb, 0xcc, 0xdd}));
 }
 
 TEST(BitVMInterpreterTest, TestControlFlowIfElse) {
