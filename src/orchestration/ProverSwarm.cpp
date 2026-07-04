@@ -356,7 +356,10 @@ std::vector<std::string> ProverSwarm::checkTimeouts(std::uint64_t current_time_m
     }
 
     if (has_updates) {
-        db_->Write(rocksdb::WriteOptions(), &batch);
+        rocksdb::Status s = db_->Write(rocksdb::WriteOptions(), &batch);
+        if (!s.ok()) {
+            timed_out_jobs.clear();
+        }
     }
 
     return timed_out_jobs;
