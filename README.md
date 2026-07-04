@@ -6,7 +6,6 @@
 [![CMake](https://img.shields.io/badge/CMake-3.10+-blue.svg)](https://cmake.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Python-green.svg)](https://fastapi.tiangolo.com/)
 [![Bitcoin](https://img.shields.io/badge/Bitcoin-Layer--2-orange.svg)](https://bitcoin.org/)
-[![Status](https://img.shields.io/badge/Status-Research%20%2F%20Pre--Production-yellow.svg)](https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin)
 
 **[Documentation](docs/)** | **[Quick Start](#-quick-start)** | **[API Reference](API_QUICKSTART.md)** | **[Architecture](docs/ARCHITECTURE_CONCEPTUAL.md)** | **[Contributing](docs/CONTRIBUTING.md)**
 
