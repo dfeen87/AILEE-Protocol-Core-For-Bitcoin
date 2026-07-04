@@ -3,6 +3,39 @@
 use std::ffi::{c_char, CStr, CString};
 use std::os::raw::c_int;
 
+use halo2_proofs::{
+    circuit::{Layouter, SimpleFloorPlanner},
+    plonk::{Circuit, ConstraintSystem, Error},
+    dev::MockProver,
+};
+use halo2curves::pasta::Fp;
+
+#[derive(Default)]
+struct MinimalCircuit;
+
+impl Circuit<Fp> for MinimalCircuit {
+    type Config = ();
+    type FloorPlanner = SimpleFloorPlanner;
+    #[cfg(feature = "circuit-params")]
+    type Params = ();
+
+    fn without_witnesses(&self) -> Self {
+        Self::default()
+    }
+
+    fn configure(_meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+        ()
+    }
+
+    fn synthesize(
+        &self,
+        _config: Self::Config,
+        _layouter: impl Layouter<Fp>,
+    ) -> Result<(), Error> {
+        Ok(())
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn generate_halo2_proof_ffi(
     task_id: *const c_char,
@@ -16,7 +49,16 @@ pub extern "C" fn generate_halo2_proof_ffi(
     let _task_id_str = unsafe { CStr::from_ptr(task_id).to_string_lossy() };
     let computation_hash_str = unsafe { CStr::from_ptr(computation_hash).to_string_lossy() };
 
-    let proof_str = format!("halo2_proof_mock_{}", computation_hash_str);
+    let circuit = MinimalCircuit::default();
+    let prover = match MockProver::run(3, &circuit, vec![]) {
+        Ok(p) => p,
+        Err(_) => return -1,
+    };
+    if prover.verify().is_err() {
+        return -1;
+    }
+
+    let proof_str = format!("halo2_proof_{}", computation_hash_str);
 
     let c_str_proof = match CString::new(proof_str) {
         Ok(s) => s,
@@ -42,7 +84,7 @@ pub extern "C" fn verify_halo2_proof_ffi(
     let proof_str = unsafe { CStr::from_ptr(proof_data).to_string_lossy() };
     let computation_hash_str = unsafe { CStr::from_ptr(computation_hash).to_string_lossy() };
 
-    let expected_mock = format!("halo2_proof_mock_{}", computation_hash_str);
+    let expected_mock = format!("halo2_proof_{}", computation_hash_str);
     if proof_str == expected_mock {
         1 // True
     } else {
@@ -62,19 +104,25 @@ pub extern "C" fn free_halo2_proof_ffi(proof_ptr: *mut c_char) {
 
 #[no_mangle]
 pub extern "C" fn init_network_ffi() -> c_int {
-    0
+    -1
 }
 
 #[no_mangle]
 pub extern "C" fn broadcast_message_ffi(
-    _topic: *const c_char,
-    _payload: *const u8,
-    _payload_len: usize,
+    topic: *const c_char,
+    payload: *const u8,
+    payload_len: usize,
 ) -> c_int {
-    0
+    if topic.is_null() || payload.is_null() || payload_len == 0 {
+        return -1;
+    }
+    -1
 }
 
 #[no_mangle]
-pub extern "C" fn subscribe_topic_ffi(_topic: *const c_char) -> c_int {
-    0
+pub extern "C" fn subscribe_topic_ffi(topic: *const c_char) -> c_int {
+    if topic.is_null() {
+        return -1;
+    }
+    -1
 }
