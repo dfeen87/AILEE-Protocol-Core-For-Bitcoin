@@ -5,6 +5,8 @@
 #include <chrono>
 #include <sstream>
 #include <iostream>
+#include <vector>
+#include <secp256k1.h>
 
 // Simple logging function - logs to stdout
 static void log(const std::string& level, const std::string& msg) {
@@ -12,6 +14,62 @@ static void log(const std::string& level, const std::string& msg) {
 }
 
 namespace ailee::l2 {
+
+namespace {
+
+std::vector<uint8_t> hexToBytes(const std::string& hex) {
+    std::vector<uint8_t> bytes;
+    if (hex.size() % 2 != 0) return bytes;
+    for (size_t i = 0; i < hex.size(); i += 2) {
+        unsigned int value = 0;
+        std::istringstream iss(hex.substr(i, 2));
+        iss >> std::hex >> value;
+        bytes.push_back(static_cast<uint8_t>(value));
+    }
+    return bytes;
+}
+
+bool verifyTxSignature(const std::string& txHashHex, const std::string& pubkeyHex, const std::string& sigHex) {
+    auto msgBytes = hexToBytes(txHashHex);
+    auto pubBytes = hexToBytes(pubkeyHex);
+    auto sigBytes = hexToBytes(sigHex);
+
+    if (msgBytes.size() != 32 || pubBytes.empty() || sigBytes.empty()) {
+        return false;
+    }
+
+    secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
+    if (!ctx) return false;
+
+    secp256k1_pubkey pubkey;
+    if (secp256k1_ec_pubkey_parse(ctx, &pubkey, pubBytes.data(), pubBytes.size()) != 1) {
+        secp256k1_context_destroy(ctx);
+        return false;
+    }
+
+    secp256k1_ecdsa_signature sig;
+    int parse_res = 0;
+    if (sigBytes.size() == 64) {
+        parse_res = secp256k1_ecdsa_signature_parse_compact(ctx, &sig, sigBytes.data());
+    } else {
+        parse_res = secp256k1_ecdsa_signature_parse_der(ctx, &sig, sigBytes.data(), sigBytes.size());
+    }
+
+    if (parse_res != 1) {
+        secp256k1_context_destroy(ctx);
+        return false;
+    }
+
+    secp256k1_ecdsa_signature normalized_sig;
+    secp256k1_ecdsa_signature_normalize(ctx, &normalized_sig, &sig);
+
+    int verify_res = secp256k1_ecdsa_verify(ctx, &normalized_sig, msgBytes.data(), &pubkey);
+    secp256k1_context_destroy(ctx);
+
+    return verify_res == 1;
+}
+
+} // namespace
 
 BlockProducer::BlockProducer(const Config& config)
     : config_(config) {
@@ -155,11 +213,17 @@ void BlockProducer::produceBlock() {
                     log("WARN", "Malformed transaction detected (missing sender/receiver). Skipping.");
                     continue;
                 }
-                // 3. Soft-check signature presence: log but don't reject, since some
-                //    transaction sources (e.g. web API) may omit signatures until
-                //    real ECDSA verification is fully integrated.
+                // 3. Strict signature presence check
                 if (tx.signature.empty()) {
-                    log("WARN", "Transaction missing signature; accepting for now: " + tx.txHash);
+                    log("WARN", "Transaction missing signature; rejecting: " + tx.txHash);
+                    continue;
+                }
+
+                // 4. Cryptographic signature verification
+                std::string pubKeyToVerify = tx.publicKey.empty() ? tx.fromAddress : tx.publicKey;
+                if (!verifyTxSignature(tx.txHash, pubKeyToVerify, tx.signature)) {
+                    log("WARN", "Transaction signature verification failed; rejecting: " + tx.txHash);
+                    continue;
                 }
 
                 validTxHashes.push_back(tx.txHash);

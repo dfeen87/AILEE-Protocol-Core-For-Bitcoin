@@ -22,6 +22,7 @@ struct Transaction {
     std::string status; // "pending", "confirmed", "failed"
     std::uint64_t blockHeight; // 0 if not yet included in a block
     std::string signature; // ECDSA signature of the transaction
+    std::string publicKey; // Public key of the sender (hex string)
 };
 
 /**
