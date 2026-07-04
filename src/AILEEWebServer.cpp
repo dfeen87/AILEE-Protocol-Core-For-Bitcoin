@@ -373,6 +373,8 @@ private:
                 tx.toAddress = request_body["to_address"].get<std::string>();
                 tx.amount = request_body["amount"].get<std::uint64_t>();
                 tx.data = request_body.value("data", "");
+                tx.signature = request_body.value("signature", "");
+                tx.publicKey = request_body.value("public_key", tx.fromAddress);
                 tx.status = "pending";
                 tx.blockHeight = 0;
                 
