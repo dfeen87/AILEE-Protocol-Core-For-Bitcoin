@@ -61,11 +61,12 @@ Proof ZKEngine::generateHalo2Proof(const std::string& taskId, const std::string&
     proof.publicInput = computationHash;
     proof.timestampMs = currentTimestampMs();
 
-    char* proof_out = nullptr;
+    Halo2ProofOutput* proof_out = nullptr;
     int res = generate_halo2_proof_ffi(taskId.c_str(), computationHash.c_str(), &proof_out);
 
     if (res == 0 && proof_out != nullptr) {
-        proof.proofData = std::string(proof_out);
+        proof.proofData = std::string(reinterpret_cast<const char*>(proof_out->proof_ptr), proof_out->proof_len);
+        proof.commitmentBytes = std::vector<uint8_t>(proof_out->commitment_ptr, proof_out->commitment_ptr + proof_out->commitment_len);
         proof.verified = true;
         free_halo2_proof_ffi(proof_out);
     } else {
@@ -111,7 +112,7 @@ bool ZKEngine::verifyHalo2Proof(const Proof& proof) {
         return false;
     }
 
-    int res = verify_halo2_proof_ffi(proof.proofData.c_str(), proof.publicInput.c_str());
+    int res = verify_halo2_proof_ffi(reinterpret_cast<const unsigned char*>(proof.proofData.data()), proof.proofData.size(), proof.publicInput.c_str());
     return res == 1;
 }
 

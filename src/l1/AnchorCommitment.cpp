@@ -4,6 +4,9 @@
 
 #include <iomanip>
 #include <sstream>
+#include <secp256k1.h>
+#include <secp256k1_extrakeys.h>
+#include <openssl/sha.h>
 
 namespace ailee::global_seven {
 
@@ -24,7 +27,7 @@ std::vector<uint8_t> hexToBytes(const std::string& hex) {
     return bytes;
 }
 
-std::vector<uint8_t> commitmentBytes(const std::string& payload) {
+std::vector<uint8_t> createCommitmentBytes(const std::string& payload) {
     if (payload.size() <= 80) {
         return std::vector<uint8_t>(payload.begin(), payload.end());
     }
@@ -68,7 +71,7 @@ std::string describePayload(const std::string& kind,
 } // namespace
 
 AnchorCommitment::AnchorPayload AnchorCommitment::buildOpReturnPayload() const {
-    const auto commitment = commitmentBytes(payload);
+    const auto commitment = createCommitmentBytes(payload);
     std::vector<uint8_t> script;
     script.push_back(0x6a);
     const auto pushed = pushData(commitment);
@@ -82,8 +85,29 @@ AnchorCommitment::AnchorPayload AnchorCommitment::buildOpReturnPayload() const {
 }
 
 AnchorCommitment::AnchorPayload AnchorCommitment::buildTaprootCommitment() const {
-    const auto commitment = commitmentBytes(payload);
+    std::vector<uint8_t> commitment;
+    if (!this->commitmentBytes.empty()) {
+        commitment = this->commitmentBytes; // Use 96 byte raw commitment if available
+    } else {
+        commitment = createCommitmentBytes(payload);
+    }
     std::vector<uint8_t> script;
+
+    if (!this->tweakedTaprootKey.empty()) {
+        // Build Taproot output using the computed tweaked key (Key Path)
+        // scriptPubKey for Taproot (SegWit v1): OP_1 <32-byte tweaked key>
+        script.push_back(0x51); // OP_1
+        script.push_back(0x20); // Push 32 bytes
+        script.insert(script.end(), this->tweakedTaprootKey.begin(), this->tweakedTaprootKey.end());
+
+        AnchorPayload payloadResult;
+        payloadResult.scriptBytes = script;
+        payloadResult.description = describePayload("TAPROOT_KEY_PATH", l2StateRoot, timestampMs,
+                                                   recoveryMetadata, payload, commitment);
+        return payloadResult;
+    }
+
+    // Fallback: Script Path
     script.push_back(0x00); // OP_FALSE
     script.push_back(0x63); // OP_IF
     const auto pushed = pushData(commitment);
@@ -95,6 +119,65 @@ AnchorCommitment::AnchorPayload AnchorCommitment::buildTaprootCommitment() const
     payloadResult.description = describePayload("TAPSCRIPT", l2StateRoot, timestampMs,
                                                recoveryMetadata, payload, commitment);
     return payloadResult;
+}
+
+bool AnchorCommitment::computeTweakedKey(const std::vector<uint8_t>& internalPubkey) {
+    if (internalPubkey.size() != 32 || this->commitmentBytes.empty()) {
+        return false;
+    }
+
+    secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
+    if (!ctx) return false;
+
+    secp256k1_xonly_pubkey pubkey;
+    if (secp256k1_xonly_pubkey_parse(ctx, &pubkey, internalPubkey.data()) != 1) {
+        secp256k1_context_destroy(ctx);
+        return false;
+    }
+
+    // Hash H(P || commitment)
+    std::vector<uint8_t> preimage;
+    preimage.insert(preimage.end(), internalPubkey.begin(), internalPubkey.end());
+    preimage.insert(preimage.end(), this->commitmentBytes.begin(), this->commitmentBytes.end());
+
+    unsigned char tweak[SHA256_DIGEST_LENGTH];
+    SHA256(preimage.data(), preimage.size(), tweak);
+
+    secp256k1_pubkey output_pubkey;
+    if (secp256k1_xonly_pubkey_tweak_add(ctx, &output_pubkey, &pubkey, tweak) != 1) {
+        secp256k1_context_destroy(ctx);
+        return false;
+    }
+
+    secp256k1_xonly_pubkey out_xonly;
+    if (secp256k1_xonly_pubkey_from_pubkey(ctx, &out_xonly, nullptr, &output_pubkey) != 1) {
+        secp256k1_context_destroy(ctx);
+        return false;
+    }
+
+    unsigned char serialized_xonly[32];
+    secp256k1_xonly_pubkey_serialize(ctx, serialized_xonly, &out_xonly);
+
+    this->tweakedTaprootKey = std::vector<uint8_t>(serialized_xonly, serialized_xonly + 32);
+
+    secp256k1_context_destroy(ctx);
+    return true;
+}
+
+bool AnchorCommitment::validateTaprootCommitment(const std::vector<uint8_t>& tweakedKey,
+                                                 const std::vector<uint8_t>& internalPubkey,
+                                                 const std::vector<uint8_t>& commitment) {
+    if (tweakedKey.size() != 32 || internalPubkey.size() != 32 || commitment.empty()) {
+        return false;
+    }
+
+    AnchorCommitment temp;
+    temp.commitmentBytes = commitment;
+    if (!temp.computeTweakedKey(internalPubkey)) {
+        return false;
+    }
+
+    return temp.tweakedTaprootKey == tweakedKey;
 }
 
 } // namespace ailee::global_seven
@@ -129,7 +212,7 @@ TapTree AnchorCommitment::buildChallengeResponseTree(const std::string& zkProofH
     TapTree tree;
     TapLeaf happyLeaf; happyLeaf.leafVersion = 0xc0;
     const std::string happyPayload = l2StateRoot + ":" + zkProofHash;
-    const auto happyBytes = commitmentBytes(happyPayload);
+    const auto happyBytes = createCommitmentBytes(happyPayload);
     std::vector<uint8_t> script1;
     script1.push_back(0x00); script1.push_back(0x63);
     const auto pushedHappy = pushData(happyBytes);
@@ -139,7 +222,7 @@ TapTree AnchorCommitment::buildChallengeResponseTree(const std::string& zkProofH
     tree.leaves.push_back(happyLeaf);
     TapLeaf disputeLeaf; disputeLeaf.leafVersion = 0xc0;
     const std::string disputePayload = "DISPUTE_EXEC:" + l2StateRoot;
-    const auto disputeBytes = commitmentBytes(disputePayload);
+    const auto disputeBytes = createCommitmentBytes(disputePayload);
     std::vector<uint8_t> script2;
     script2.push_back(0x00); script2.push_back(0x63);
     const auto pushedDispute = pushData(disputeBytes);

@@ -158,6 +158,9 @@ struct AnchorCommitment {
     std::string payload;
     std::string hash;
 
+    std::vector<uint8_t> commitmentBytes; // 96-byte commitment
+    std::vector<uint8_t> tweakedTaprootKey; // 32-byte tweaked X-only pubkey
+
     struct AnchorPayload {
         std::vector<uint8_t> scriptBytes;
         std::string description;
@@ -166,8 +169,17 @@ struct AnchorCommitment {
     AnchorPayload buildOpReturnPayload() const;
     AnchorPayload buildTaprootCommitment() const;
 
+    // Computes Taproot tweak P' = P + H(P || commitment) * G using secp256k1
+    // Returns true if successful, false otherwise.
+    bool computeTweakedKey(const std::vector<uint8_t>& internalPubkey);
+
     // Build a BitVM-style Taproot challenge-response tree
     TapTree buildChallengeResponseTree(const std::string& zkProofHash) const;
+
+    // Validates if an on-chain output key matches the expected P' given P and commitment
+    static bool validateTaprootCommitment(const std::vector<uint8_t>& tweakedKey,
+                                          const std::vector<uint8_t>& internalPubkey,
+                                          const std::vector<uint8_t>& commitment);
 };
 
 struct BlockHeader {
@@ -265,6 +277,7 @@ struct AdapterConfig {
     FeePolicy   feePolicy{};
     SlippagePolicy slippagePolicy{};
     double      minOracleConfidence{0.7};
+    std::string internal_pubkey;        // secp256k1 hex pubkey for taproot anchoring
 };
 
 // ---------- Callbacks ----------
