@@ -338,11 +338,9 @@ bool BitVMInterpreter::verifyRustProverOutput(InterpreterState& state, const Rus
         }
     }
 
-    // Or if the execution resulted in an empty stack (successful verify script)
-    // and the rust output is valid
-    if (state.stack.empty() && rustOutput.is_valid) {
-        return true;
-    }
+    // If the stack is empty, we cannot verify roots deterministically here.
+    // Avoid treating rustOutput.is_valid as sufficient proof of equivalence.
+    // (Callers that want "empty stack implies success" should enforce that policy externally.)
 
     return false;
 }
