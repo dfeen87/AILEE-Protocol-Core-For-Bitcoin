@@ -32,6 +32,18 @@
 namespace ailee {
 namespace global_seven {
 
+struct BTCState {
+    AdapterConfig cfg;
+    ErrorCallback onError;
+    TxCallback onTx;
+    BlockCallback onBlock;
+    EnergyCallback onEnergy;
+    std::atomic<bool> running{false};
+    // BTCInternal is just used by the other branch, here it's empty
+};
+
+std::shared_ptr<BTCState> BitcoinAdapter::state_;
+
 #if !defined(AILEE_HAS_JSONCPP)
 static inline void logEvt(Severity s, const std::string& msg, const std::string& comp, ErrorCallback cb) {
     if (cb) cb(AdapterError{s, msg, comp, 0});
@@ -930,7 +942,6 @@ AnchorCommitment BitcoinAdapter::buildAnchorCommitment(const std::string& l2Stat
 }
 
 // Static member initialization
-std::shared_ptr<BTCState> BitcoinAdapter::state_;
 
 // ============================================================================
 // AILEE Adapter Attachment (Optional, Read-Only)

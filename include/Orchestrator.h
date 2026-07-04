@@ -19,6 +19,7 @@
 #include <queue>
 #include <condition_variable>
 #include <future>
+#include "ProverSwarm.h"
 
 namespace ailee::sched {
 
@@ -705,6 +706,11 @@ public:
           running_(false)
     {
         orchestrator_.setStrategy(config_.performance.defaultStrategy);
+
+        ailee::orchestration::ProverSwarmConfig swarm_cfg;
+        swarm_cfg.db_path = "./swarm_db"; // Can be integrated to Config
+        proverSwarm_ = std::make_unique<ailee::orchestration::ProverSwarm>(swarm_cfg);
+        proverSwarm_->initialize();
     }
     
     ~Engine() {
@@ -871,11 +877,14 @@ public:
     IOrchestrator& getOrchestrator() { return orchestrator_; }
     std::vector<TaskPayload> getQueuedTasks() const { return taskQueue_.snapshot(); }
     
+    ailee::orchestration::ProverSwarm* getProverSwarm() const { return proverSwarm_.get(); }
+
 private:
     Config config_;
     ReputationLedger repLedger_;
     LatencyMap latencyMap_;
     WeightedOrchestrator orchestrator_;
+    std::unique_ptr<ailee::orchestration::ProverSwarm> proverSwarm_;
     
     std::atomic<bool> running_;
     TaskQueue taskQueue_;
