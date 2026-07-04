@@ -259,7 +259,7 @@ bool ProverSwarm::recordJobFailure(const std::string& job_id, std::string* err) 
     }
 
     auto job = *job_opt;
-    if (job.completed) return false;
+    if (job.completed) return true;
 
     rocksdb::WriteBatch batch;
 
