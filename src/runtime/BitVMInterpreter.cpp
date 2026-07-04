@@ -245,8 +245,13 @@ void BitVMInterpreter::step(InterpreterState& state) const {
             auto a = state.stack.back();
             state.stack.pop_back();
 
-            bool is_true = !a.empty();
-
+            bool is_true = false;
+            for (size_t j = 0; j < a.size(); ++j) {
+                if (a[j] != 0) {
+                    is_true = !(j == a.size() - 1 && a[j] == 0x80);
+                    break;
+                }
+            }
             if (!is_true) {
                 state.execution_success = false;
                 state.error_message = "OP_VERIFY failed";
