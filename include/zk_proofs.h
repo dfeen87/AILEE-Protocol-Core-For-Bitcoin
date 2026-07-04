@@ -27,6 +27,7 @@ struct Proof {
     std::optional<std::string> anchorCommitmentHash; // Optional L2 anchor hash for verification
     bool verified = false;
     uint64_t timestampMs = 0;
+    std::vector<uint8_t> commitmentBytes; // 96-byte commitment from Halo2
 };
 
 class ZKEngine {

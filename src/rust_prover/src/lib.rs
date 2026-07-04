@@ -44,11 +44,19 @@ impl Circuit<Fp> for MinimalCircuit {
     }
 }
 
+#[repr(C)]
+pub struct Halo2ProofOutput {
+    pub commitment_ptr: *const u8,
+    pub commitment_len: usize,
+    pub proof_ptr: *const u8,
+    pub proof_len: usize,
+}
+
 #[no_mangle]
 pub extern "C" fn generate_halo2_proof_ffi(
     task_id: *const c_char,
     computation_hash: *const c_char,
-    out_proof: *mut *mut c_char,
+    out_proof: *mut *mut Halo2ProofOutput,
 ) -> c_int {
     if task_id.is_null() || computation_hash.is_null() || out_proof.is_null() {
         if !out_proof.is_null() { unsafe { *out_proof = std::ptr::null_mut(); } }
@@ -69,14 +77,27 @@ pub extern "C" fn generate_halo2_proof_ffi(
     }
 
     let proof_str = format!("halo2_proof_{}", computation_hash_str);
+    let proof_bytes = proof_str.into_bytes();
+    let mut proof_vec = proof_bytes.into_boxed_slice();
+    let proof_ptr = proof_vec.as_mut_ptr();
+    let proof_len = proof_vec.len();
+    std::mem::forget(proof_vec);
 
-    let c_str_proof = match CString::new(proof_str) {
-        Ok(s) => s,
-        Err(_) => { unsafe { *out_proof = std::ptr::null_mut(); } return -1; },
-    };
+    // Mock 96 byte commitment: [proof_root | state_root | challenge_root]
+    let mut commitment_vec = vec![0u8; 96].into_boxed_slice();
+    let commitment_ptr = commitment_vec.as_mut_ptr();
+    let commitment_len = commitment_vec.len();
+    std::mem::forget(commitment_vec);
+
+    let output = Box::new(Halo2ProofOutput {
+        commitment_ptr,
+        commitment_len,
+        proof_ptr,
+        proof_len,
+    });
 
     unsafe {
-        *out_proof = c_str_proof.into_raw();
+        *out_proof = Box::into_raw(output);
     }
 
     0
@@ -84,14 +105,19 @@ pub extern "C" fn generate_halo2_proof_ffi(
 
 #[no_mangle]
 pub extern "C" fn verify_halo2_proof_ffi(
-    proof_data: *const c_char,
+    proof_data: *const u8,
+    proof_len: usize,
     computation_hash: *const c_char,
 ) -> c_int {
     if proof_data.is_null() || computation_hash.is_null() {
         return -1;
     }
 
-    let proof_str = unsafe { CStr::from_ptr(proof_data).to_string_lossy() };
+    let proof_slice = unsafe { std::slice::from_raw_parts(proof_data, proof_len) };
+    let proof_str = match std::str::from_utf8(proof_slice) {
+        Ok(s) => s,
+        Err(_) => return -1,
+    };
     let computation_hash_str = unsafe { CStr::from_ptr(computation_hash).to_string_lossy() };
 
     let expected_mock = format!("halo2_proof_{}", computation_hash_str);
@@ -103,10 +129,22 @@ pub extern "C" fn verify_halo2_proof_ffi(
 }
 
 #[no_mangle]
-pub extern "C" fn free_halo2_proof_ffi(proof_ptr: *mut c_char) {
+pub extern "C" fn free_halo2_proof_ffi(proof_ptr: *mut Halo2ProofOutput) {
     if !proof_ptr.is_null() {
         unsafe {
-            let _ = CString::from_raw(proof_ptr);
+            let output = Box::from_raw(proof_ptr);
+            if !output.proof_ptr.is_null() && output.proof_len > 0 {
+                let _ = Box::<[u8]>::from_raw(std::ptr::slice_from_raw_parts_mut(
+                    output.proof_ptr as *mut u8,
+                    output.proof_len,
+                ));
+            }
+            if !output.commitment_ptr.is_null() && output.commitment_len > 0 {
+                let _ = Box::<[u8]>::from_raw(std::ptr::slice_from_raw_parts_mut(
+                    output.commitment_ptr as *mut u8,
+                    output.commitment_len,
+                ));
+            }
         }
     }
 }

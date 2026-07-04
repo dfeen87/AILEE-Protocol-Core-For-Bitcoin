@@ -117,3 +117,43 @@ TEST(BitcoinShadowModeTest, WriteEnabledAtCompileTime) {
     EXPECT_TRUE(true);
 }
 #endif
+
+TEST(AnchorCommitmentTest, ComputeTweakedKeyWithValidInput) {
+    AnchorCommitment commitment;
+    commitment.commitmentBytes = std::vector<uint8_t>(96, 0x01); // Fake commitment
+
+    // Valid secp256k1 pubkey (example)
+    std::vector<uint8_t> internalPubkey = {
+        0x79, 0xbe, 0x66, 0x7e, 0xf9, 0xdc, 0xbb, 0xac,
+        0x55, 0xa0, 0x62, 0x95, 0xce, 0x87, 0x0b, 0x07,
+        0x02, 0x9b, 0xfc, 0xdb, 0x2d, 0xce, 0x28, 0xd9,
+        0x59, 0xf2, 0x81, 0x5b, 0x16, 0xf8, 0x17, 0x98
+    };
+
+    EXPECT_TRUE(commitment.computeTweakedKey(internalPubkey));
+    EXPECT_EQ(commitment.tweakedTaprootKey.size(), 32);
+
+    EXPECT_TRUE(AnchorCommitment::validateTaprootCommitment(commitment.tweakedTaprootKey, internalPubkey, commitment.commitmentBytes));
+}
+
+TEST(AnchorCommitmentTest, BuildTaprootCommitmentKeyPath) {
+    AnchorCommitment commitment;
+    commitment.commitmentBytes = std::vector<uint8_t>(96, 0x01); // Fake commitment
+
+    // Valid secp256k1 pubkey (example)
+    std::vector<uint8_t> internalPubkey = {
+        0x79, 0xbe, 0x66, 0x7e, 0xf9, 0xdc, 0xbb, 0xac,
+        0x55, 0xa0, 0x62, 0x95, 0xce, 0x87, 0x0b, 0x07,
+        0x02, 0x9b, 0xfc, 0xdb, 0x2d, 0xce, 0x28, 0xd9,
+        0x59, 0xf2, 0x81, 0x5b, 0x16, 0xf8, 0x17, 0x98
+    };
+
+    EXPECT_TRUE(commitment.computeTweakedKey(internalPubkey));
+    EXPECT_EQ(commitment.tweakedTaprootKey.size(), 32);
+
+    auto taprootPayload = commitment.buildTaprootCommitment();
+    EXPECT_EQ(taprootPayload.scriptBytes.size(), 34); // OP_1 (1) + OP_PUSH32 (1) + 32 bytes = 34
+    EXPECT_EQ(taprootPayload.scriptBytes[0], 0x51); // OP_1
+    EXPECT_EQ(taprootPayload.scriptBytes[1], 0x20); // Push 32 bytes
+    EXPECT_TRUE(taprootPayload.description.find("TAPROOT_KEY_PATH") != std::string::npos);
+}

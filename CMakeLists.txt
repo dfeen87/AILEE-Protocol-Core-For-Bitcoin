@@ -62,6 +62,27 @@ find_package(yaml-cpp QUIET)
 # 7. Threads (Required for running ZMQ listener in background)
 find_package(Threads REQUIRED)
 
+# Try pkg-config for libsecp256k1 first
+if(PKG_CONFIG_FOUND)
+    pkg_check_modules(libsecp256k1 QUIET libsecp256k1)
+endif()
+if(NOT libsecp256k1_FOUND)
+    # Fallback to normal find_library
+    find_library(libsecp256k1_LIBRARY NAMES secp256k1)
+    find_path(libsecp256k1_INCLUDE_DIR NAMES secp256k1.h)
+    if(libsecp256k1_LIBRARY AND libsecp256k1_INCLUDE_DIR)
+        set(libsecp256k1_FOUND TRUE)
+        set(libsecp256k1_LIBRARIES ${libsecp256k1_LIBRARY})
+        set(libsecp256k1_INCLUDE_DIRS ${libsecp256k1_INCLUDE_DIR})
+    endif()
+endif()
+if(libsecp256k1_FOUND)
+    message(STATUS "Found libsecp256k1: ${libsecp256k1_LIBRARIES}")
+    include_directories(${libsecp256k1_INCLUDE_DIRS})
+else()
+    message(FATAL_ERROR "libsecp256k1 is required but not found")
+endif()
+
 # 8. RocksDB (Optional - for persistent storage)
 # Robust detection logic prioritizing pkg-config for Linux CI environments
 set(ROCKSDB_LINK_LIBS "")
@@ -353,6 +374,7 @@ target_link_libraries(ailee_node
     OpenSSL::SSL
     OpenSSL::Crypto
     ${CURL_LIBRARIES}
+    ${libsecp256k1_LIBRARIES}
     Threads::Threads
 )
 
@@ -374,6 +396,7 @@ target_link_libraries(ailee_l2_verify
     $<IF:$<BOOL:${AILEE_USE_RUST_PROVER}>,ailee_rust_prover,ailee_rust_ffi_fallback>
     OpenSSL::SSL
     OpenSSL::Crypto
+    ${libsecp256k1_LIBRARIES}
 )
 
 # Link yaml-cpp if found (for policy system)
@@ -421,6 +444,7 @@ add_library(ailee_adapters STATIC
     ${INFRASTRUCTURE_SOURCES}
     ${POLICY_SOURCES}
     src/security/zk_proofs.cpp
+    src/l1/AnchorCommitment.cpp
 )
 
 target_link_libraries(ailee_adapters
@@ -429,6 +453,7 @@ target_link_libraries(ailee_adapters
     OpenSSL::SSL
     OpenSSL::Crypto
     ${CURL_LIBRARIES}
+    ${libsecp256k1_LIBRARIES}
     Threads::Threads
 )
 

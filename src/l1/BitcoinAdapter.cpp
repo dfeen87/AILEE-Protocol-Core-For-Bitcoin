@@ -82,6 +82,17 @@ AnchorCommitment BitcoinAdapter::buildAnchorCommitment(const std::string& l2Stat
     commitment.recoveryMetadata = recoveryMetadata;
     commitment.payload = l2StateRoot + ":" + std::to_string(timestampMs) + ":" + recoveryMetadata;
     commitment.hash = ailee::zk::sha256Hex(commitment.payload);
+
+    // If an internal pubkey is configured, generate tweaked key
+    if (state_ && !state_->cfg.internal_pubkey.empty() && !commitment.commitmentBytes.empty()) {
+        std::vector<uint8_t> pubkeyBytes;
+        for (size_t i = 0; i < state_->cfg.internal_pubkey.length(); i += 2) {
+            std::string byteString = state_->cfg.internal_pubkey.substr(i, 2);
+            pubkeyBytes.push_back(static_cast<uint8_t>(strtol(byteString.c_str(), nullptr, 16)));
+        }
+        commitment.computeTweakedKey(pubkeyBytes);
+    }
+
     return commitment;
 }
 
@@ -904,6 +915,17 @@ AnchorCommitment BitcoinAdapter::buildAnchorCommitment(const std::string& l2Stat
     commitment.recoveryMetadata = recoveryMetadata;
     commitment.payload = l2StateRoot + ":" + std::to_string(timestampMs) + ":" + recoveryMetadata;
     commitment.hash = ailee::zk::sha256Hex(commitment.payload);
+
+    // If an internal pubkey is configured, generate tweaked key
+    if (state_ && !state_->cfg.internal_pubkey.empty() && !commitment.commitmentBytes.empty()) {
+        std::vector<uint8_t> pubkeyBytes;
+        for (size_t i = 0; i < state_->cfg.internal_pubkey.length(); i += 2) {
+            std::string byteString = state_->cfg.internal_pubkey.substr(i, 2);
+            pubkeyBytes.push_back(static_cast<uint8_t>(strtol(byteString.c_str(), nullptr, 16)));
+        }
+        commitment.computeTweakedKey(pubkeyBytes);
+    }
+
     return commitment;
 }
 
