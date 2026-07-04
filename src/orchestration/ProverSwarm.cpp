@@ -77,9 +77,9 @@ bool ProverSwarm::initialize(std::string* err) {
 void ProverSwarm::close() {
     if (db_) {
         std::lock_guard<std::mutex> lock(mu_);
-        if (default_cf_) db_->DestroyColumnFamilyHandle(default_cf_);
-        if (jobs_cf_) db_->DestroyColumnFamilyHandle(jobs_cf_);
-        if (state_cf_) db_->DestroyColumnFamilyHandle(state_cf_);
+        if (default_cf_) { db_->DestroyColumnFamilyHandle(default_cf_); default_cf_ = nullptr; }
+        if (jobs_cf_) { db_->DestroyColumnFamilyHandle(jobs_cf_); jobs_cf_ = nullptr; }
+        if (state_cf_) { db_->DestroyColumnFamilyHandle(state_cf_); state_cf_ = nullptr; }
         db_.reset();
     }
 }
