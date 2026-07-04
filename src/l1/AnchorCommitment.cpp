@@ -135,14 +135,22 @@ bool AnchorCommitment::computeTweakedKey(const std::vector<uint8_t>& internalPub
         return false;
     }
 
-    // Hash H(P || commitment)
+    // BIP341 TapTweak: tweak = tagged_hash("TapTweak", P || merkle_root)
+    // If commitmentBytes is not 32 bytes, hash it down first.
+    unsigned char merkle_root[SHA256_DIGEST_LENGTH];
+    SHA256(this->commitmentBytes.data(), this->commitmentBytes.size(), merkle_root);
+
+    unsigned char tag_hash[SHA256_DIGEST_LENGTH];
+    SHA256(reinterpret_cast<const unsigned char*>("TapTweak"), 8, tag_hash);
+
     std::vector<uint8_t> preimage;
+    preimage.insert(preimage.end(), tag_hash, tag_hash + SHA256_DIGEST_LENGTH);
+    preimage.insert(preimage.end(), tag_hash, tag_hash + SHA256_DIGEST_LENGTH);
     preimage.insert(preimage.end(), internalPubkey.begin(), internalPubkey.end());
-    preimage.insert(preimage.end(), this->commitmentBytes.begin(), this->commitmentBytes.end());
+    preimage.insert(preimage.end(), merkle_root, merkle_root + SHA256_DIGEST_LENGTH);
 
     unsigned char tweak[SHA256_DIGEST_LENGTH];
     SHA256(preimage.data(), preimage.size(), tweak);
-
     secp256k1_pubkey output_pubkey;
     if (secp256k1_xonly_pubkey_tweak_add(ctx, &output_pubkey, &pubkey, tweak) != 1) {
         secp256k1_context_destroy(ctx);
