@@ -13,26 +13,34 @@ use halo2curves::pasta::Fp;
 #[derive(Default)]
 struct MinimalCircuit;
 
+#[derive(Clone)]
+struct MinimalConfig {
+    advice: halo2_proofs::plonk::Column<halo2_proofs::plonk::Advice>,
+}
+
 impl Circuit<Fp> for MinimalCircuit {
-    type Config = ();
+    type Config = MinimalConfig;
     type FloorPlanner = SimpleFloorPlanner;
-    #[cfg(feature = "circuit-params")]
-    type Params = ();
 
     fn without_witnesses(&self) -> Self {
         Self::default()
     }
 
-    fn configure(_meta: &mut ConstraintSystem<Fp>) -> Self::Config {
-        ()
+    fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+        let advice = meta.advice_column();
+        meta.enable_equality(advice);
+        MinimalConfig { advice }
     }
 
     fn synthesize(
         &self,
-        _config: Self::Config,
-        _layouter: impl Layouter<Fp>,
+        config: Self::Config,
+        mut layouter: impl Layouter<Fp>,
     ) -> Result<(), Error> {
-        Ok(())
+        layouter.assign_region(|| "dummy", |mut region| {
+            region.assign_advice(|| "dummy", config.advice, 0, || halo2_proofs::circuit::Value::known(Fp::from(0)))?;
+            Ok(())
+        })
     }
 }
 
@@ -43,6 +51,7 @@ pub extern "C" fn generate_halo2_proof_ffi(
     out_proof: *mut *mut c_char,
 ) -> c_int {
     if task_id.is_null() || computation_hash.is_null() || out_proof.is_null() {
+        if !out_proof.is_null() { unsafe { *out_proof = std::ptr::null_mut(); } }
         return -1;
     }
 
@@ -52,9 +61,9 @@ pub extern "C" fn generate_halo2_proof_ffi(
     let circuit = MinimalCircuit::default();
     let prover = match MockProver::run(3, &circuit, vec![]) {
         Ok(p) => p,
-        Err(_) => return -1,
+        Err(_) => { unsafe { *out_proof = std::ptr::null_mut(); } return -1; },
     };
-    if prover.verify().is_err() {
+    if prover.verify().is_err() { unsafe { *out_proof = std::ptr::null_mut(); }
         return -1;
     }
 
@@ -62,7 +71,7 @@ pub extern "C" fn generate_halo2_proof_ffi(
 
     let c_str_proof = match CString::new(proof_str) {
         Ok(s) => s,
-        Err(_) => return -1,
+        Err(_) => { unsafe { *out_proof = std::ptr::null_mut(); } return -1; },
     };
 
     unsafe {
@@ -100,7 +109,6 @@ pub extern "C" fn free_halo2_proof_ffi(proof_ptr: *mut c_char) {
         }
     }
 }
-
 
 #[no_mangle]
 pub extern "C" fn init_network_ffi() -> c_int {
