@@ -375,7 +375,6 @@ target_link_libraries(ailee_node
     OpenSSL::Crypto
     ${CURL_LIBRARIES}
     ${libsecp256k1_LIBRARIES}
-    ${libsecp256k1_LIBRARIES}
     Threads::Threads
 )
 
