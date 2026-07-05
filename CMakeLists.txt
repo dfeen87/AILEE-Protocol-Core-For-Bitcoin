@@ -9,6 +9,28 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# ============================================================================
+# Build Metadata Generation (Deterministic)
+# ============================================================================
+execute_process(
+    COMMAND git rev-parse --short HEAD
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_VARIABLE AILEE_COMMIT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+if(NOT AILEE_COMMIT_HASH)
+    set(AILEE_COMMIT_HASH "unknown")
+endif()
+
+# Fallbacks for deterministic build variables that can be overridden via CMake
+if(NOT AILEE_BUILD_NUMBER)
+    set(AILEE_BUILD_NUMBER "0")
+endif()
+if(NOT AILEE_PROTOCOL_VERSION)
+    set(AILEE_PROTOCOL_VERSION "1.0.0")
+endif()
+
 # Build type default to Release for performance
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
@@ -262,6 +284,7 @@ set(INFRASTRUCTURE_SOURCES
     src/network/ReputationRateLimiter.cpp
     src/orchestration/DistributedTaskProtocol.cpp
     src/metrics/PrometheusExporter.cpp
+    src/build/BuildInfo.cpp
 )
 
 # Policy System Sources
@@ -425,6 +448,12 @@ target_link_libraries(ailee_node
     Threads::Threads
 )
 
+target_compile_definitions(ailee_node PRIVATE
+    AILEE_COMMIT_HASH=\"${AILEE_COMMIT_HASH}\"
+    AILEE_BUILD_NUMBER=\"${AILEE_BUILD_NUMBER}\"
+    AILEE_PROTOCOL_VERSION=\"${AILEE_PROTOCOL_VERSION}\"
+)
+
 if(jsoncpp_FOUND)
     target_link_libraries(ailee_node PRIVATE jsoncpp_lib)
     target_compile_definitions(ailee_node PRIVATE AILEE_HAS_JSONCPP=1)
@@ -502,6 +531,12 @@ target_link_libraries(ailee_adapters
     ${CURL_LIBRARIES}
     ${libsecp256k1_LIBRARIES}
     Threads::Threads
+)
+
+target_compile_definitions(ailee_adapters PRIVATE
+    AILEE_COMMIT_HASH=\"${AILEE_COMMIT_HASH}\"
+    AILEE_BUILD_NUMBER=\"${AILEE_BUILD_NUMBER}\"
+    AILEE_PROTOCOL_VERSION=\"${AILEE_PROTOCOL_VERSION}\"
 )
 
 if(jsoncpp_FOUND)

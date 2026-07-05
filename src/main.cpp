@@ -20,6 +20,7 @@
 
 // Core Protocol Headers
 #include "build_metadata.hpp"
+#include "build/BuildInfo.hpp"
 #include "ailee_tps_engine.h"
 #include "ailee_gold_bridge.h"
 #include "ailee_recovery_protocol.h"
@@ -1032,6 +1033,9 @@ int main(int argc, char* argv[]) {
     log(LogLevel::INFO, "╚═══════════════════════════════════════════════════╝");
     std::cout << "AILEE build id: " << AILEE_BUILD_ID << "\n";
     std::cout << "Rust prover hash: " << AILEE_RUST_PROVER_HASH << "\n";
+    std::cout << "AILEE commit hash: " << ailee::build::BuildInfo::getCommitHash() << "\n";
+    std::cout << "AILEE build number: " << ailee::build::BuildInfo::getBuildNumber() << "\n";
+    std::cout << "AILEE protocol version: " << ailee::build::BuildInfo::getProtocolVersion() << "\n";
 
     // Load and validate configuration
     Config cfg = loadConfigFromEnv();
