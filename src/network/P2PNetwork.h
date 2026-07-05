@@ -9,6 +9,8 @@
 #include <memory>
 #include <optional>
 #include <cstdint>
+#include <map>
+#include "ReputationRateLimiter.h"
 
 namespace ailee::network {
 
@@ -40,6 +42,10 @@ struct NetworkMessage {
     std::vector<uint8_t> payload; // Message payload
     uint64_t timestamp;           // Message timestamp
     std::string messageId;        // Unique message identifier
+
+    // Deterministic binary serialization
+    std::vector<uint8_t> serialize() const;
+    bool deserialize(const uint8_t* data, size_t len);
 };
 
 /**
@@ -68,7 +74,36 @@ struct P2PConfig {
 using MessageHandler = std::function<void(const NetworkMessage&)>;
 
 /**
- * P2P Network layer using libp2p
+ * Abstract interface for P2P networking transport.
+ * Facilitates dropping in libp2p or other engines deterministically.
+ */
+class INetworkTransport {
+public:
+    virtual ~INetworkTransport() = default;
+
+    virtual bool start() = 0;
+    virtual void stop() = 0;
+    virtual bool isRunning() const = 0;
+
+    virtual std::string getLocalPeerId() const = 0;
+    virtual std::vector<PeerInfo> getPeers() const = 0;
+
+    virtual bool subscribe(const std::string& topic, MessageHandler handler) = 0;
+    virtual bool unsubscribe(const std::string& topic) = 0;
+    virtual bool publish(const std::string& topic, const std::vector<uint8_t>& payload) = 0;
+
+    virtual std::optional<std::vector<uint8_t>> sendToPeer(
+        const std::string& peerId,
+        const std::string& protocol,
+        const std::vector<uint8_t>& payload) = 0;
+
+    virtual bool connectToPeer(const std::string& multiaddr) = 0;
+    virtual bool disconnectPeer(const std::string& peerId) = 0;
+};
+
+
+/**
+ * P2P Network layer delegating to an abstract transport
  * 
  * Provides:
  * - Peer discovery (mDNS, DHT, bootstrap)
@@ -81,6 +116,9 @@ public:
     explicit P2PNetwork(const P2PConfig& config = P2PConfig{});
     ~P2PNetwork();
     
+    // Optionally allow injecting a custom transport (e.g., for testing or true libp2p integration)
+    explicit P2PNetwork(std::unique_ptr<INetworkTransport> transport);
+
     // Disable copy, allow move
     P2PNetwork(const P2PNetwork&) = delete;
     P2PNetwork& operator=(const P2PNetwork&) = delete;
@@ -175,8 +213,27 @@ public:
     NetworkStats getStats() const;
 
 private:
-    class Impl;
-    std::unique_ptr<Impl> impl_;
+    std::unique_ptr<INetworkTransport> transport_;
+
+    struct Stats {
+        size_t totalMessagesSent = 0;
+        size_t totalMessagesReceived = 0;
+        uint64_t bytesUploaded = 0;
+        uint64_t bytesDownloaded = 0;
+    };
+    Stats internalStats_;
+
+    // Internal handler to intercept incoming messages for rate limiting
+    void internalMessageHandler(const NetworkMessage& msg, MessageHandler userHandler, double peerReputation);
+
+    // We forward subscriptions through this instance to track them
+    std::map<std::string, MessageHandler> subscriptions_;
+
+    // Rate limiter instance bound to this network
+    ReputationRateLimiter rateLimiter_;
+
+    // Mutex to protect subscriptions_ and internalStats_
+    mutable std::mutex mutex_;
 };
 
 } // namespace ailee::network

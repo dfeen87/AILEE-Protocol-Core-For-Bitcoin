@@ -18,8 +18,9 @@ struct RateLimiterConfig {
     double mediumRepMultiplier = 1.0;
     double highRepMultiplier = 2.0;
 
-    std::uint32_t baseMessagesPerSecond = 10;
-    std::chrono::milliseconds windowSize{1000};
+    std::uint32_t baseMessagesPerWindow = 10;
+    // Window size in logical ticks (replacing milliseconds)
+    uint64_t windowSizeTicks{100};
 
     // Limits per topic
     std::unordered_map<std::string, std::uint32_t> topicLimits;
@@ -38,7 +39,7 @@ private:
 
     struct PeerState {
         std::uint32_t messageCount = 0;
-        std::chrono::steady_clock::time_point windowStart;
+        uint64_t windowStartTick = 0;
         std::vector<std::size_t> recentPayloadHashes;
     };
 
