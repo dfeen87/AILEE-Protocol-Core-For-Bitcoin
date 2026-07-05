@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
 #include <thread>
 
@@ -75,6 +76,8 @@ private:
     
     Mempool* mempool_{nullptr}; // Non-owning pointer to mempool
     ailee::l1::ReorgDetector* reorgDetector_{nullptr}; // Non-owning pointer
+
+    std::set<std::string> rejectedTxs_; // Track deterministically rejected transactions
 };
 
 } // namespace ailee::l2

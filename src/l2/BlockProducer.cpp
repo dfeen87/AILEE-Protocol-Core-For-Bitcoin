@@ -20,6 +20,12 @@ namespace {
 std::vector<uint8_t> hexToBytes(const std::string& hex) {
     std::vector<uint8_t> bytes;
     if (hex.size() % 2 != 0) return bytes;
+
+    // Strict validation of hex characters
+    if (hex.find_first_not_of("0123456789abcdefABCDEF") != std::string::npos) {
+        return bytes; // Return empty on invalid hex characters
+    }
+
     for (size_t i = 0; i < hex.size(); i += 2) {
         unsigned int value = 0;
         std::istringstream iss(hex.substr(i, 2));
@@ -27,6 +33,12 @@ std::vector<uint8_t> hexToBytes(const std::string& hex) {
         bytes.push_back(static_cast<uint8_t>(value));
     }
     return bytes;
+}
+
+// Helper to manage secp256k1 context lifecycle deterministically
+secp256k1_context* getSecp256k1VerifyContext() {
+    static secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
+    return ctx;
 }
 
 bool verifyTxSignature(const std::string& txHashHex, const std::string& pubkeyHex, const std::string& sigHex) {
@@ -38,12 +50,11 @@ bool verifyTxSignature(const std::string& txHashHex, const std::string& pubkeyHe
         return false;
     }
 
-    secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
+    secp256k1_context* ctx = getSecp256k1VerifyContext();
     if (!ctx) return false;
 
     secp256k1_pubkey pubkey;
     if (secp256k1_ec_pubkey_parse(ctx, &pubkey, pubBytes.data(), pubBytes.size()) != 1) {
-        secp256k1_context_destroy(ctx);
         return false;
     }
 
@@ -56,7 +67,6 @@ bool verifyTxSignature(const std::string& txHashHex, const std::string& pubkeyHe
     }
 
     if (parse_res != 1) {
-        secp256k1_context_destroy(ctx);
         return false;
     }
 
@@ -64,7 +74,6 @@ bool verifyTxSignature(const std::string& txHashHex, const std::string& pubkeyHe
     secp256k1_ecdsa_signature_normalize(ctx, &normalized_sig, &sig);
 
     int verify_res = secp256k1_ecdsa_verify(ctx, &normalized_sig, msgBytes.data(), &pubkey);
-    secp256k1_context_destroy(ctx);
 
     return verify_res == 1;
 }
@@ -201,28 +210,37 @@ void BlockProducer::produceBlock() {
             validTxHashes.reserve(txsInBlock);
 
             for (const auto& tx : transactions) {
+                // Skip deterministic rejections to prevent infinite reprocessing
+                if (rejectedTxs_.count(tx.txHash) > 0) {
+                    continue;
+                }
+
                 // Audit Fix: Basic Validation
                 // 1. Check if hash is valid length and contains only hex characters
                 if (tx.txHash.length() != 64 ||
                     tx.txHash.find_first_not_of("0123456789abcdefABCDEF") != std::string::npos) {
-                    log("WARN", "Invalid transaction hash detected: " + tx.txHash + ". Skipping.");
+                    log("ERROR", "Invalid transaction hash detected: " + tx.txHash + ". Rejecting.");
+                    rejectedTxs_.insert(tx.txHash);
                     continue;
                 }
                 // 2. Check if sender/receiver present (basic sanity)
                 if (tx.fromAddress.empty() || tx.toAddress.empty()) {
-                    log("WARN", "Malformed transaction detected (missing sender/receiver). Skipping.");
+                    log("ERROR", "Malformed transaction detected (missing sender/receiver). Rejecting: " + tx.txHash);
+                    rejectedTxs_.insert(tx.txHash);
                     continue;
                 }
                 // 3. Strict signature presence check
                 if (tx.signature.empty()) {
-                    log("WARN", "Transaction missing signature; rejecting: " + tx.txHash);
+                    log("ERROR", "Transaction missing signature; rejecting: " + tx.txHash);
+                    rejectedTxs_.insert(tx.txHash);
                     continue;
                 }
 
                 // 4. Cryptographic signature verification
                 std::string pubKeyToVerify = tx.publicKey.empty() ? tx.fromAddress : tx.publicKey;
                 if (!verifyTxSignature(tx.txHash, pubKeyToVerify, tx.signature)) {
-                    log("WARN", "Transaction signature verification failed; rejecting: " + tx.txHash);
+                    log("ERROR", "Transaction signature verification failed; rejecting: " + tx.txHash);
+                    rejectedTxs_.insert(tx.txHash);
                     continue;
                 }
 
