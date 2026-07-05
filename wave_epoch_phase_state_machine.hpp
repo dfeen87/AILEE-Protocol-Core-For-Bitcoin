@@ -13,9 +13,11 @@ double generate_phase_salt(double ts, double omega);
 
 class PllController {
 public:
-    void monitor_phase_error();
+    void monitor_phase_error(double incoming_phase_error, double current_ts, double current_omega, double incoming_salt);
 private:
-    bool is_replay_detected_;
+    bool is_replay_detected_ = false;
+    double ema_score_ = 1.0;
+    bool is_active_ = false;
 };
 
 } // namespace wnn

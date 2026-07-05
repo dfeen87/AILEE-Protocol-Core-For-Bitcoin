@@ -2,6 +2,7 @@
 
 #include "wave_identity_phase_binding.hpp"
 #include <optional>
+#include <vector>
 
 namespace ailee {
 namespace wnn {
@@ -20,9 +21,11 @@ struct MeshNodeState {
 
 class MeshOrchestrator {
 public:
-    void evaluate_topology();
+    void evaluate_topology(const std::vector<MeshNodeState>& nodes);
 private:
-    bool mesh_healthy_;
+    bool mesh_healthy_ = false;
+    double min_trust_threshold_ = 0.5;
+    double max_phase_error_deg_ = 15.0;
 };
 
 } // namespace wnn

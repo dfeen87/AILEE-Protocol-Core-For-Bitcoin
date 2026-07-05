@@ -14,11 +14,18 @@ struct WaveState {
 class DuffingOscillator {
 public:
     void step(WaveState& state);
+private:
+    double sum_x_c_ = 0.0;
+    double sum_v_c_ = 0.0;
+    double sum_ts_c_ = 0.0;
+    double sum_theta_c_ = 0.0;
 };
 
 class DistributedPLL {
 public:
-    void synchronize();
+    void synchronize(double aggregate_anchor_error);
+private:
+    double local_phase_ = 0.0;
 };
 
 class MeshOrchestrator;

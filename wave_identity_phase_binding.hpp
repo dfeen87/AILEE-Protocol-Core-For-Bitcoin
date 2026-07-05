@@ -3,6 +3,7 @@
 #include <vector>
 #include <cstdint>
 #include <atomic>
+#include <map>
 
 namespace ailee {
 namespace mesh_legacy {
@@ -31,7 +32,7 @@ struct KnownPeer {
 
 class CoherenceEngine {
 public:
-    void evaluate_clusters();
+    void evaluate_clusters(const std::vector<CoherenceCluster>& clusters, std::map<space::AnchorId, KnownPeer>& anchors);
 };
 
 } // namespace wnn
