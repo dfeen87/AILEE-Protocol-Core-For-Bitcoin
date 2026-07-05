@@ -2,6 +2,7 @@
 // HashProofSystem.cpp — Production-Grade Hash-Based Verification Implementation
 
 #include "HashProofSystem.h"
+#include <secp256k1.h>
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 #include <sstream>
@@ -214,17 +215,24 @@ bool HashProofSystem::verifyMerklePath(
     return current == root;
 }
 
-// ==================== SIGNATURE (STUB FOR MVP) ====================
+// ==================== SIGNATURE ====================
 
 std::string HashProofSystem::signExecution(
     const std::string& executionHash,
     const std::string& privkey) {
     
-    // MVP: Simple HMAC-style signature using SHA256
-    // In production: Use Ed25519 with libsodium or OpenSSL 3.0+
+    if (privkey.size() != 32 || executionHash.size() != 32) return ""; // Expect raw 32-byte hash and key
     
-    std::string combined = executionHash + privkey;
-    return sha3_256(combined);
+    static secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
+    secp256k1_ecdsa_signature sig;
+
+    if (secp256k1_ecdsa_sign(ctx, &sig, reinterpret_cast<const unsigned char*>(executionHash.data()), reinterpret_cast<const unsigned char*>(privkey.data()), NULL, NULL) == 1) {
+        unsigned char sig_out[72];
+        size_t sig_out_len = sizeof(sig_out);
+        secp256k1_ecdsa_signature_serialize_der(ctx, sig_out, &sig_out_len, &sig);
+        return std::string(reinterpret_cast<char*>(sig_out), sig_out_len);
+    }
+    return "";
 }
 
 bool HashProofSystem::verifySignature(
@@ -232,12 +240,18 @@ bool HashProofSystem::verifySignature(
     const std::string& signature,
     const std::string& pubkey) {
     
-    // MVP: Verify HMAC-style signature
-    // In production: Use Ed25519 verification
+    if (signature.empty() || pubkey.empty() || executionHash.size() != 32) return false;
+
+    static secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
+    secp256k1_pubkey pubkey_parsed;
+    secp256k1_ecdsa_signature sig_parsed;
     
-    // For now, just check signature is non-empty
-    // Real verification would use pubkey to verify signature of executionHash
-    return !signature.empty() && !pubkey.empty() && !executionHash.empty();
+    if (secp256k1_ec_pubkey_parse(ctx, &pubkey_parsed, reinterpret_cast<const unsigned char*>(pubkey.data()), pubkey.size()) == 1) {
+        if (secp256k1_ecdsa_signature_parse_der(ctx, &sig_parsed, reinterpret_cast<const unsigned char*>(signature.data()), signature.size()) == 1) {
+            return (secp256k1_ecdsa_verify(ctx, &sig_parsed, reinterpret_cast<const unsigned char*>(executionHash.data()), &pubkey_parsed) == 1);
+        }
+    }
+    return false;
 }
 
 // ==================== PROOF GENERATION ====================

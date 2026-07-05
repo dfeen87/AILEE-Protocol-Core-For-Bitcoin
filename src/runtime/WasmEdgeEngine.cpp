@@ -116,40 +116,8 @@ void WasmEdgeEngine::configureResourceLimits() {
 
 bool WasmEdgeEngine::loadModule(const std::vector<uint8_t>& moduleBytes, 
                                 const std::string& moduleHash) {
-    std::lock_guard<std::mutex> lock(cacheMutex_);
-    
-    // Verify hash matches
-    std::string computedHash = computeSHA256(moduleBytes);
-    if (computedHash != moduleHash) {
-        std::cerr << "[WasmEdgeEngine] Module hash mismatch!" << std::endl;
-        std::cerr << "  Expected: " << moduleHash << std::endl;
-        std::cerr << "  Got: " << computedHash << std::endl;
-        return false;
-    }
-    
-    // Check if already loaded
-    if (moduleCache_.find(moduleHash) != moduleCache_.end()) {
-        std::cout << "[WasmEdgeEngine] Module already cached: " << moduleHash << std::endl;
-        return true;
-    }
-    
-    // In production with WasmEdge SDK:
-    // auto result = WasmEdge_VMLoadWasmFromBuffer(vm_, moduleBytes.data(), moduleBytes.size());
-    // if (!WasmEdge_ResultOK(result)) {
-    //     return false;
-    // }
-    
-    // Cache module
-    CachedModule cached;
-    cached.bytecode = moduleBytes;
-    cached.instance = nullptr; // Would be actual WasmEdge module instance
-    cached.loadedAt = std::chrono::system_clock::now();
-    cached.executionCount = 0;
-    
-    moduleCache_[moduleHash] = std::move(cached);
-    
-    std::cout << "[WasmEdgeEngine] Module loaded and cached: " << moduleHash.substr(0, 16) << "..." << std::endl;
-    return true;
+    std::cerr << "[WasmEdgeEngine] NOT_IMPLEMENTED_WASM: Module loading is disabled in deterministic fail-closed mode." << std::endl;
+    return false;
 }
 
 void WasmEdgeEngine::unloadModule(const std::string& moduleHash) {
@@ -179,92 +147,14 @@ WasmResult WasmEdgeEngine::executeInternal(const WasmCall& call, bool recordTrac
     WasmResult result;
     result.timestamp = std::chrono::system_clock::now();
     
-    // Verify input hash if provided
-    if (!call.inputHash.empty()) {
-        std::string computedHash = computeSHA256(call.inputBytes);
-        if (computedHash != call.inputHash) {
-            result.success = false;
-            result.error = "Input hash mismatch";
-            result.errorCode = static_cast<uint32_t>(WasmErrorCode::INVALID_INPUT);
-            return result;
-        }
-    }
-    
-    // ========== SIMULATED EXECUTION (for demo purposes) ==========
-    // In production with WasmEdge SDK, this would:
-    // 1. Get module from cache
-    // 2. Set up WASI environment with limits
-    // 3. Call WasmEdge_VMExecute with function name and parameters
-    // 4. Collect execution metrics from WasmEdge statistics API
-    // 5. Return actual execution output
-    
-    std::cout << "[WasmEdgeEngine] Executing function: " << call.functionName << std::endl;
-    std::cout << "  Input size: " << call.inputBytes.size() << " bytes" << std::endl;
-    
-    // Simulate computation time (100-600ms)
-    std::this_thread::sleep_for(std::chrono::milliseconds(100 + (rand() % 500)));
-    
-    // Simulate output generation
-    result.success = true;
-    result.outputBytes = {0x01, 0x02, 0x03, 0x04}; // Dummy output
-    
-    // In real implementation:
-    // - Call actual WASM function
-    // - result.outputBytes = functionResult;
+    // Deterministic fail-closed for WasmEdge integration
+    result.success = false;
+    result.error = "NOT_IMPLEMENTED_WASM";
+    result.errorCode = static_cast<uint32_t>(WasmErrorCode::INVALID_MODULE); // Or appropriate code
     
     auto endTime = std::chrono::high_resolution_clock::now();
-    
-    // ========== COMPUTE HASHES ==========
-    result.moduleHash = call.nodeId.value_or("module_unknown");
-    result.outputHash = computeSHA256(result.outputBytes);
-    result.executionHash = computeExecutionHash(
-        result.moduleHash,
-        call.inputHash,
-        result.outputHash
-    );
-    
-    // ========== COLLECT METRICS ==========
-    result.metrics.executionTime = std::chrono::duration_cast<std::chrono::microseconds>(
-        endTime - startTime
-    );
-    result.metrics.instantiationTime = std::chrono::microseconds(1000); // Simulated
-    result.metrics.peakMemoryUsed = 10 * 1024 * 1024 + (rand() % (40 * 1024 * 1024)); // 10-50MB
-    result.metrics.averageMemoryUsed = result.metrics.peakMemoryUsed * 0.7;
-    result.metrics.instructionsExecuted = 1000000 + (rand() % 9000000);
-    result.metrics.gasConsumed = result.metrics.instructionsExecuted / 10;
-    result.metrics.functionCallCount = 100 + (rand() % 900);
-    result.metrics.runtimeVersion = "WasmEdge-Simulated-0.13.5";
-    
-    // Check limits
-    if (result.metrics.peakMemoryUsed > limits_.memoryBytes) {
-        result.metrics.memoryLimitExceeded = true;
-        result.success = false;
-        result.error = "Memory limit exceeded";
-    }
-    
-    if (result.metrics.gasConsumed > limits_.gasLimit) {
-        result.metrics.gasLimitExceeded = true;
-        result.success = false;
-        result.error = "Gas limit exceeded";
-    }
-    
-    // ========== GENERATE ZK PROOF (hash-based for MVP) ==========
-    // See production roadmap: "Use hash-based proofs as a bridge"
-    if (result.success) {
-        std::string proofInput = result.executionHash + std::to_string(result.timestamp.time_since_epoch().count());
-        std::vector<uint8_t> proofData(proofInput.begin(), proofInput.end());
-        result.zkProof = computeSHA256(proofData);
-        result.zkVerified = (rand() % 100 < 98); // 98% success rate in simulation
-    }
-    
-    // Update statistics
-    recordMetrics(result);
-    
-    std::cout << "[WasmEdgeEngine] Execution complete:" << std::endl;
-    std::cout << "  Status: " << (result.success ? "SUCCESS" : "FAILED") << std::endl;
-    std::cout << "  Time: " << result.metrics.executionTime.count() / 1000.0 << " ms" << std::endl;
-    std::cout << "  Gas: " << result.metrics.gasConsumed << " units" << std::endl;
-    std::cout << "  ZK Proof: " << (result.zkVerified ? "VERIFIED" : "FAILED") << std::endl;
+    result.metrics.executionTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
+    result.metrics.runtimeVersion = "WasmEdge-Stubbed-FailClosed";
     
     return result;
 }

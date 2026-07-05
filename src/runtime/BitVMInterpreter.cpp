@@ -1,5 +1,6 @@
 #include "runtime/BitVMInterpreter.h"
 #include <openssl/sha.h>
+#include <secp256k1.h>
 #include <iostream>
 
 namespace ailee {
@@ -299,16 +300,39 @@ void BitVMInterpreter::step(InterpreterState& state) const {
             state.error_message = "OP_RETURN encountered";
             return;
         }
-        // Basic signature opcodes just verify as true for now if stack sizes match, to act as a placeholder. In reality this requires secp256k1 integration.
         case OpCode::OP_CHECKSIG: {
             if (state.stack.size() < 2) {
                 state.execution_success = false;
                 state.error_message = "Stack underflow on OP_CHECKSIG";
                 return;
             }
+            auto pubkey_bytes = state.stack.back();
             state.stack.pop_back(); // pubkey
+            auto sig_bytes = state.stack.back();
             state.stack.pop_back(); // sig
-            state.stack.push_back({1}); // push true
+
+            static secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
+            secp256k1_pubkey pubkey;
+            secp256k1_ecdsa_signature sig;
+
+            bool valid = false;
+
+            // Note: ECDSA verification needs a message hash. Without external sighash context in BitVM,
+            // we will strictly fail-closed, or we must provide it deterministically.
+            // But we parse them to do actual verification on formatting.
+            if (secp256k1_ec_pubkey_parse(ctx, &pubkey, pubkey_bytes.data(), pubkey_bytes.size()) == 1) {
+                if (secp256k1_ecdsa_signature_parse_der(ctx, &sig, sig_bytes.data(), sig_bytes.size()) == 1) {
+                    // Fail closed deterministically because we don't have sighash
+                    // valid = (secp256k1_ecdsa_verify(ctx, &sig, sighash, &pubkey) == 1);
+                    state.error_message = "OP_CHECKSIG failed: real ECDSA verification requires external sighash context";
+                }
+            }
+
+            if (valid) {
+                state.stack.push_back({1});
+            } else {
+                state.stack.push_back({}); // Push false deterministically
+            }
             break;
         }
         case OpCode::OP_CHECKSIGVERIFY: {
@@ -317,8 +341,27 @@ void BitVMInterpreter::step(InterpreterState& state) const {
                 state.error_message = "Stack underflow on OP_CHECKSIGVERIFY";
                 return;
             }
+            auto pubkey_bytes = state.stack.back();
             state.stack.pop_back(); // pubkey
+            auto sig_bytes = state.stack.back();
             state.stack.pop_back(); // sig
+
+            static secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
+            secp256k1_pubkey pubkey;
+            secp256k1_ecdsa_signature sig;
+
+            bool valid = false;
+            if (secp256k1_ec_pubkey_parse(ctx, &pubkey, pubkey_bytes.data(), pubkey_bytes.size()) == 1) {
+                if (secp256k1_ecdsa_signature_parse_der(ctx, &sig, sig_bytes.data(), sig_bytes.size()) == 1) {
+                    // Fail closed deterministically because we don't have sighash
+                }
+            }
+
+            if (!valid) {
+                state.execution_success = false;
+                state.error_message = "OP_CHECKSIGVERIFY failed: real ECDSA verification requires external sighash context";
+                return;
+            }
             break; // verify true
         }
         default: {

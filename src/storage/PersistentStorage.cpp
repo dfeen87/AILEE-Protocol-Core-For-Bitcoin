@@ -5,16 +5,13 @@
 #include <stdexcept>
 #include <iostream>
 
-#ifdef AILEE_HAS_ROCKSDB
 #include <rocksdb/db.h>
 #include <rocksdb/options.h>
 #include <rocksdb/table.h>
 #include <rocksdb/filter_policy.h>
-#endif
 
 namespace ailee::storage {
 
-#ifdef AILEE_HAS_ROCKSDB
 class PersistentStorage::Impl {
 public:
     rocksdb::DB* db = nullptr;
@@ -26,16 +23,9 @@ public:
         }
     }
 };
-#else
-class PersistentStorage::Impl {
-public:
-    // Stub implementation when RocksDB is not available
-};
-#endif
 
 PersistentStorage::PersistentStorage(const Config& config) 
     : impl_(std::make_unique<Impl>()) {
-#ifdef AILEE_HAS_ROCKSDB
     rocksdb::Options options;
     
     // Basic options
@@ -61,16 +51,11 @@ PersistentStorage::PersistentStorage(const Config& config)
     }
     
     std::cout << "[PersistentStorage] Initialized RocksDB at: " << config.dbPath << std::endl;
-#else
-    std::cerr << "[PersistentStorage] WARNING: RocksDB not available, storage operations will fail" << std::endl;
-    (void)config; // Suppress unused parameter warning
-#endif
 }
 
 PersistentStorage::~PersistentStorage() = default;
 
 bool PersistentStorage::put(const std::string& key, const std::string& value) {
-#ifdef AILEE_HAS_ROCKSDB
     if (!impl_->db) {
         return false;
     }
@@ -80,15 +65,9 @@ bool PersistentStorage::put(const std::string& key, const std::string& value) {
     
     rocksdb::Status status = impl_->db->Put(writeOptions, key, value);
     return status.ok();
-#else
-    (void)key;
-    (void)value;
-    return false;
-#endif
 }
 
 std::optional<std::string> PersistentStorage::get(const std::string& key) {
-#ifdef AILEE_HAS_ROCKSDB
     if (!impl_->db) {
         return std::nullopt;
     }
@@ -104,28 +83,18 @@ std::optional<std::string> PersistentStorage::get(const std::string& key) {
         std::cerr << "[PersistentStorage] Get failed for key " << key << ": " << status.ToString() << std::endl;
         return std::nullopt;
     }
-#else
-    (void)key;
-    return std::nullopt;
-#endif
 }
 
 bool PersistentStorage::remove(const std::string& key) {
-#ifdef AILEE_HAS_ROCKSDB
     if (!impl_->db) {
         return false;
     }
     
-    rocksdb::Status status = impl_->db->Delete(rocksdb::WriteOptions(), key);
+    rocksdb::Status status = impl_->db->Delete([]() { rocksdb::WriteOptions o; o.sync = true; return o; }(), key);
     return status.ok();
-#else
-    (void)key;
-    return false;
-#endif
 }
 
 bool PersistentStorage::exists(const std::string& key) {
-#ifdef AILEE_HAS_ROCKSDB
     if (!impl_->db) {
         return false;
     }
@@ -133,17 +102,11 @@ bool PersistentStorage::exists(const std::string& key) {
     std::string value;
     rocksdb::Status status = impl_->db->Get(rocksdb::ReadOptions(), key, &value);
     return status.ok();
-#else
-    (void)key;
-    return false;
-#endif
 }
 
 class PersistentStorage::WriteBatch::Impl {
 public:
-#ifdef AILEE_HAS_ROCKSDB
     rocksdb::WriteBatch batch;
-#endif
     size_t count = 0;
 };
 
@@ -153,28 +116,17 @@ PersistentStorage::WriteBatch::WriteBatch(WriteBatch&&) noexcept = default;
 PersistentStorage::WriteBatch& PersistentStorage::WriteBatch::operator=(WriteBatch&&) noexcept = default;
 
 void PersistentStorage::WriteBatch::put(const std::string& key, const std::string& value) {
-#ifdef AILEE_HAS_ROCKSDB
     impl_->batch.Put(key, value);
-#else
-    (void)key;
-    (void)value;
-#endif
     impl_->count++;
 }
 
 void PersistentStorage::WriteBatch::remove(const std::string& key) {
-#ifdef AILEE_HAS_ROCKSDB
     impl_->batch.Delete(key);
-#else
-    (void)key;
-#endif
     impl_->count++;
 }
 
 void PersistentStorage::WriteBatch::clear() {
-#ifdef AILEE_HAS_ROCKSDB
     impl_->batch.Clear();
-#endif
     impl_->count = 0;
 }
 
@@ -183,7 +135,6 @@ bool PersistentStorage::commitBatch(const WriteBatch& batch) {
         std::cerr << "[PersistentStorage] commitBatch failed: empty or malformed batch" << std::endl;
         return false;
     }
-#ifdef AILEE_HAS_ROCKSDB
     if (!impl_->db) {
         std::cerr << "[PersistentStorage] commitBatch failed: database not open" << std::endl;
         return false;
@@ -202,10 +153,6 @@ bool PersistentStorage::commitBatch(const WriteBatch& batch) {
         return false;
     }
     return true;
-#else
-    (void)batch;
-    return false;
-#endif
 }
 
 bool PersistentStorage::executeBatch(const std::vector<BatchOp>& ops) {
@@ -213,7 +160,6 @@ bool PersistentStorage::executeBatch(const std::vector<BatchOp>& ops) {
         std::cerr << "[PersistentStorage] executeBatch failed: empty or malformed batch" << std::endl;
         return false;
     }
-#ifdef AILEE_HAS_ROCKSDB
     if (!impl_->db) {
         std::cerr << "[PersistentStorage] executeBatch failed: database not open" << std::endl;
         return false;
@@ -237,10 +183,6 @@ bool PersistentStorage::executeBatch(const std::vector<BatchOp>& ops) {
         return false;
     }
     return true;
-#else
-    (void)ops;
-    return false;
-#endif
 }
 
 } // namespace ailee::storage
