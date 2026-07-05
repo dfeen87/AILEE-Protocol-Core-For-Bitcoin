@@ -159,11 +159,15 @@ int64_t calculateNodeUtilityFp(const AmbientNode& node, uint64_t tokenRewardRate
     uint64_t computeContributionFp = s.compute.instantaneousPower_GFLOPSFp;
 
     // energyCost = (inputPower * 0.001 scaled)
-    uint64_t energyCostFp = (s.energy.inputPowerWFp * 10) / FIXED_POINT_SCALE; // 0.001 is 10/10000
-    // latencyPenalty = (latency * 0.01 scaled)
-    uint64_t latencyPenaltyFp = (s.compute.latencyMsFp * 100) / FIXED_POINT_SCALE; // 0.01 is 100/10000
+    const auto energyCostProduct = static_cast<__uint128_t>(s.energy.inputPowerWFp) * 10;
+    uint64_t energyCostFp = static_cast<uint64_t>(energyCostProduct / FIXED_POINT_SCALE); // 0.001 is 10/10000
 
-    uint64_t baseRewardFp = (computeContributionFp * tokenRewardRateFp) / FIXED_POINT_SCALE;
+    // latencyPenalty = (latency * 0.01 scaled)
+    const auto latencyPenaltyProduct = static_cast<__uint128_t>(s.compute.latencyMsFp) * 100;
+    uint64_t latencyPenaltyFp = static_cast<uint64_t>(latencyPenaltyProduct / FIXED_POINT_SCALE); // 0.01 is 100/10000
+
+    const auto baseRewardProduct = static_cast<__uint128_t>(computeContributionFp) * static_cast<__uint128_t>(tokenRewardRateFp);
+    uint64_t baseRewardFp = static_cast<uint64_t>(baseRewardProduct / FIXED_POINT_SCALE);
     int64_t utility = static_cast<int64_t>(baseRewardFp) - static_cast<int64_t>(energyCostFp) - static_cast<int64_t>(latencyPenaltyFp);
     return std::max<int64_t>(0, utility);
 }
@@ -178,7 +182,11 @@ uint64_t calculateNashEquilibriumThresholdFp(const std::vector<AmbientNode*>& ne
         totalComputeFp += s.compute.instantaneousPower_GFLOPSFp;
         totalEnergyFp += s.energy.inputPowerWFp;
     }
-    return totalEnergyFp > 0 ? (totalComputeFp * FIXED_POINT_SCALE) / totalEnergyFp : 0;
+    if (totalEnergyFp > 0) {
+        const auto computeProduct = static_cast<__uint128_t>(totalComputeFp) * static_cast<__uint128_t>(FIXED_POINT_SCALE);
+        return static_cast<uint64_t>(computeProduct / totalEnergyFp);
+    }
+    return 0;
 }
 
 // ============================================================================
@@ -219,24 +227,34 @@ bool detectByzantineNode(const AmbientNode& node, const std::vector<AmbientNode*
 // REPUTATION & TOKEN ECONOMICS
 // ============================================================================
 
+/**
+ * Updates reputation score deterministically.
+ * @param uptimeMs Must be deterministically derived by the caller from logical protocol time.
+ */
 uint64_t updateReputationScoreFp(const AmbientNode& node, bool success, uint64_t slaFp, int64_t uptimeMs) {
     auto rep = node.reputation();
     int64_t deltaFp = 0;
     if (success) {
-        deltaFp = (100 * slaFp) / FIXED_POINT_SCALE; // 0.01 * sla
+        const auto deltaProduct = static_cast<__uint128_t>(100) * static_cast<__uint128_t>(slaFp);
+        deltaFp = static_cast<int64_t>(deltaProduct / FIXED_POINT_SCALE); // 0.01 * sla
     } else {
         deltaFp = -500; // -0.05
     }
 
     // std::min(0.01, uptimeMs/3600000.0*0.001)
     uint64_t uptimeBonusFp = (uptimeMs * 10) / 3600000;
+
+    // Protocol-defined maximum uptime bonus is 100 (0.01 scaled)
     if (uptimeBonusFp > 100) uptimeBonusFp = 100;
 
     deltaFp += uptimeBonusFp;
 
     int64_t currentScoreFp = rep.scoreFp;
-    int64_t term1 = (9500 * currentScoreFp) / FIXED_POINT_SCALE; // 0.95
-    int64_t term2 = (500 * (currentScoreFp + deltaFp)) / FIXED_POINT_SCALE; // 0.05
+    const auto term1Product = static_cast<__int128_t>(9500) * static_cast<__int128_t>(currentScoreFp);
+    int64_t term1 = static_cast<int64_t>(term1Product / FIXED_POINT_SCALE); // 0.95
+
+    const auto term2Product = static_cast<__int128_t>(500) * static_cast<__int128_t>(currentScoreFp + deltaFp);
+    int64_t term2 = static_cast<int64_t>(term2Product / FIXED_POINT_SCALE); // 0.05
 
     int64_t newScoreFp = term1 + term2;
     if (newScoreFp < 0) newScoreFp = 0;
@@ -253,10 +271,23 @@ IncentiveRecord calculateTokenReward(const AmbientNode& node, uint64_t baseRateF
     uint64_t privFp = s.privacy.privacyBudgetRemainingFp;
     uint64_t repFp = node.reputation().scoreFp;
 
-    uint64_t amount1 = (s.compute.instantaneousPower_GFLOPSFp * baseRateFp) / FIXED_POINT_SCALE;
-    uint64_t amount2 = (amount1 * effFp) / FIXED_POINT_SCALE;
-    uint64_t amount3 = (amount2 * privFp) / FIXED_POINT_SCALE;
-    uint64_t finalAmountFp = (amount3 * repFp) / FIXED_POINT_SCALE;
+    const auto amount1Product = static_cast<__uint128_t>(s.compute.instantaneousPower_GFLOPSFp) * static_cast<__uint128_t>(baseRateFp);
+    uint64_t amount1 = static_cast<uint64_t>(amount1Product / FIXED_POINT_SCALE);
+
+    const auto amount2Product = static_cast<__uint128_t>(amount1) * static_cast<__uint128_t>(effFp);
+    uint64_t amount2 = static_cast<uint64_t>(amount2Product / FIXED_POINT_SCALE);
+
+    const auto amount3Product = static_cast<__uint128_t>(amount2) * static_cast<__uint128_t>(privFp);
+    uint64_t amount3 = static_cast<uint64_t>(amount3Product / FIXED_POINT_SCALE);
+
+    const auto finalProduct = static_cast<__uint128_t>(amount3) * static_cast<__uint128_t>(repFp);
+    uint64_t finalAmountFp = static_cast<uint64_t>(finalProduct / FIXED_POINT_SCALE);
+
+    // Overflow guard: ensure reward stays within expected protocol bounds (e.g., max 100M tokens scaled)
+    uint64_t MAX_REWARD_FP = 100000000ULL * FIXED_POINT_SCALE;
+    if (finalAmountFp > MAX_REWARD_FP) {
+        finalAmountFp = MAX_REWARD_FP;
+    }
 
     return node.accrueReward("autoTask", finalAmountFp);
 }
@@ -295,7 +326,12 @@ SystemHealth analyzeSystemHealth(const std::vector<AmbientNode*>& network) {
         if(!sOpt.has_value()) continue;
         totalPowerFp += sOpt->energy.inputPowerWFp;
     }
-    health.networkEfficiencyFp = totalPowerFp > 0 ? (health.totalComputePower_GFLOPSFp * FIXED_POINT_SCALE) / totalPowerFp : 0;
+    if (totalPowerFp > 0) {
+        const auto efficiencyProduct = static_cast<__uint128_t>(health.totalComputePower_GFLOPSFp) * static_cast<__uint128_t>(FIXED_POINT_SCALE);
+        health.networkEfficiencyFp = static_cast<uint64_t>(efficiencyProduct / totalPowerFp);
+    } else {
+        health.networkEfficiencyFp = 0;
+    }
     return health;
 }
 

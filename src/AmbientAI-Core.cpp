@@ -92,10 +92,11 @@ struct EnergyProof {
         if (kWhToGridFp > kWhGeneratedFp) return false;  // Can't output more than generated
         if (thermodynamicEfficiencyFp > FIXED_POINT_SCALE) return false; // Max 1.0 scaled
         
-        // Check timestamp is recent (within 5 minutes)
-        uint64_t fiveMinutes = 5 * 60 * 1000;
+        // Check timestamp is recent (within a logical 5-minute window).
+        // This window is protocol-defined and not tied to wall-clock time.
+        uint64_t fiveMinutesLogicalMs = 5 * 60 * 1000;
         if (protocolTimestampMs < proofTimestampMs ||
-            (protocolTimestampMs - proofTimestampMs) > fiveMinutes) {
+            (protocolTimestampMs - proofTimestampMs) > fiveMinutesLogicalMs) {
             return false;
         }
         
@@ -157,9 +158,22 @@ public:
         uint64_t efficiencyMultiplierFp = FIXED_POINT_SCALE + proof.thermodynamicEfficiencyFp;
         uint64_t gridDemandMultiplierFp = FIXED_POINT_SCALE;  // Would be based on real-time grid demand
         
-        uint64_t baseRewardFp = (proof.kWhToGridFp * baseRateFp) / FIXED_POINT_SCALE;
-        uint64_t rewardPhase1Fp = (baseRewardFp * efficiencyMultiplierFp) / FIXED_POINT_SCALE;
-        return (rewardPhase1Fp * gridDemandMultiplierFp) / FIXED_POINT_SCALE;
+        const auto baseProduct = static_cast<__uint128_t>(proof.kWhToGridFp) * static_cast<__uint128_t>(baseRateFp);
+        uint64_t baseRewardFp = static_cast<uint64_t>(baseProduct / FIXED_POINT_SCALE);
+
+        const auto phase1Product = static_cast<__uint128_t>(baseRewardFp) * static_cast<__uint128_t>(efficiencyMultiplierFp);
+        uint64_t rewardPhase1Fp = static_cast<uint64_t>(phase1Product / FIXED_POINT_SCALE);
+
+        const auto finalProduct = static_cast<__uint128_t>(rewardPhase1Fp) * static_cast<__uint128_t>(gridDemandMultiplierFp);
+        uint64_t finalRewardFp = static_cast<uint64_t>(finalProduct / FIXED_POINT_SCALE);
+
+        // Overflow guard: ensure reward stays within expected protocol bounds (e.g., max 100M tokens scaled)
+        uint64_t MAX_REWARD_FP = 100000000ULL * FIXED_POINT_SCALE;
+        if (finalRewardFp > MAX_REWARD_FP) {
+            finalRewardFp = MAX_REWARD_FP;
+        }
+
+        return finalRewardFp;
     }
     
     const std::map<std::string, GridContribution>& getContributions() const {
@@ -419,7 +433,7 @@ public:
 
     FederatedUpdate runLocalTraining(
         const std::string& modelId, 
-        const std::vector<float>& miniBatch,
+        const std::vector<int64_t>& miniBatch,
         uint64_t computeTimeMs,
         uint64_t protocolTimestampMs
     ) {
@@ -431,13 +445,10 @@ public:
         up.computeTimeMs = computeTimeMs;
         up.submissionTimestampMs = protocolTimestampMs;
 
-        // Ensure we avoid floating-point non-determinism during summation
-        // Convert to scaled integers before sum, or use deterministic representation.
-        // Given miniBatch is float, for strict determinism we would use integers,
-        // but here we just convert back to fixed point.
+        // Ensure strict determinism by using scaled integers directly.
         int64_t sumFp = 0;
-        for (float f : miniBatch) {
-            sumFp += static_cast<int64_t>(f * FIXED_POINT_SCALE);
+        for (int64_t val : miniBatch) {
+            sumFp += val; // Already scaled as per contract
         }
 
         // Store gradient as raw bytes in deltaBytes
@@ -555,7 +566,15 @@ public:
         }
 
         uint64_t multiplierFp = fn(*n);
-        uint64_t rewardFp = (baseRewardTokensFp * multiplierFp) / FIXED_POINT_SCALE;
+        const auto rewardProduct = static_cast<__uint128_t>(baseRewardTokensFp) * static_cast<__uint128_t>(multiplierFp);
+        uint64_t rewardFp = static_cast<uint64_t>(rewardProduct / FIXED_POINT_SCALE);
+
+        // Overflow guard: limit individual rewards to a reasonable protocol maximum (e.g., 100M tokens scaled)
+        uint64_t MAX_REWARD_FP = 100000000ULL * FIXED_POINT_SCALE;
+        if (rewardFp > MAX_REWARD_FP) {
+            rewardFp = MAX_REWARD_FP;
+        }
+
         return n->accrueReward(taskId, rewardFp);
     }
 
@@ -630,13 +649,26 @@ TokenReward calculateTokenReward(
     if (inputPowerWFp < (FIXED_POINT_SCALE / 100)) {
         inputPowerWFp = FIXED_POINT_SCALE / 100; // max(0.01 scaled)
     }
-    efficiencyMultiplierFp += (computeContributionFp * FIXED_POINT_SCALE) / inputPowerWFp;
+
+    const auto computePowerProduct = static_cast<__uint128_t>(computeContributionFp) * static_cast<__uint128_t>(FIXED_POINT_SCALE);
+    efficiencyMultiplierFp += static_cast<uint64_t>(computePowerProduct / inputPowerWFp);
 
     uint64_t reputationMultiplierFp = FIXED_POINT_SCALE;
 
-    uint64_t amount1 = (computeContributionFp * baseRewardRateFp) / FIXED_POINT_SCALE;
-    uint64_t amount2 = (amount1 * efficiencyMultiplierFp) / FIXED_POINT_SCALE;
-    reward.tokenAmountFp = (amount2 * reputationMultiplierFp) / FIXED_POINT_SCALE;
+    const auto amount1Product = static_cast<__uint128_t>(computeContributionFp) * static_cast<__uint128_t>(baseRewardRateFp);
+    uint64_t amount1 = static_cast<uint64_t>(amount1Product / FIXED_POINT_SCALE);
+
+    const auto amount2Product = static_cast<__uint128_t>(amount1) * static_cast<__uint128_t>(efficiencyMultiplierFp);
+    uint64_t amount2 = static_cast<uint64_t>(amount2Product / FIXED_POINT_SCALE);
+
+    const auto finalAmountProduct = static_cast<__uint128_t>(amount2) * static_cast<__uint128_t>(reputationMultiplierFp);
+    reward.tokenAmountFp = static_cast<uint64_t>(finalAmountProduct / FIXED_POINT_SCALE);
+
+    // Overflow guard: limit individual rewards to a reasonable protocol maximum (e.g., 100M tokens scaled)
+    uint64_t MAX_REWARD_FP = 100000000ULL * FIXED_POINT_SCALE;
+    if (reward.tokenAmountFp > MAX_REWARD_FP) {
+        reward.tokenAmountFp = MAX_REWARD_FP;
+    }
 
     std::ostringstream ss;
     ss << "0x" << std::hash<std::string>{}(
@@ -691,8 +723,12 @@ SystemHealth analyzeSystemHealth(
         health.avgPrivacyBudgetFp /= health.activeNodes;
     }
     
-    health.networkEfficiencyFp = totalPowerFp > 0 ?
-        (health.totalComputePowerFp * FIXED_POINT_SCALE) / totalPowerFp : 0;
+    if (totalPowerFp > 0) {
+        const auto efficiencyProduct = static_cast<__uint128_t>(health.totalComputePowerFp) * static_cast<__uint128_t>(FIXED_POINT_SCALE);
+        health.networkEfficiencyFp = static_cast<uint64_t>(efficiencyProduct / totalPowerFp);
+    } else {
+        health.networkEfficiencyFp = 0;
+    }
 
     return health;
 }
