@@ -258,6 +258,7 @@ set(AMBIENT_SOURCES
 set(INFRASTRUCTURE_SOURCES
     src/storage/PersistentStorage.cpp
     src/network/P2PNetwork.cpp
+    src/network/LogicalClock.cpp
     src/network/ReputationRateLimiter.cpp
     src/orchestration/DistributedTaskProtocol.cpp
     src/metrics/PrometheusExporter.cpp

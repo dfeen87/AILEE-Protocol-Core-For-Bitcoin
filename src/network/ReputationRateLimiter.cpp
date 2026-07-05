@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 #include "ReputationRateLimiter.h"
+#include "LogicalClock.h"
 #include <algorithm>
 
 namespace ailee::network {
@@ -18,7 +19,7 @@ std::size_t ReputationRateLimiter::hashPayload(const std::vector<std::uint8_t>& 
 
 bool ReputationRateLimiter::allowMessage(const std::string& peerId, double peerReputation, const std::string& topic, const std::vector<std::uint8_t>& payload) {
     std::lock_guard<std::mutex> lock(mu_);
-    auto now = std::chrono::steady_clock::now();
+    auto currentTick = LogicalClock::now();
 
     // Determine allowed rate
     double multiplier = config_.mediumRepMultiplier;
@@ -28,7 +29,7 @@ bool ReputationRateLimiter::allowMessage(const std::string& peerId, double peerR
         multiplier = config_.highRepMultiplier;
     }
 
-    std::uint32_t limit = config_.baseMessagesPerSecond;
+    std::uint32_t limit = config_.baseMessagesPerWindow;
     auto itTopic = config_.topicLimits.find(topic);
     if (itTopic != config_.topicLimits.end()) {
         limit = itTopic->second;
@@ -37,9 +38,9 @@ bool ReputationRateLimiter::allowMessage(const std::string& peerId, double peerR
     if (limit == 0) limit = 1; // Always allow at least 1 if not strictly 0 config
 
     auto& state = peerStates_[peerId];
-    if (now - state.windowStart >= config_.windowSize) {
+    if (state.windowStartTick == 0 || currentTick >= state.windowStartTick + config_.windowSizeTicks) {
         state.messageCount = 0;
-        state.windowStart = now;
+        state.windowStartTick = currentTick;
         state.recentPayloadHashes.clear();
     }
 
