@@ -1,3 +1,5 @@
+#!/bin/bash
+cat << 'INNER_EOF' > src/identity/ambient_ai_participation.cpp
 #include <array>
 #include <openssl/sha.h>
 #include "ambient_ai_participation.hpp"
@@ -26,3 +28,4 @@ std::array<uint8_t, 32> BuildMetadata::hash() const {
 
 }
 }
+INNER_EOF

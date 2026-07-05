@@ -708,7 +708,8 @@ public:
         orchestrator_.setStrategy(config_.performance.defaultStrategy);
 
         std::string swarm_err;
-        if (!proverSwarm_->initialize(&swarm_err)) {
+        proverSwarm_ = std::make_unique<ailee::orchestration::ProverSwarm>(ailee::orchestration::ProverSwarmConfig());
+        if (proverSwarm_ && !proverSwarm_->initialize(&swarm_err)) {
             proverSwarm_.reset();
         }
     }

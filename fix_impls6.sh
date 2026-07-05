@@ -1,3 +1,8 @@
+#!/bin/bash
+sed -i 's/struct AmbientMeshParticipationSummary { uint32_t successfulRoutes; uint32_t failedRoutes; uint64_t meshUptimeSegments; std::vector<uint8_t> serialize() const; };/struct AmbientMeshParticipationSummary;/' include/ambient_ai_consensus_ordering_rules.hpp
+
+# Re-stub orderParticipationProofs to avoid struct clashes
+cat << 'INNER_EOF' > src/consensus/ambient_ai_consensus_ordering_rules.cpp
 #include "ambient_ai_consensus_ordering_rules.hpp"
 #include <algorithm>
 #include "ambient_ai_energy_model.hpp"
@@ -33,3 +38,4 @@ void AmbientConsensusOrderingRules::orderAmbientEvents(std::vector<ambient::Ambi
 
 }
 }
+INNER_EOF

@@ -1,3 +1,4 @@
+#include "ambient_ai_mesh_participation.hpp"
 #include <cstdint>
 #include <vector>
 #ifndef AMBIENT_AI_CONSENSUS_ORDERING_RULES_HPP
@@ -11,7 +12,7 @@ namespace identity {
     struct ParticipationProof;
 }
 namespace ambient_mesh {
-    struct AmbientMeshParticipationSummary { uint32_t successfulRoutes; uint32_t failedRoutes; uint64_t meshUptimeSegments; std::vector<uint8_t> serialize() const; };
+    struct AmbientMeshParticipationSummary;
 }
 namespace ambient {
     struct AmbientEvent;
