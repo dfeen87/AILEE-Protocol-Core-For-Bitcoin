@@ -129,14 +129,14 @@ FederatedUpdate AmbientNode::runLocalTraining(const ailee::fl::FLTask& task,
     update.compression = ailee::fl::CompressionMethod::NONE;
     update.numSamplesTrained = numSamplesTrained;
     update.numEpochs = task.localEpochs;
-    update.trainingLoss = static_cast<double>(trainingLossFp) / FIXED_POINT_SCALE; // Update FederatedUpdate or do this conversion for compatibility
+    update.trainingLossFp = trainingLossFp;
     if (lastSample_.has_value()) {
-        update.epsilonSpent = static_cast<double>(lastSample_->privacy.epsilonFp) / FIXED_POINT_SCALE;
-        update.deltaSpent = static_cast<double>(lastSample_->privacy.deltaFp) / FIXED_POINT_SCALE;
+        update.epsilonSpentFp = lastSample_->privacy.epsilonFp;
+        update.deltaSpentFp = lastSample_->privacy.deltaFp;
         update.isDPNoisyUpdate = lastSample_->privacy.epsilonFp < FIXED_POINT_SCALE;
     }
-    update.submissionTime = std::chrono::system_clock::time_point(std::chrono::milliseconds(protocolTimestampMs));
-    update.computeTime = std::chrono::milliseconds(computeTimeMs);
+    update.submissionTimestampMs = protocolTimestampMs;
+    update.computeTimeMs = computeTimeMs;
 
     const std::string deltaHash = sha256Hex(deltaBytes);
     ailee::zk::ZKEngine zkEngine;

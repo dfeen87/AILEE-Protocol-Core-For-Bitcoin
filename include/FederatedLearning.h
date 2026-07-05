@@ -116,13 +116,13 @@ struct LocalDelta {
     // Training metadata
     std::size_t numSamplesTrained = 0;
     std::size_t numEpochs = 0;
-    double trainingLoss = 0.0;
-    std::optional<double> validationLoss;
-    std::optional<double> validationAccuracy;
+    uint64_t trainingLossFp = 0;
+    std::optional<uint64_t> validationLossFp;
+    std::optional<uint64_t> validationAccuracyFp;
     
     // Privacy guarantees
-    double epsilonSpent = 0.0;      // DP budget consumed
-    double deltaSpent = 0.0;
+    uint64_t epsilonSpentFp = 0;      // DP budget consumed
+    uint64_t deltaSpentFp = 0;
     bool isDPNoisyUpdate = false;
     
     // Cryptographic proof
@@ -134,9 +134,9 @@ struct LocalDelta {
     std::optional<std::vector<uint8_t>> encryptedDelta; // Homomorphic encryption
     std::optional<std::string> secretSharingShare;      // Secret sharing scheme
     
-    // Timing
-    std::chrono::system_clock::time_point submissionTime;
-    std::chrono::milliseconds computeTime{0};
+    // Timing (Deterministic)
+    uint64_t submissionTimestampMs = 0;
+    uint64_t computeTimeMs = 0;
     
     // Signature (authenticity)
     std::optional<std::vector<uint8_t>> workerSignature;

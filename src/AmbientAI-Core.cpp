@@ -427,16 +427,22 @@ public:
         up.taskId = modelId;
         auto lastSample = last();
         uint64_t epsilonFp = lastSample.has_value() ? lastSample->privacy.epsilonFp : FIXED_POINT_SCALE;
-        up.epsilonSpent = static_cast<double>(epsilonFp) / FIXED_POINT_SCALE; // Keep FederatedUpdate interface if needed or fix later
-        up.computeTime = std::chrono::milliseconds(computeTimeMs);
-        up.submissionTime = std::chrono::system_clock::time_point(std::chrono::milliseconds(protocolTimestampMs));
+        up.epsilonSpentFp = epsilonFp;
+        up.computeTimeMs = computeTimeMs;
+        up.submissionTimestampMs = protocolTimestampMs;
 
-        float sum = std::accumulate(miniBatch.begin(), miniBatch.end(), 0.0f);
-        // Removed non-deterministic random noise.
+        // Ensure we avoid floating-point non-determinism during summation
+        // Convert to scaled integers before sum, or use deterministic representation.
+        // Given miniBatch is float, for strict determinism we would use integers,
+        // but here we just convert back to fixed point.
+        int64_t sumFp = 0;
+        for (float f : miniBatch) {
+            sumFp += static_cast<int64_t>(f * FIXED_POINT_SCALE);
+        }
 
         // Store gradient as raw bytes in deltaBytes
-        up.deltaBytes.resize(sizeof(float));
-        std::memcpy(up.deltaBytes.data(), &sum, sizeof(float));
+        up.deltaBytes.resize(sizeof(int64_t));
+        std::memcpy(up.deltaBytes.data(), &sumFp, sizeof(int64_t));
         return up;
     }
 

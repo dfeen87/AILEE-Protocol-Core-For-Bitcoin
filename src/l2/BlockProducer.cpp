@@ -150,22 +150,13 @@ void BlockProducer::blockProductionLoop() {
     log("INFO", "Block production loop started");
 
     while (running_.load()) {
-        auto startTime = std::chrono::steady_clock::now();
-
-        // Produce a new block
+        // We use a deterministic logical sleep in production-like consensus
+        // but since this is an active thread loop, we just use a fixed thread sleep.
+        // We do NOT use this sleep duration for any consensus state.
         produceBlock();
-
-        // Check if we need to create an anchor commitment
         checkAnchorCommitment();
 
-        // Sleep for the configured interval
-        auto endTime = std::chrono::steady_clock::now();
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-        auto sleepDuration = std::chrono::milliseconds(config_.blockIntervalMs) - elapsed;
-
-        if (sleepDuration.count() > 0) {
-            std::this_thread::sleep_for(sleepDuration);
-        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(config_.blockIntervalMs));
     }
 
     log("INFO", "Block production loop exited");
@@ -192,11 +183,9 @@ void BlockProducer::produceBlock() {
     // Increment block height
     state_.blockHeight++;
 
-    // Update timestamp
-    auto now = std::chrono::system_clock::now();
-    auto nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-        now.time_since_epoch()).count();
-    state_.lastBlockTimestampMs = static_cast<std::uint64_t>(nowMs);
+    // Update timestamp deterministically based on protocol logic
+    // Using block height and interval instead of wall-clock time
+    state_.lastBlockTimestampMs = state_.blockHeight * config_.blockIntervalMs;
 
     // Pull transactions from mempool if available
     std::size_t txsInBlock = 0;

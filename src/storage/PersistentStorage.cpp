@@ -76,7 +76,7 @@ bool PersistentStorage::put(const std::string& key, const std::string& value) {
     }
     
     rocksdb::WriteOptions writeOptions;
-    writeOptions.sync = false; // Async writes for performance
+    writeOptions.sync = true; // Ensure deterministic atomicity
     
     rocksdb::Status status = impl_->db->Put(writeOptions, key, value);
     return status.ok();
