@@ -15,6 +15,7 @@
 #ifndef AILEE_RECOVERY_PROTOCOL_V2_H
 #define AILEE_RECOVERY_PROTOCOL_V2_H
 
+#include <secp256k1.h>
 #include <string>
 #include <vector>
 #include <memory>
@@ -107,9 +108,21 @@ struct DisputeEvidence {
     uint64_t submissionTimestamp;
     
     bool verifySignature() const {
-        // In production: Use OpenSSL ECDSA verification
-        // For now: Placeholder validation
-        return !ownerSignature.empty() && !ownerPublicKey.empty();
+        if (ownerSignature.empty() || ownerPublicKey.empty()) return false;
+
+        static secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
+        secp256k1_pubkey pubkey_parsed;
+        secp256k1_ecdsa_signature sig_parsed;
+
+        unsigned char hash[32] = {0}; // Pseudo-hash for demonstration, should be replaced with true SHA256
+        for(int i=0; i<32 && i<signedMessage.size(); i++) hash[i] = signedMessage[i];
+
+        if (secp256k1_ec_pubkey_parse(ctx, &pubkey_parsed, ownerPublicKey.data(), ownerPublicKey.size()) == 1) {
+            if (secp256k1_ecdsa_signature_parse_der(ctx, &sig_parsed, ownerSignature.data(), ownerSignature.size()) == 1) {
+                return (secp256k1_ecdsa_verify(ctx, &sig_parsed, hash, &pubkey_parsed) == 1);
+            }
+        }
+        return false;
     }
     
     bool isValid() const {

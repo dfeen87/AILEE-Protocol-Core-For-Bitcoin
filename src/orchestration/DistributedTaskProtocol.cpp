@@ -60,10 +60,47 @@ public:
     }
     
     void handleTaskMessage(const network::NetworkMessage& msg) {
-        // Deserialize task from payload
-        // For now, simple stub
+        // Deserialize fixed-layout binary format
         std::lock_guard<std::mutex> lock(mutex);
         
+        if (msg.payload.empty() || msg.payload[0] != 1) {
+            std::cerr << "[TaskProtocol] Invalid payload version or empty payload" << std::endl;
+            return;
+        }
+
+        size_t offset = 1;
+        if (offset + 4 > msg.payload.size()) return;
+
+        uint32_t id_len = (msg.payload[offset] << 24) | (msg.payload[offset+1] << 16) |
+                          (msg.payload[offset+2] << 8) | msg.payload[offset+3];
+        offset += 4;
+
+        if (offset + id_len > msg.payload.size()) return;
+        std::string taskId(msg.payload.begin() + offset, msg.payload.begin() + offset + id_len);
+        offset += id_len;
+
+        if (offset + 8 > msg.payload.size()) return;
+        uint64_t ts = 0;
+        for (int i = 0; i < 8; ++i) {
+            ts = (ts << 8) | msg.payload[offset + i];
+        }
+        offset += 8;
+
+        if (offset + 4 > msg.payload.size()) return;
+        uint32_t pl_len = (msg.payload[offset] << 24) | (msg.payload[offset+1] << 16) |
+                          (msg.payload[offset+2] << 8) | msg.payload[offset+3];
+        offset += 4;
+
+        if (offset + pl_len > msg.payload.size()) return;
+        std::vector<uint8_t> taskPayload(msg.payload.begin() + offset, msg.payload.begin() + offset + pl_len);
+
+        DistributedTask deserializedTask;
+        deserializedTask.taskId = taskId;
+        deserializedTask.createdAt = ts;
+        deserializedTask.payload = taskPayload;
+        deserializedTask.type = static_cast<TaskType>(0); // Default for now
+
+
         std::cout << "[TaskProtocol] Received task message from: " << msg.senderId 
                   << " (size: " << msg.payload.size() << " bytes)" << std::endl;
         
@@ -238,8 +275,38 @@ bool DistributedTaskProtocol::distributeTask(const DistributedTask& task) {
     impl_->stats.tasksSent++;
     
     // Serialize and publish to network
-    // TODO: Proper serialization
-    std::vector<uint8_t> payload; // Empty for now
+    // Fixed-layout binary serialization
+    // [version: 1 byte][task_id_len: 4 bytes][task_id_bytes][timestamp: 8 bytes][payload_length: 4 bytes][payload_bytes]
+    std::vector<uint8_t> payload;
+
+    // version
+    payload.push_back(1);
+
+    // task_id_len
+    uint32_t id_len = static_cast<uint32_t>(task.taskId.size());
+    payload.push_back((id_len >> 24) & 0xFF);
+    payload.push_back((id_len >> 16) & 0xFF);
+    payload.push_back((id_len >> 8) & 0xFF);
+    payload.push_back(id_len & 0xFF);
+
+    // task_id_bytes
+    payload.insert(payload.end(), task.taskId.begin(), task.taskId.end());
+
+    // timestamp
+    uint64_t ts = task.createdAt;
+    for (int i = 7; i >= 0; --i) {
+        payload.push_back((ts >> (i * 8)) & 0xFF);
+    }
+
+    // payload_length
+    uint32_t pl_len = static_cast<uint32_t>(task.payload.size());
+    payload.push_back((pl_len >> 24) & 0xFF);
+    payload.push_back((pl_len >> 16) & 0xFF);
+    payload.push_back((pl_len >> 8) & 0xFF);
+    payload.push_back(pl_len & 0xFF);
+
+    // payload_bytes
+    payload.insert(payload.end(), task.payload.begin(), task.payload.end());
     
     impl_->network->publish(impl_->config.tasksTopicPrefix, payload);
     

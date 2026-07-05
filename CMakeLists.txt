@@ -414,6 +414,7 @@ target_link_libraries(ailee_service
     Threads::Threads
     OpenSSL::SSL
     OpenSSL::Crypto
+    ${libsecp256k1_LIBRARIES}
 )
 if(nlohmann_json_FOUND)
     target_link_libraries(ailee_service PRIVATE nlohmann_json::nlohmann_json)
@@ -424,7 +425,7 @@ add_executable(example_wallet_integration
     examples/example_wallet_integration.cpp
     ${AILEE_L2_SOURCES}
 )
-target_link_libraries(example_wallet_integration PRIVATE Threads::Threads OpenSSL::SSL OpenSSL::Crypto)
+target_link_libraries(example_wallet_integration PRIVATE Threads::Threads OpenSSL::SSL OpenSSL::Crypto secp256k1)
 if(nlohmann_json_FOUND)
     target_link_libraries(example_wallet_integration PRIVATE nlohmann_json::nlohmann_json)
 endif()
@@ -433,13 +434,14 @@ add_executable(example_node_sidecar
     examples/example_node_sidecar.cpp
     ${AILEE_L2_SOURCES}
 )
-target_link_libraries(example_node_sidecar PRIVATE Threads::Threads OpenSSL::SSL OpenSSL::Crypto)
+target_link_libraries(example_node_sidecar PRIVATE Threads::Threads OpenSSL::SSL OpenSSL::Crypto secp256k1)
 if(nlohmann_json_FOUND)
     target_link_libraries(example_node_sidecar PRIVATE nlohmann_json::nlohmann_json)
 endif()
 
 target_link_libraries(ailee_node
     PRIVATE
+    ${libsecp256k1_LIBRARIES}
     $<IF:$<BOOL:${AILEE_USE_RUST_PROVER}>,ailee_rust_prover,ailee_rust_ffi_fallback>
     OpenSSL::SSL
     OpenSSL::Crypto
@@ -469,6 +471,7 @@ add_executable(ailee_l2_verify
 
 target_link_libraries(ailee_l2_verify
     PRIVATE
+    ${libsecp256k1_LIBRARIES}
     $<IF:$<BOOL:${AILEE_USE_RUST_PROVER}>,ailee_rust_prover,ailee_rust_ffi_fallback>
     OpenSSL::SSL
     OpenSSL::Crypto

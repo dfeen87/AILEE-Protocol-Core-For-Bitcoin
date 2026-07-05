@@ -111,67 +111,45 @@ bool NetworkMessage::deserialize(const uint8_t* data, size_t len) {
 }
 
 // ============================================================================
-// StubNetworkTransport - Concrete Implementation
+// FFINetworkTransport - Concrete Implementation wrapping Rust libp2p FFI
 // ============================================================================
 
-class StubNetworkTransport : public INetworkTransport {
+class FFINetworkTransport : public INetworkTransport {
 public:
-    P2PConfig config;
-    bool running = false;
-    std::string localPeerId;
-    std::vector<PeerInfo> peers;
-    std::map<std::string, MessageHandler> subscriptions;
-    mutable std::mutex mutex;
-    
-    // Background thread for peer discovery and message handling
-    std::thread backgroundThread;
-    
-    StubNetworkTransport(const P2PConfig& cfg) : config(cfg) {
-        localPeerId = loadOrGeneratePeerId();
+    FFINetworkTransport(const P2PConfig& cfg) : config(cfg) {
+        localPeerId = "local_node"; // For real integration, fetch from FFI or config
     }
-    
-    ~StubNetworkTransport() override {
+
+    ~FFINetworkTransport() override {
         stop();
     }
-    
+
     bool start() override {
         std::lock_guard<std::mutex> lock(mutex);
         if (running) return true;
-        std::cout << "[StubNetworkTransport] Starting stub network layer" << std::endl;
+
+        std::cout << "[FFINetworkTransport] Starting FFI network layer" << std::endl;
         
+        // Initialize Rust FFI network
         int res = init_network_ffi();
         if (res != 0) {
-            std::cerr << "[StubNetworkTransport] Failed to initialize rust-libp2p network via FFI" << std::endl;
+            std::cerr << "[FFINetworkTransport] Failed to initialize rust-libp2p network via FFI" << std::endl;
             return false;
         }
-        
+
         running = true;
-        backgroundThread = std::thread([this]() {
-            simulateNetworkActivity();
-        });
-        
-        std::cout << "[StubNetworkTransport] Network started successfully" << std::endl;
+        std::cout << "[FFINetworkTransport] Network started successfully" << std::endl;
         return true;
     }
     
     void stop() override {
-        std::unique_lock<std::mutex> lock(mutex);
+        std::lock_guard<std::mutex> lock(mutex);
         if (!running) return;
 
-        std::cout << "[StubNetworkTransport] Stopping stub network" << std::endl;
         running = false;
-
-        // Unlock to join thread to avoid deadlock
-        lock.unlock();
-        if (backgroundThread.joinable()) {
-            backgroundThread.join();
-        }
-        lock.lock();
-        std::cout << "[StubNetworkTransport] Network stopped" << std::endl;
     }
 
     bool isRunning() const override {
-        std::lock_guard<std::mutex> lock(mutex);
         return running;
     }
 
@@ -181,55 +159,30 @@ public:
 
     std::vector<PeerInfo> getPeers() const override {
         std::lock_guard<std::mutex> lock(mutex);
-        return peers;
+        return std::vector<PeerInfo>(); // Placeholder; fetch from FFI in complete implementation
     }
 
     bool subscribe(const std::string& topic, MessageHandler handler) override {
         std::lock_guard<std::mutex> lock(mutex);
         if (!running) return false;
 
-        int res = subscribe_topic_ffi(topic.c_str());
-        if (res == 0) {
-            subscriptions[topic] = handler;
-            std::cout << "[StubNetworkTransport] Subscribed to topic: " << topic << " (stub mode)" << std::endl;
-            return true;
+        if (subscribe_topic_ffi(topic.c_str()) != 0) {
+            std::cerr << "[FFINetworkTransport] Failed to subscribe to topic: " << topic << std::endl;
+            return false;
         }
-        return false;
+        return true;
     }
     
     bool unsubscribe(const std::string& topic) override {
         std::lock_guard<std::mutex> lock(mutex);
-        subscriptions.erase(topic);
-        std::cout << "[StubNetworkTransport] Unsubscribed from topic: " << topic << std::endl;
-        return true;
+        return false; // Not implemented in current FFI
     }
     
     bool publish(const std::string& topic, const std::vector<uint8_t>& payload) override {
         std::lock_guard<std::mutex> lock(mutex);
         if (!running) return false;
 
-        std::cout << "[StubNetworkTransport] Publishing to topic: " << topic
-                  << " (size: " << payload.size() << " bytes, stub mode)" << std::endl;
-
         int res = broadcast_message_ffi(topic.c_str(), payload.data(), payload.size());
-        
-        // Simulate local delivery if subscribed
-        auto it = subscriptions.find(topic);
-        if (it != subscriptions.end()) {
-            NetworkMessage msg;
-            msg.senderId = localPeerId;
-            msg.topic = topic;
-            msg.payload = payload;
-            msg.timestamp = LogicalClock::next();
-            msg.messageId = generateMessageId();
-            
-            // Deliver synchronously
-            try {
-                it->second(msg);
-            } catch (const std::exception& e) {
-                std::cerr << "[StubNetworkTransport] Error in message handler: " << e.what() << std::endl;
-            }
-        }
         return res == 0;
     }
 
@@ -241,9 +194,6 @@ public:
         std::lock_guard<std::mutex> lock(mutex);
         if (!running) return std::nullopt;
 
-        std::cout << "[StubNetworkTransport] Sending to peer: " << peerId
-                  << " (protocol: " << protocol << ", size: " << payload.size() << " bytes)" << std::endl;
-
         return std::nullopt;
     }
     
@@ -251,101 +201,19 @@ public:
         std::lock_guard<std::mutex> lock(mutex);
         if (!running) return false;
 
-        std::cout << "[StubNetworkTransport] Connecting to peer: " << multiaddr << " (stub mode)" << std::endl;
-        
-        PeerInfo peer;
-        peer.peerId = generatePeerId();
-        peer.multiaddr = multiaddr;
-        peer.connected = true;
-        peer.lastSeen = LogicalClock::next();
-        peer.latencyMs = 50;
-        
-        peers.push_back(peer);
-        return true;
+        return false; // Not implemented in current FFI
     }
     
     bool disconnectPeer(const std::string& peerId) override {
         std::lock_guard<std::mutex> lock(mutex);
-        std::cout << "[StubNetworkTransport] Disconnecting peer: " << peerId << std::endl;
-
-        peers.erase(
-            std::remove_if(peers.begin(), peers.end(),
-                [&peerId](const PeerInfo& p) { return p.peerId == peerId; }),
-            peers.end()
-        );
-        return true;
+        return false; // Not implemented in current FFI
     }
 
 private:
-    std::string loadOrGeneratePeerId() {
-        if (!config.privateKeyPath.empty()) {
-            std::ifstream keyFile(config.privateKeyPath);
-            if (keyFile.is_open()) {
-                std::string peerId;
-                std::getline(keyFile, peerId);
-                if (!peerId.empty()) {
-                    return peerId;
-                }
-            }
-        }
-        
-        auto peerId = generatePeerId();
-        
-        if (!config.privateKeyPath.empty()) {
-            std::ofstream keyFile(config.privateKeyPath);
-            if (keyFile.is_open()) {
-                keyFile << peerId;
-            }
-        }
-        return peerId;
-    }
-    
-    static std::string generatePeerId() {
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<> dis(0, 255);
-        
-        std::stringstream ss;
-        ss << "Qm";
-        for (int i = 0; i < 44; i++) {
-            static const char charset[] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-            ss << charset[dis(gen) % (sizeof(charset) - 1)];
-        }
-        return ss.str();
-    }
-    
-    static std::string generateMessageId() {
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<> dis(0, 15);
-        
-        std::stringstream ss;
-        for (int i = 0; i < 32; i++) {
-            ss << std::hex << dis(gen);
-        }
-        return ss.str();
-    }
-    
-    void simulateNetworkActivity() {
-        while (running) {
-            std::this_thread::sleep_for(std::chrono::seconds(10));
-            
-            std::lock_guard<std::mutex> lock(mutex);
-            if (!running) break;
-
-            if (peers.size() < config.maxPeers / 2) {
-                PeerInfo peer;
-                peer.peerId = generatePeerId();
-                peer.multiaddr = "/ip4/192.168.1." + std::to_string(100 + peers.size()) + "/tcp/4001";
-                peer.connected = true;
-                peer.lastSeen = LogicalClock::next();
-                peer.latencyMs = 20 + (peers.size() * 5);
-                
-                peers.push_back(peer);
-                std::cout << "[StubNetworkTransport] Discovered peer (simulated): " << peer.peerId << std::endl;
-            }
-        }
-    }
+    P2PConfig config;
+    std::string localPeerId;
+    bool running = false;
+    mutable std::mutex mutex;
 };
 
 // ============================================================================
@@ -353,7 +221,7 @@ private:
 // ============================================================================
 
 P2PNetwork::P2PNetwork(const P2PConfig& config)
-    : transport_(std::make_unique<StubNetworkTransport>(config)) {
+    : transport_(std::make_unique<FFINetworkTransport>(config)) {
 }
 
 P2PNetwork::P2PNetwork(std::unique_ptr<INetworkTransport> transport)
