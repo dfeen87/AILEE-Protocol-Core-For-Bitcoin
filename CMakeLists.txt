@@ -627,6 +627,7 @@ add_library(ailee_adapters STATIC
     src/l3/NetworkDriver.cpp
     src/l1/AnchorCommitment.cpp
     src/l4/ClusterSim.cpp
+    src/l4/DeterministicScheduler.cpp
     src/l4/RecoveryCoordinator.cpp
     src/l4/MeshAnchor.cpp
     src/l4/StateRootPropagation.cpp
@@ -734,6 +735,7 @@ if(BUILD_TESTS)
         tests/l3/GossipLayerTests.cpp
         tests/l3/PeerSyncTests.cpp
         tests/l4/test_cluster_sim.cpp
+        tests/l4/test_deterministic_scheduler.cpp
         tests/l4/test_recovery_coordinator.cpp
         tests/l4/test_mesh_anchor.cpp
         tests/l4/test_state_root_propagation.cpp
