@@ -365,6 +365,9 @@ set(CORE_SOURCES
     src/orchestration/ProverSwarm.cpp
     src/security/ailee_circuit_breaker.cpp
     src/security/zk_proofs.cpp
+    src/l3/NetworkReflection.cpp
+    src/l3/NetworkBinding.cpp
+    src/l3/NetworkDriver.cpp
     src/l1/AnchorCommitment.cpp
     src/l1/ReorgDetector.cpp
     src/l1/SettlementIngestion.cpp
@@ -529,13 +532,26 @@ endif()
 # --- 2. L2 Verification Tool ---
 add_executable(ailee_l2_verify
     src/tools/ailee_l2_verify.cpp
+    src/l2/DeterministicEngine.cpp
+    src/l2/EpochScheduler.cpp
+    src/l2/ExecutionContext.cpp
+    src/l2/RecoveryPayload.cpp
+    src/l2/StateRootPipeline.cpp
+    src/ReflectionLayer.cpp
+    src/MeshCoherence.cpp
+    src/NodeIdentity.cpp
     src/security/zk_proofs.cpp
+    src/l3/NetworkReflection.cpp
+    src/l3/NetworkBinding.cpp
+    src/l3/NetworkDriver.cpp
     src/l1/AnchorCommitment.cpp
     src/l2/L2State.cpp
 )
 
 target_link_libraries(ailee_l2_verify
     PRIVATE
+    ${CURL_LIBRARIES}
+    jsoncpp_lib
     ${libsecp256k1_LIBRARIES}
     $<IF:$<BOOL:${AILEE_USE_RUST_PROVER}>,ailee_rust_prover,ailee_rust_ffi_fallback>
     OpenSSL::SSL
@@ -600,6 +616,9 @@ add_library(ailee_adapters STATIC
     ${INFRASTRUCTURE_SOURCES}
     ${POLICY_SOURCES}
     src/security/zk_proofs.cpp
+    src/l3/NetworkReflection.cpp
+    src/l3/NetworkBinding.cpp
+    src/l3/NetworkDriver.cpp
     src/l1/AnchorCommitment.cpp
 )
 
@@ -700,6 +719,7 @@ if(BUILD_TESTS)
         tests/MeshCoherenceTests.cpp
         tests/ReflectionLayerTests.cpp
     tests/DeterministicEngineTests.cpp
+        tests/NetworkIntegrationTests.cpp
         src/runtime/BitVMInterpreter.cpp
     )
     
