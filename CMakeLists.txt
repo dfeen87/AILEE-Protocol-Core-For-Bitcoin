@@ -640,6 +640,10 @@ add_library(ailee_adapters STATIC
     src/l4/ClusterFederationView.cpp
     src/l4/MultiClusterSim.cpp
     src/l4/ReplayTick.cpp
+    src/l6/ExternalSchema.cpp
+    src/l6/JsonBindings.cpp
+    src/l6/ReplayExport.cpp
+    src/l6/FederationExport.cpp
 )
 
 add_library(ailee_l5_compression STATIC
@@ -760,6 +764,7 @@ if(BUILD_TESTS)
         tests/l4/test_deterministic_replay.cpp
         tests/l4/test_multi_cluster_sim.cpp
         tests/l5/test_deterministic_compression.cpp
+        tests/l6/test_external_bindings.cpp
         src/runtime/BitVMInterpreter.cpp
     )
     
