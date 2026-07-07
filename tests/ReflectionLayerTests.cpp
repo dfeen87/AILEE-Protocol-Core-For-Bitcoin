@@ -20,7 +20,10 @@ public:
     uint64_t get_latest_l1_height() const override { return 0; }
     void get_latest_confirmed_anchor(uint8_t out_hash[32]) const override {}
 
-    bool get_raw_value(const std::string& key, rocksdb::Slice& out_slice) const override { return false; }
+    // FIX: unused parameters removed
+    bool get_raw_value(const std::string& /*key*/, rocksdb::Slice& /*out_slice*/) const override {
+        return false;
+    }
 
     bool get_raw_anchor_slice(rocksdb::Slice& out_slice) const override {
         if (!return_success || anchor_data.empty()) return false;
