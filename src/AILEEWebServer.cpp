@@ -93,6 +93,14 @@ public:
         mempool_ = mempool;
     }
 
+    void setReplayTickCallback(std::function<std::string(uint64_t)> callback) {
+        replay_tick_callback_ = callback;
+    }
+
+    void setFederationViewCallback(std::function<std::string()> callback) {
+        federation_view_callback_ = callback;
+    }
+
 private:
     void setupRoutes() {
         // Combined pre-routing handler: CORS headers first, then API key auth.
@@ -151,7 +159,9 @@ private:
                         {"/api/l2/state", "Get Layer-2 state information"},
                         {"/api/orchestration/tasks", "Get orchestration task list"},
                         {"/api/anchors/latest", "Get latest Bitcoin anchor"},
-                        {"/api/health", "Health check endpoint"}
+                        {"/api/health", "Health check endpoint"},
+                        {"/api/replay/tick/:index", "Get deterministic replay tick by index"},
+                        {"/api/federation/view", "Get deterministic federation view"}
                     }},
                     {"documentation", "https://github.com/dfeen87/AILEE-Protocol-Core-For-Bitcoin"}
                 };
@@ -337,6 +347,57 @@ private:
             }
         });
 
+        // Deterministic Replay Tick endpoint
+        server_->Get(R"(/api/replay/tick/(\d+))", [this](const httplib::Request& req, httplib::Response& res) {
+            if (!replay_tick_callback_) {
+                res.status = 501;
+                json error = {
+                    {"error", "Not Implemented"},
+                    {"message", "Replay tick callback not configured"}
+                };
+                res.set_content(error.dump(), "application/json");
+                return;
+            }
+
+            try {
+                uint64_t index = std::stoull(req.matches[1]);
+                std::string tick_json = replay_tick_callback_(index);
+                if (tick_json.empty()) {
+                    res.status = 404;
+                    json error = {
+                        {"error", "Not Found"},
+                        {"message", "Tick index out of bounds"}
+                    };
+                    res.set_content(error.dump(), "application/json");
+                } else {
+                    res.set_content(tick_json, "application/json");
+                }
+            } catch (...) {
+                res.status = 400;
+                json error = {
+                    {"error", "Invalid Request"},
+                    {"message", "Invalid tick index format"}
+                };
+                res.set_content(error.dump(), "application/json");
+            }
+        });
+
+        // Deterministic Federation View endpoint
+        server_->Get("/api/federation/view", [this](const httplib::Request&, httplib::Response& res) {
+            if (!federation_view_callback_) {
+                res.status = 501;
+                json error = {
+                    {"error", "Not Implemented"},
+                    {"message", "Federation view callback not configured"}
+                };
+                res.set_content(error.dump(), "application/json");
+                return;
+            }
+
+            std::string view_json = federation_view_callback_();
+            res.set_content(view_json, "application/json");
+        });
+
         // Transaction submission endpoint (POST)
         server_->Post("/api/transactions/submit", [this](const httplib::Request& req, httplib::Response& res) {
             try {
@@ -439,6 +500,8 @@ private:
     Ledger* ledger_ = nullptr;
     l2::BlockProducer* block_producer_ = nullptr;
     l2::Mempool* mempool_ = nullptr;
+    std::function<std::string(uint64_t)> replay_tick_callback_;
+    std::function<std::string()> federation_view_callback_;
 };
 
 // Public API implementation
@@ -478,6 +541,14 @@ void AILEEWebServer::setBlockProducerRef(l2::BlockProducer* producer) {
 
 void AILEEWebServer::setMempoolRef(l2::Mempool* mempool) {
     pImpl->setMempoolRef(mempool);
+}
+
+void AILEEWebServer::setReplayTickCallback(std::function<std::string(uint64_t)> callback) {
+    pImpl->setReplayTickCallback(callback);
+}
+
+void AILEEWebServer::setFederationViewCallback(std::function<std::string()> callback) {
+    pImpl->setFederationViewCallback(callback);
 }
 
 } // namespace ailee

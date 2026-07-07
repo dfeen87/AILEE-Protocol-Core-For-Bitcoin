@@ -65,6 +65,10 @@ public:
     void setBlockProducerRef(l2::BlockProducer* producer);
     void setMempoolRef(l2::Mempool* mempool);
 
+    // Phase 16 External Bindings endpoints
+    void setReplayTickCallback(std::function<std::string(uint64_t)> callback);
+    void setFederationViewCallback(std::function<std::string()> callback);
+
 private:
     class Impl;
     std::unique_ptr<Impl> pImpl;

@@ -4,7 +4,9 @@
 #include "l4/DeterministicScheduler.h"
 #include "l4/DeterministicTelemetry.h"
 #include "l5/DeterministicCompressor.h"
+#include "l6/ReplayExport.h"
 #include <vector>
+#include <string>
 
 namespace ailee {
 namespace l4 {
@@ -30,6 +32,9 @@ struct ReplayBuffer {
 
     std::vector<std::vector<uint8_t>> compressed_ticks;
     l5::DeterministicCompressor compressor;
+
+    l6::ReplayExport replay_export;
+    std::vector<std::string> external_json_ticks;
 
     void record_tick(
         const DeterministicSchedulerState& scheduler_state,
