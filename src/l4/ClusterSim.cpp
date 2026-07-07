@@ -1,4 +1,5 @@
 #include "l4/ClusterSim.h"
+#include "l4/RecoveryCoordinator.h"
 #include "l2/DeterministicEngine.h"
 #include "l3/GossipLayer.h"
 #include "l3/PeerSync.h"
@@ -21,11 +22,11 @@ ClusterView run_cluster_simulation(
     std::memset(view.padding, 0, sizeof(view.padding));
 
     // We instantiate DeterministicEngines per node to hold their internal state
-    std::vector<l2::DeterministicEngine> engines(view.nodes.size());
-    // Since DeterministicEngine maintains its own state and we need to pass initial state,
-    // Wait, DeterministicEngine is default initialized. The test will probably just rely
-    // on engine default initialization. There's no way to inject an EngineState back into
-    // DeterministicEngine via public API. I will rely on step() to update its state.
+    std::vector<l2::DeterministicEngine> engines;
+    engines.reserve(view.nodes.size());
+    for (const auto& node : view.nodes) {
+        engines.emplace_back(node.engine_state);
+    }
 
     for (uint64_t step = 0; step < max_steps; ++step) {
 
@@ -60,6 +61,20 @@ ClusterView run_cluster_simulation(
 
             // Receiver updates its peer_sync_states
             receiver.peer_sync_states.push_back(sync_state);
+        }
+
+        // 1.5. Deterministic Recovery
+        std::vector<RecoveryRequest> requests = build_recovery_requests(view);
+        std::vector<RecoveryResponse> responses = match_recovery_responses(view, requests);
+
+        for (const auto& response : responses) {
+            for (size_t i = 0; i < view.nodes.size(); ++i) {
+                if (view.nodes[i].node_id_hash == response.requester_node_id_hash) {
+                    apply_recovery(view.nodes[i], response);
+                    engines[i].set_state(view.nodes[i].engine_state);
+                    break;
+                }
+            }
         }
 
         // 2. Deterministic Engine Progression & 3. Update Node State
@@ -110,11 +125,16 @@ ClusterView run_cluster_simulation(
 
 ClusterCoherenceSummary compute_cluster_coherence(const ClusterView& view) {
     ClusterCoherenceSummary summary = {};
-    std::memset(summary.padding, 0, sizeof(summary.padding));
+    std::memset(&summary, 0, sizeof(summary));
 
     if (view.total_nodes == 0) {
         return summary;
     }
+
+    std::vector<RecoveryRequest> pending_reqs = build_recovery_requests(view);
+    std::vector<RecoveryResponse> matched_resps = match_recovery_responses(view, pending_reqs);
+
+    summary.unrecoverable_nodes_count = pending_reqs.size() - matched_resps.size();
 
     for (const auto& node : view.nodes) {
         if (!node.peer_sync_states.empty()) {
@@ -136,6 +156,17 @@ ClusterCoherenceSummary compute_cluster_coherence(const ClusterView& view) {
                 case l3::SyncStatus::STALE:
                     summary.stale_count++;
                     break;
+            }
+
+            bool was_bad = false;
+            for (const auto& st : node.peer_sync_states) {
+                if (st.sync_status == l3::SyncStatus::NEEDS_RECOVERY || st.sync_status == l3::SyncStatus::BEHIND) {
+                    was_bad = true;
+                }
+                if (was_bad && st.sync_status == l3::SyncStatus::IN_SYNC) {
+                    summary.recovered_nodes_count++;
+                    break;
+                }
             }
         } else {
             // Assume stale if no sync state

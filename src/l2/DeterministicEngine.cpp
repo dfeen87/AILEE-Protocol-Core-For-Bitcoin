@@ -9,6 +9,14 @@ DeterministicEngine::DeterministicEngine() {
     std::memset(&m_state, 0, sizeof(EngineState));
 }
 
+DeterministicEngine::DeterministicEngine(const EngineState& initial_state) {
+    std::memcpy(&m_state, &initial_state, sizeof(EngineState));
+}
+
+void DeterministicEngine::set_state(const EngineState& new_state) {
+    std::memcpy(&m_state, &new_state, sizeof(EngineState));
+}
+
 EngineStepResult DeterministicEngine::step(
     const reflection::ReflectionSnapshot& reflection_snapshot,
     const l1::SettlementIngestion& settlement_ingestion,
