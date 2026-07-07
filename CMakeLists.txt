@@ -645,6 +645,7 @@ add_library(ailee_adapters STATIC
     src/l6/JsonBindings.cpp
     src/l6/ReplayExport.cpp
     src/l6/FederationExport.cpp
+    src/l6/AnchorSerializer.cpp
 )
 
 add_library(ailee_l5_compression STATIC
@@ -766,6 +767,7 @@ if(BUILD_TESTS)
         tests/l4/test_multi_cluster_sim.cpp
         tests/l5/test_deterministic_compression.cpp
         tests/l6/test_external_bindings.cpp
+        tests/l6/test_anchor_serializer.cpp
         src/runtime/BitVMInterpreter.cpp
     )
     
