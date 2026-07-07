@@ -70,6 +70,10 @@ TEST_F(DeterministicDashboardTest, IntegrationTest) {
 
     std::vector<std::pair<size_t, size_t>> schedule = { {0, 1}, {1, 2}, {2, 0} };
 
+    // Ensure web directory exists for tests, but we'll try reading what it actually wrote
+    // The test environment might not have a web directory where it's being run.
+    system("mkdir -p web");
+
     // Run N ticks
     run_cluster_simulation(initial_nodes, schedule, 2);
 
