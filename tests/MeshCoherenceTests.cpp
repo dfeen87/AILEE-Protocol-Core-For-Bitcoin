@@ -18,13 +18,27 @@ public:
     uint8_t anchor_hash[32] = {0xAA};
 
     uint64_t get_latest_l1_height() const override { return l1_height; }
+
     void get_latest_confirmed_anchor(uint8_t out_hash[32]) const override {
         std::memcpy(out_hash, anchor_hash, 32);
     }
-    bool get_raw_value(const std::string& key, rocksdb::Slice& out_slice) const override { return false; }
-    bool get_raw_anchor_slice(rocksdb::Slice& out_slice) const override { return false; }
-    bool get_raw_reorg_slice(rocksdb::Slice& out_slice) const override { return false; }
-    bool get_raw_block_height_slice(rocksdb::Slice& out_slice) const override { return false; }
+
+    // FIX: unused parameters removed
+    bool get_raw_value(const std::string& /*key*/, rocksdb::Slice& /*out_slice*/) const override {
+        return false;
+    }
+
+    bool get_raw_anchor_slice(rocksdb::Slice& /*out_slice*/) const override {
+        return false;
+    }
+
+    bool get_raw_reorg_slice(rocksdb::Slice& /*out_slice*/) const override {
+        return false;
+    }
+
+    bool get_raw_block_height_slice(rocksdb::Slice& /*out_slice*/) const override {
+        return false;
+    }
 };
 
 class MockHeartbeatLog : public HeartbeatLog {
@@ -52,7 +66,6 @@ TEST(MeshCoherenceTests, ComputeNodeIdDeterminism) {
     MeshNodeId id1 = compute_node_id(build1, gen1, cfg1);
     MeshNodeId id2 = compute_node_id(build1, gen1, cfg1);
 
-    // Identical inputs -> identical id
     EXPECT_EQ(std::memcmp(id1.id, id2.id, 32), 0);
 
     build::BuildHashInfo build2;
@@ -60,7 +73,6 @@ TEST(MeshCoherenceTests, ComputeNodeIdDeterminism) {
 
     MeshNodeId id3 = compute_node_id(build2, gen1, cfg1);
 
-    // Different inputs -> different id
     EXPECT_TRUE(std::memcmp(id1.id, id3.id, 32) != 0);
 }
 
@@ -115,7 +127,7 @@ TEST(MeshCoherenceTests, ComputeMeshCoherenceScore3) {
     std::memset(&s2, 0, sizeof(s2));
 
     s1.latest_l1_height = 100;
-    s2.latest_l1_height = 101; // difference
+    s2.latest_l1_height = 101;
 
     std::memset(s1.latest_anchor_hash, 0x11, 32);
     std::memset(s2.latest_anchor_hash, 0x11, 32);
@@ -170,14 +182,11 @@ TEST(MeshCoherenceTests, SummarizeMeshCoherence) {
     MeshNodeSnapshot others[3];
     std::memset(&others, 0, sizeof(others));
 
-    // other 0: identical (score 4)
     others[0] = self;
 
-    // other 1: 1 field different (score 3)
     others[1] = self;
     others[1].latest_l1_height = 101;
 
-    // other 2: all fields different (score 0)
     others[2].latest_l1_height = 101;
     others[2].latest_l2_epoch = 201;
     std::memset(others[2].latest_anchor_hash, 0x12, 32);
