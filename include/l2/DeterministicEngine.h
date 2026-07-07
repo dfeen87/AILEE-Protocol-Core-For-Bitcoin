@@ -43,6 +43,9 @@ static_assert(sizeof(EngineRunSummary) == 704, "EngineRunSummary must be a multi
 class DeterministicEngine {
 public:
     DeterministicEngine();
+    explicit DeterministicEngine(const EngineState& initial_state);
+
+    void set_state(const EngineState& new_state);
 
     EngineStepResult step(
         const reflection::ReflectionSnapshot& reflection_snapshot,

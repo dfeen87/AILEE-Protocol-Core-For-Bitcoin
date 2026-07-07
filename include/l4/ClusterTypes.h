@@ -33,15 +33,15 @@ struct alignas(64) ClusterView {
 static_assert(sizeof(ClusterView) == 64, "ClusterView must be 64 bytes");
 
 struct alignas(64) ClusterCoherenceSummary {
-    uint64_t in_sync_count;          // 8 bytes
-    uint64_t ahead_count;            // 8 bytes
-    uint64_t behind_count;           // 8 bytes
-    uint64_t needs_recovery_count;   // 8 bytes
-    uint64_t stale_count;            // 8 bytes
-    uint64_t global_coherence_score; // 8 bytes
-    // Total size: 48 bytes
-    // Next multiple of 64 is 64. Padding needed: 16 bytes
-    uint8_t padding[16];
+    uint64_t in_sync_count;             // 8 bytes
+    uint64_t ahead_count;               // 8 bytes
+    uint64_t behind_count;              // 8 bytes
+    uint64_t needs_recovery_count;      // 8 bytes
+    uint64_t stale_count;               // 8 bytes
+    uint64_t global_coherence_score;    // 8 bytes
+    uint64_t recovered_nodes_count;     // 8 bytes
+    uint64_t unrecoverable_nodes_count; // 8 bytes
+    // Total size: 64 bytes
 };
 static_assert(sizeof(ClusterCoherenceSummary) == 64, "ClusterCoherenceSummary must be 64 bytes");
 
