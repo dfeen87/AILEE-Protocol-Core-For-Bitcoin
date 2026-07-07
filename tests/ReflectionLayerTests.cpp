@@ -37,7 +37,7 @@ public:
         return true;
     }
 
-    bool get_raw_block_height_slice(rocksdb::Slice& out_slice) const override {
+    bool get_raw_block_height_slice(rocksdb::Slice& /*out_slice*/) const override {
         if (!return_success || block_height_data.empty()) return false;
         out_slice = rocksdb::Slice(reinterpret_cast<const char*>(block_height_data.data()), block_height_data.size());
         return true;
