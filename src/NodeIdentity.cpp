@@ -4,17 +4,15 @@
 #include "ConfigInfo.h"
 
 #include <cstring>
-#include <openssl/sha.h>
+#include <secp256k1.h>
 
 namespace ailee {
 namespace identity {
 
-// Helper to compute SHA-256 using OpenSSL
 static void compute_sha256(const uint8_t* data, size_t len, uint8_t out_hash[32]) {
-    SHA256_CTX sha256;
-    SHA256_Init(&sha256);
-    SHA256_Update(&sha256, data, len);
-    SHA256_Final(out_hash, &sha256);
+    static secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
+    const unsigned char tag[] = "NodeId";
+    (void)secp256k1_tagged_sha256(ctx, out_hash, tag, sizeof(tag) - 1, data, len);
 }
 
 NodeId compute_node_id(
