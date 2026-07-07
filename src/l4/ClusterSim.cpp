@@ -7,6 +7,8 @@
 #include "l3/GossipLayer.h"
 #include "l3/PeerSync.h"
 #include "l4/DeterministicScheduler.h"
+#include "l4/ReplayBuffer.h"
+#include "l4/ReplayEngine.h"
 #include "NodeIdentity.h"
 #include <cstring>
 #include <iostream>
@@ -32,12 +34,21 @@ ClusterView run_cluster_simulation(
     }
 
     DeterministicScheduler scheduler;
+    ReplayBuffer replay_buffer;
 
     // max_steps now represents full cluster ticks (which consist of 9 sub-ticks each, so total_ticks = max_steps * 9)
     uint64_t total_ticks = max_steps * 9;
     for (uint64_t i = 0; i < total_ticks; ++i) {
         scheduler.run_tick(view, gossip_schedule, engines);
+        
+        SchedulerPhase phase = static_cast<SchedulerPhase>((scheduler.state.tick_count - 1) % 9);
+        if (phase == SchedulerPhase::COHERENCE_UPDATE) {
+            replay_buffer.record_tick(scheduler.state, view, scheduler.telemetry.samples.back());
+        }
     }
+
+    ReplayEngine engine;
+    engine.write_replay_file("web/replay.bin", replay_buffer);
 
     // Write dashboard JSON snapshot
     std::ofstream ofs("web/dashboard.json");
