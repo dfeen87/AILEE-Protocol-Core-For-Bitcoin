@@ -6,11 +6,20 @@ FROM ubuntu:22.04 AS cpp-builder
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
-    build-essential cmake git wget \
+    build-essential cmake git wget autoconf automake libtool pkg-config \
     libssl-dev libcurl4-openssl-dev libzmq3-dev \
     libjsoncpp-dev libyaml-cpp-dev librocksdb-dev \
-    libsecp256k1-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# --------------------------------------------------
+# Build libsecp256k1 from source (Bitcoin Core style)
+# --------------------------------------------------
+WORKDIR /tmp/secp256k1
+RUN git clone https://github.com/bitcoin-core/secp256k1.git . && \
+    ./autogen.sh && \
+    ./configure --enable-module-recovery --enable-experimental && \
+    make -j$(nproc) && \
+    make install
 
 WORKDIR /build
 
