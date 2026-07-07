@@ -365,6 +365,9 @@ set(CORE_SOURCES
     src/orchestration/ProverSwarm.cpp
     src/security/ailee_circuit_breaker.cpp
     src/security/zk_proofs.cpp
+    src/l3/NetworkReflection.cpp
+    src/l3/NetworkBinding.cpp
+    src/l3/NetworkDriver.cpp
     src/l1/AnchorCommitment.cpp
     src/l1/ReorgDetector.cpp
     src/l1/SettlementIngestion.cpp
@@ -530,6 +533,9 @@ endif()
 add_executable(ailee_l2_verify
     src/tools/ailee_l2_verify.cpp
     src/security/zk_proofs.cpp
+    src/l3/NetworkReflection.cpp
+    src/l3/NetworkBinding.cpp
+    src/l3/NetworkDriver.cpp
     src/l1/AnchorCommitment.cpp
     src/l2/L2State.cpp
 )
@@ -600,6 +606,9 @@ add_library(ailee_adapters STATIC
     ${INFRASTRUCTURE_SOURCES}
     ${POLICY_SOURCES}
     src/security/zk_proofs.cpp
+    src/l3/NetworkReflection.cpp
+    src/l3/NetworkBinding.cpp
+    src/l3/NetworkDriver.cpp
     src/l1/AnchorCommitment.cpp
 )
 
@@ -700,6 +709,7 @@ if(BUILD_TESTS)
         tests/MeshCoherenceTests.cpp
         tests/ReflectionLayerTests.cpp
     tests/DeterministicEngineTests.cpp
+        tests/NetworkIntegrationTests.cpp
         src/runtime/BitVMInterpreter.cpp
     )
     
