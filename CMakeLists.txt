@@ -315,6 +315,11 @@ set(AILEE_CORE_SOURCES
     src/ailee_core/consensus/ailee_core_consensus.cpp
     src/ailee_core/mesh/ailee_core_mesh.cpp
     src/ailee_core/anchoring/ailee_core_anchoring.cpp
+    src/l2/DeterministicEngine.cpp
+    src/l2/EpochScheduler.cpp
+    src/l2/StateRootPipeline.cpp
+    src/l2/RecoveryPayload.cpp
+    src/l2/ExecutionContext.cpp
     src/heartbeat/WavePhaseController.cpp
     src/heartbeat/EpochScheduler.cpp
     src/heartbeat/DeterministicEpochExecutorWrapper.cpp
@@ -694,6 +699,7 @@ if(BUILD_TESTS)
         tests/BitVMInterpreterTests.cpp
         tests/MeshCoherenceTests.cpp
         tests/ReflectionLayerTests.cpp
+    tests/DeterministicEngineTests.cpp
         src/runtime/BitVMInterpreter.cpp
     )
     
