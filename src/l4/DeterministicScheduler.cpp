@@ -207,6 +207,7 @@ void DeterministicScheduler::run_tick(
             state.cluster_stable = (view.coherence_summary.global_coherence_score == 100);
             view.total_steps++;
             record_telemetry_sample(view, state, telemetry);
+            last_snapshot = dashboard_builder.build_snapshot(telemetry);
             break;
         }
     }

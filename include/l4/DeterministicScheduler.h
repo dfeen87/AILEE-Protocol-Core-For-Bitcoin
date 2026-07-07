@@ -10,6 +10,7 @@
 #include "l2/DeterministicEngine.h"
 #include "l4/ClusterSim.h"
 #include "l4/DeterministicTelemetry.h"
+#include "l4/DeterministicDashboard.h"
 
 namespace ailee {
 namespace l4 {
@@ -45,6 +46,8 @@ struct DeterministicScheduler {
     std::vector<StateRootAnnouncement> current_announcements;
 
     TelemetryBuffer telemetry;
+    DashboardBuilder dashboard_builder;
+    DashboardSnapshot last_snapshot;
 
     DeterministicScheduler() {
         std::memset(&state, 0, sizeof(state));

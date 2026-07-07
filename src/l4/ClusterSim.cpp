@@ -10,6 +10,7 @@
 #include "NodeIdentity.h"
 #include <cstring>
 #include <iostream>
+#include <fstream>
 
 namespace ailee {
 namespace l4 {
@@ -36,6 +37,13 @@ ClusterView run_cluster_simulation(
     uint64_t total_ticks = max_steps * 9;
     for (uint64_t i = 0; i < total_ticks; ++i) {
         scheduler.run_tick(view, gossip_schedule, engines);
+    }
+
+    // Write dashboard JSON snapshot
+    std::ofstream ofs("web/dashboard.json");
+    if (ofs.is_open()) {
+        ofs << scheduler.last_snapshot.json;
+        ofs.close();
     }
 
     return view;
