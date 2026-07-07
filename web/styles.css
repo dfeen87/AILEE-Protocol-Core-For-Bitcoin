@@ -1,0 +1,18 @@
+/* Custom deterministic styles beyond existing index.html styles */
+
+.deterministic-chart-data {
+    font-family: monospace;
+    background: #111827;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    margin-top: 5px;
+}
+
+#tickChart h3, #coherenceChart h3, #stateRootChart h3 {
+    margin-top: 15px;
+    font-size: 1.1em;
+    color: #f3f4f6;
+    border-bottom: 1px solid #374151;
+    padding-bottom: 5px;
+}

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AILEE Protocol Core - Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
     <style>
         * {
             margin: 0;
@@ -313,6 +314,13 @@
             </div>
             
             <!-- Metrics Card -->
+            <div class="card" id="deterministic-card">
+                <h2>Deterministic Mesh</h2>
+                <div id="tickChart"></div>
+                <div id="coherenceChart"></div>
+                <div id="stateRootChart"></div>
+            </div>
+
             <div class="card" id="metrics-card">
                 <h2>Performance Metrics</h2>
                 <div class="loading">Loading...</div>
@@ -658,5 +666,6 @@
         // Auto-refresh every 10 seconds
         setInterval(loadAllData, 10000);
     </script>
+    <script src="dashboard.js"></script>
 </body>
 </html>
