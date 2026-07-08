@@ -103,6 +103,20 @@ ClusterView ClusterSim::build_view() const {
     return view;
 }
 
+SchedulerCallbacks ClusterSim::get_scheduler_callbacks() const {
+    SchedulerCallbacks cb;
+    if (scheduler) {
+        cb.sync_events = [this]() { return scheduler->get_sync_events_json(); };
+        cb.sync_clock  = [this]() { return scheduler->get_clock_json(); };
+        cb.replay_tick = [this]() { return scheduler->get_latest_replay_tick_json(); };
+    } else {
+        cb.sync_events = []() { return std::string("[]"); };
+        cb.sync_clock  = []() { return std::string("{}"); };
+        cb.replay_tick = []() { return std::string("{}"); };
+    }
+    return cb;
+}
+
 ClusterView run_cluster_simulation(
     const std::vector<ClusterNodeState>& initial_nodes,
     const std::vector<std::pair<size_t, size_t>>& gossip_schedule,
