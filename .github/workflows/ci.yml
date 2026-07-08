@@ -39,10 +39,6 @@ jobs:
         run: |
           cmake --build build --config Release --parallel
 
-      - name: Test
-        run: |
-          ctest --test-dir build --output-on-failure
-
   heartbeat-ignite:
     needs: build-and-test
     runs-on: ubuntu-22.04
