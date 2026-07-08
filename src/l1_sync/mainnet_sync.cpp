@@ -30,11 +30,6 @@ void MainnetSyncManager::ingest_headers(const HeaderBatch& headers) {
             const auto& tip = header_buffer.back();
             if (std::memcmp(tip.hash.data(), header.prev_hash.data(), 32) != 0 || header.height <= tip.height) {
                 // Reorg detected due to prevhash mismatch or rollback
-                SyncEvent event;
-                event.type = SyncEventType::ReorgDetected;
-                event.height = header.height;
-                event.block_hash = header.hash;
-                pending_events.push_back(event);
 
                 // Use the ReorgDetector
                 std::vector<std::array<uint8_t, 32>> current_chain;
@@ -47,6 +42,13 @@ void MainnetSyncManager::ingest_headers(const HeaderBatch& headers) {
                 ReorgResolution resolution = ReorgDetector::detect_and_resolve(current_chain, new_chain);
 
                 if (resolution.reorg_occurred) {
+                    SyncEvent event;
+                    event.type = SyncEventType::ReorgDetected;
+                    event.height = tip.height; // Emit at the height where the reorg was observed
+                    event.reorg_target_height = resolution.rollback_height;
+                    event.block_hash = header.hash;
+                    pending_events.push_back(event);
+
                     // Truncate buffer to branch point
                     while (header_buffer.size() > resolution.rollback_height) {
                         header_buffer.pop_back();

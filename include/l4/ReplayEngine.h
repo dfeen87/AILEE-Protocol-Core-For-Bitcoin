@@ -11,7 +11,7 @@ namespace l4 {
 struct ReplayEngine {
     ReplayBuffer buffer;
 
-    ReplayTick step(l1_sync::ReplayState& previous, const l1_sync::ReplayInput& input) const;
+    ReplayTick step(const l1_sync::ReplayState& previous, const l1_sync::ReplayInput& input) const;
 
     void load_replay_file(const std::string& path);
     void write_replay_file(const std::string& path, const ReplayBuffer& replay_buffer) const;
