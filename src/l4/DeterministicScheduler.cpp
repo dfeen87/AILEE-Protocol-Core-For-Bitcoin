@@ -33,6 +33,13 @@ void DeterministicScheduler::run_tick(
     ReplayTick tick = replay_engine->step(previous_replay_state, input);
 
     previous_replay_state.current_height = tick.height;
+    previous_replay_state.applied_event_count += tick.replay_events.size();
+    for (const auto& ev : tick.replay_events) {
+        if (ev.type == l1_sync::ReplayEventType::ReorgRollback) {
+            previous_replay_state.last_reorg_height = ev.height;
+        }
+    }
+
     latest_replay_tick = std::make_unique<ReplayTick>(tick);
 
     view.clock = tick.clock;

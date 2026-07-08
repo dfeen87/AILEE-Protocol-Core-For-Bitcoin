@@ -18,6 +18,7 @@ enum class SyncEventType : uint8_t {
 struct SyncEvent {
     SyncEventType type;
     uint64_t height;
+    uint64_t reorg_target_height;
     std::array<uint8_t, 32> block_hash; // Relevant for HeaderApplied and ReorgDetected
     TxId txid;       // Relevant for MempoolDeltaApplied
 };
