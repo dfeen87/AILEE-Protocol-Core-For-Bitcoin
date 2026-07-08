@@ -101,6 +101,18 @@ public:
         federation_view_callback_ = callback;
     }
 
+    void setSyncEventsCallback(std::function<std::string()> callback) {
+        sync_events_callback_ = callback;
+    }
+
+    void setSyncClockCallback(std::function<std::string()> callback) {
+        sync_clock_callback_ = callback;
+    }
+
+    void setLatestReplayTickCallback(std::function<std::string()> callback) {
+        latest_replay_tick_callback_ = callback;
+    }
+
 private:
     void setupRoutes() {
         // Combined pre-routing handler: CORS headers first, then API key auth.
@@ -398,6 +410,48 @@ private:
             res.set_content(view_json, "application/json");
         });
 
+        // V17 Telemetry Endpoints
+        
+        server_->Get("/api/sync/events", [this](const httplib::Request&, httplib::Response& res) {
+            if (!sync_events_callback_) {
+                res.status = 501;
+                json error = {
+                    {"error", "Not Implemented"},
+                    {"message", "Sync events callback not configured"}
+                };
+                res.set_content(error.dump(), "application/json");
+                return;
+            }
+            res.set_content(sync_events_callback_(), "application/json");
+        });
+
+        server_->Get("/api/sync/clock", [this](const httplib::Request&, httplib::Response& res) {
+            if (!sync_clock_callback_) {
+                res.status = 501;
+                json error = {
+                    {"error", "Not Implemented"},
+                    {"message", "Sync clock callback not configured"}
+                };
+                res.set_content(error.dump(), "application/json");
+                return;
+            }
+            res.set_content(sync_clock_callback_(), "application/json");
+        });
+
+        server_->Get("/api/replay/tick", [this](const httplib::Request&, httplib::Response& res) {
+            if (!latest_replay_tick_callback_) {
+                res.status = 501;
+                json error = {
+                    {"error", "Not Implemented"},
+                    {"message", "Latest replay tick callback not configured"}
+                };
+                res.set_content(error.dump(), "application/json");
+                return;
+            }
+            res.set_content(latest_replay_tick_callback_(), "application/json");
+        });
+
+
         // Transaction submission endpoint (POST)
         server_->Post("/api/transactions/submit", [this](const httplib::Request& req, httplib::Response& res) {
             try {
@@ -502,6 +556,9 @@ private:
     l2::Mempool* mempool_ = nullptr;
     std::function<std::string(uint64_t)> replay_tick_callback_;
     std::function<std::string()> federation_view_callback_;
+    std::function<std::string()> sync_events_callback_;
+    std::function<std::string()> sync_clock_callback_;
+    std::function<std::string()> latest_replay_tick_callback_;
 };
 
 // Public API implementation
@@ -549,6 +606,18 @@ void AILEEWebServer::setReplayTickCallback(std::function<std::string(uint64_t)> 
 
 void AILEEWebServer::setFederationViewCallback(std::function<std::string()> callback) {
     pImpl->setFederationViewCallback(callback);
+}
+
+void AILEEWebServer::setSyncEventsCallback(std::function<std::string()> callback) {
+    pImpl->setSyncEventsCallback(callback);
+}
+
+void AILEEWebServer::setSyncClockCallback(std::function<std::string()> callback) {
+    pImpl->setSyncClockCallback(callback);
+}
+
+void AILEEWebServer::setLatestReplayTickCallback(std::function<std::string()> callback) {
+    pImpl->setLatestReplayTickCallback(callback);
 }
 
 } // namespace ailee
