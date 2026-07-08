@@ -69,6 +69,11 @@ public:
     void setReplayTickCallback(std::function<std::string(uint64_t)> callback);
     void setFederationViewCallback(std::function<std::string()> callback);
 
+    // V17 Telemetry Endpoints
+    void setSyncEventsCallback(std::function<std::string()> callback);
+    void setSyncClockCallback(std::function<std::string()> callback);
+    void setLatestReplayTickCallback(std::function<std::string()> callback);
+
 private:
     class Impl;
     std::unique_ptr<Impl> pImpl;
