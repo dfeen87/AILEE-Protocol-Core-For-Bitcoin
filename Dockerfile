@@ -18,7 +18,7 @@ WORKDIR /tmp/secp256k1
 RUN git clone https://github.com/bitcoin-core/secp256k1.git . && \
     ./autogen.sh && \
     ./configure --enable-module-recovery --enable-experimental && \
-    make -j$(nproc) && \
+    make -j2 && \
     make install
 
 WORKDIR /build
@@ -28,8 +28,8 @@ COPY . .
 
 # Build the C++ node
 RUN mkdir build && cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF && \
-    make -j$(nproc) ailee_node
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF -DAILEE_USE_RUST_PROVER=OFF && \
+    make -j2 ailee_node
 
 
 # ============================
