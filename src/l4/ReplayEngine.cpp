@@ -10,12 +10,14 @@ namespace l4 {
 static const char REPLAY_MAGIC[10] = "AILEE-RPL";
 static const uint32_t REPLAY_VERSION = 2;
 
-ReplayTick ReplayEngine::step(const l1_sync::ReplayState& previous, const l1_sync::ReplayInput& input) const {
+ReplayTick ReplayEngine::step(l1_sync::ReplayState& previous, const l1_sync::ReplayInput& input) const {
     ReplayTick tick;
     tick.height = previous.current_height;
     tick.clock = input.clock;
 
     for (const auto& ev : input.events) {
+        previous.applied_event_count++;
+
         l1_sync::ReplayEvent re;
         std::memset(&re, 0, sizeof(re));
 
@@ -28,9 +30,10 @@ ReplayTick ReplayEngine::step(const l1_sync::ReplayState& previous, const l1_syn
                 break;
             case l1_sync::SyncEventType::ReorgDetected:
                 re.type = l1_sync::ReplayEventType::ReorgRollback;
-                re.height = ev.height; // Using the provided height from SyncEvent as the rollback target
+                re.height = ev.height; // Rollback target
                 re.block_hash = ev.block_hash;
                 tick.height = ev.height;
+                previous.last_reorg_height = ev.height;
                 break;
             case l1_sync::SyncEventType::MempoolDeltaApplied:
                 re.type = l1_sync::ReplayEventType::MempoolUpdate;
@@ -41,6 +44,9 @@ ReplayTick ReplayEngine::step(const l1_sync::ReplayState& previous, const l1_syn
 
         tick.replay_events.push_back(re);
     }
+
+    tick.view.clock = tick.clock;
+    tick.view.replay_events = tick.replay_events;
 
     return tick;
 }
