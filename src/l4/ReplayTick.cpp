@@ -95,25 +95,8 @@ ReplayTick ReplayTick::deserialize(const std::vector<uint8_t>& raw) {
     ReplayTick tick;
     size_t offset = 0;
 
-    uint32_t version = 1;
-    if (raw.size() >= sizeof(uint32_t)) {
-        // We peek to see if the first bytes look like a version.
-        // In previous implementation, the first field was `tick_count` of `DeterministicSchedulerState`.
-        // If this is a very old file, it might not have a version.
-        // We can safely assume version 2 if we explicitly wrote it, but for simplicity
-        // let's just always read it. If we need strict backwards compatibility with unversioned
-        // files we might need magic bytes. But since the prompt suggested `d.read(version)`,
-        // we'll implement it strictly.
-        // Actually, to handle old unversioned data safely without magic bytes is tricky.
-        // We will assume that all newly generated data starts with `version = 2`.
-        read_bytes(raw, offset, &version, sizeof(version));
-        if (version != 2 && version != 1) {
-            // Unlikely to be a valid version, probably old unversioned data
-            // We'll reset offset and assume version 1.
-            offset = 0;
-            version = 1;
-        }
-    }
+    uint32_t version;
+    read_bytes(raw, offset, &version, sizeof(version));
 
     // Deserialize Scheduler State
     read_bytes(raw, offset, &tick.scheduler_state, sizeof(DeterministicSchedulerState));

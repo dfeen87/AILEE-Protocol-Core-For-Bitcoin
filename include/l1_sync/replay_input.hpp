@@ -9,8 +9,6 @@
 namespace ailee {
 namespace l1_sync {
 
-using TxId = std::array<uint8_t, 32>;
-
 enum class ReplayEventType : uint8_t {
     HeaderApplied = 0,
     ReorgRollback = 1,
@@ -31,7 +29,9 @@ struct ReplayInput {
 };
 
 struct ReplayState {
-    uint64_t current_height;
+    uint64_t current_height;      // required
+    uint64_t last_reorg_height;   // track on rollback
+    uint64_t applied_event_count; // increment per event
 };
 
 } // namespace l1_sync
