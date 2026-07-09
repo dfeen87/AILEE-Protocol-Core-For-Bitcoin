@@ -176,7 +176,7 @@ TaprootSignatureResult sign_taproot_input(
         return result;
     }
 
-    if (secp256k1_schnorrsig_sign32(ctx, result.signature.data(), sighash.data(), &keypair, nullptr) != 1) {
+    if (secp256k1_schnorrsig_sign(ctx, result.signature.data(), sighash.data(), &keypair, nullptr) != 1) {
         result.error = "schnorr-sign-failed";
         std::fill(result.signature.begin(), result.signature.end(), 0);
         secp256k1_context_destroy(ctx);
