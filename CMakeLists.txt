@@ -780,6 +780,7 @@ if(BUILD_TESTS)
         tests/taproot/TaprootScriptTests.cpp
         tests/taproot/TaprootSignerTests.cpp
         tests/test_anchor_commit_txbuilder.cpp
+        tests/test_anchor_commit_signing.cpp
     )
     
     add_executable(anchor_metadata_tests
