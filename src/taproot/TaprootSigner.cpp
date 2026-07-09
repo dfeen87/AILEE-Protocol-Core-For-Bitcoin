@@ -1,18 +1,23 @@
 #include "taproot/TaprootSigner.h"
 #include "taproot/TaprootScript.h"
 #include "taproot/TaprootUtils.h"
+
 #include <openssl/sha.h>
 #include <secp256k1.h>
 #include <secp256k1_schnorrsig.h>
 #include <secp256k1_extrakeys.h>
-#include <cstring>
+
+#include <array>
 #include <vector>
+#include <cstring>
+#include <algorithm>
 
 namespace ailee {
 namespace taproot {
 
 namespace {
 
+// Tagged hash: SHA256(SHA256(tag) || SHA256(tag) || msg)
 void tagged_hash(const char* tag, const std::vector<uint8_t>& msg, std::array<uint8_t, 32>& out_hash) {
     std::array<uint8_t, 32> tag_hash;
     SHA256(reinterpret_cast<const unsigned char*>(tag), std::strlen(tag), tag_hash.data());
@@ -26,18 +31,32 @@ void tagged_hash(const char* tag, const std::vector<uint8_t>& msg, std::array<ui
     SHA256(buffer.data(), buffer.size(), out_hash.data());
 }
 
+// Build BIP341-style Taproot P2TR scriptPubKey from x-only output key
+std::vector<uint8_t> build_p2tr_script_pubkey(const std::array<uint8_t, 32>& output_key) {
+    std::vector<uint8_t> spk;
+    spk.reserve(1 + 1 + 32);
+    // OP_1 (segwit v1)
+    spk.push_back(0x51);
+    // push 32 bytes
+    spk.push_back(0x20);
+    // x-only pubkey
+    spk.insert(spk.end(), output_key.begin(), output_key.end());
+    return spk;
+}
+
 } // anonymous namespace
 
-TaprootSignatureResult sign_taproot_input(
+TaprootSignatureResult sign_anchor_commit_input(
     const Tx& tx,
     size_t input_index,
     const std::array<uint8_t, 32>& internal_key,
-    const std::array<uint8_t, 32>& taproot_output_key,
-    const std::array<uint8_t, 32>& privkey,
-    uint64_t value_sats
+    const std::array<uint8_t, 32>& leaf_hash,
+    uint64_t value_sats,
+    const std::array<uint8_t, 32>& privkey
 ) {
     TaprootSignatureResult result;
     result.success = false;
+    result.error.clear();
     std::fill(result.signature.begin(), result.signature.end(), 0);
 
     if (input_index >= tx.vin.size()) {
@@ -45,9 +64,49 @@ TaprootSignatureResult sign_taproot_input(
         return result;
     }
 
-    // --- 1. Compute BIP341 sighash ---
+    // --- secp256k1 context ---
+    secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
+    if (!ctx) {
+        result.error = "secp256k1-context-failed";
+        return result;
+    }
 
-    // We only have one input according to scope
+    // --- Derive tweaked output key: TapTweak(internal_key || leaf_hash) ---
+    std::vector<uint8_t> tweak_preimage;
+    tweak_preimage.reserve(64);
+    tweak_preimage.insert(tweak_preimage.end(), internal_key.begin(), internal_key.end());
+    tweak_preimage.insert(tweak_preimage.end(), leaf_hash.begin(), leaf_hash.end());
+
+    std::array<uint8_t, 32> tweak;
+    tagged_hash("TapTweak", tweak_preimage, tweak);
+
+    secp256k1_xonly_pubkey xonly_internal;
+    if (secp256k1_xonly_pubkey_parse(ctx, &xonly_internal, internal_key.data()) != 1) {
+        result.error = "invalid-internal-key";
+        secp256k1_context_destroy(ctx);
+        return result;
+    }
+
+    secp256k1_pubkey output_pubkey;
+    if (secp256k1_xonly_pubkey_tweak_add(ctx, &output_pubkey, &xonly_internal, tweak.data()) != 1) {
+        result.error = "pubkey-tweak-failed";
+        secp256k1_context_destroy(ctx);
+        return result;
+    }
+
+    secp256k1_xonly_pubkey out_xonly;
+    if (secp256k1_xonly_pubkey_from_pubkey(ctx, &out_xonly, nullptr, &output_pubkey) != 1) {
+        result.error = "xonly-from-pubkey-failed";
+        secp256k1_context_destroy(ctx);
+        return result;
+    }
+
+    std::array<uint8_t, 32> taproot_output_key;
+    secp256k1_xonly_pubkey_serialize(ctx, taproot_output_key.data(), &out_xonly);
+
+    // --- BIP341-style sighash components (single-input, single-output) ---
+
+    // prevouts
     std::vector<uint8_t> prevouts_data;
     for (const auto& in : tx.vin) {
         prevouts_data.insert(prevouts_data.end(), in.prev_txid.begin(), in.prev_txid.end());
@@ -56,19 +115,21 @@ TaprootSignatureResult sign_taproot_input(
     std::array<uint8_t, 32> sha_prevouts;
     SHA256(prevouts_data.data(), prevouts_data.size(), sha_prevouts.data());
 
+    // amounts (we only know value_sats for this single input)
     std::vector<uint8_t> amounts_data;
-    // Assuming single input logic as specified, we only know the value_sats for this input.
     write_uint64_le(amounts_data, value_sats);
     std::array<uint8_t, 32> sha_amounts;
     SHA256(amounts_data.data(), amounts_data.size(), sha_amounts.data());
 
+    // scriptPubKeys (prevout script derived from taproot_output_key)
     std::vector<uint8_t> spks_data;
-    std::vector<uint8_t> script_pubkey = build_p2tr_script_pubkey(taproot_output_key);
-    write_compact_size(spks_data, script_pubkey.size());
-    spks_data.insert(spks_data.end(), script_pubkey.begin(), script_pubkey.end());
+    std::vector<uint8_t> prevout_spk = build_p2tr_script_pubkey(taproot_output_key);
+    write_compact_size(spks_data, prevout_spk.size());
+    spks_data.insert(spks_data.end(), prevout_spk.begin(), prevout_spk.end());
     std::array<uint8_t, 32> sha_scriptpubkeys;
     SHA256(spks_data.data(), spks_data.size(), sha_scriptpubkeys.data());
 
+    // sequences
     std::vector<uint8_t> sequences_data;
     for (const auto& in : tx.vin) {
         write_uint32_le(sequences_data, in.sequence);
@@ -76,6 +137,7 @@ TaprootSignatureResult sign_taproot_input(
     std::array<uint8_t, 32> sha_sequences;
     SHA256(sequences_data.data(), sequences_data.size(), sha_sequences.data());
 
+    // outputs
     std::vector<uint8_t> outputs_data;
     for (const auto& out : tx.vout) {
         write_uint64_le(outputs_data, out.value_sats);
@@ -85,26 +147,19 @@ TaprootSignatureResult sign_taproot_input(
     std::array<uint8_t, 32> sha_outputs;
     SHA256(outputs_data.data(), outputs_data.size(), sha_outputs.data());
 
-    // Assemble sighash message
+    // --- Assemble TapSighash message (SIGHASH_DEFAULT → SIGHASH_ALL semantics) ---
     std::vector<uint8_t> sighash_msg;
-    // Epoch: 0x00
-    sighash_msg.push_back(0x00);
-    // hash_type (SIGHASH_DEFAULT)
-    sighash_msg.push_back(0x00);
-    // nVersion
+    sighash_msg.push_back(0x00); // epoch
+    sighash_msg.push_back(0x00); // hash_type (SIGHASH_DEFAULT)
+
     write_uint32_le(sighash_msg, tx.version);
-    // nLockTime
     write_uint32_le(sighash_msg, tx.locktime);
 
-    // hashes
     sighash_msg.insert(sighash_msg.end(), sha_prevouts.begin(), sha_prevouts.end());
     sighash_msg.insert(sighash_msg.end(), sha_amounts.begin(), sha_amounts.end());
     sighash_msg.insert(sighash_msg.end(), sha_scriptpubkeys.begin(), sha_scriptpubkeys.end());
     sighash_msg.insert(sighash_msg.end(), sha_sequences.begin(), sha_sequences.end());
-
-    if (!(0x00 & 0x01) && !(0x00 & 0x02)) { // SIGHASH_ALL (SIGHASH_DEFAULT maps to SIGHASH_ALL semantics for outputs)
-        sighash_msg.insert(sighash_msg.end(), sha_outputs.begin(), sha_outputs.end());
-    }
+    sighash_msg.insert(sighash_msg.end(), sha_outputs.begin(), sha_outputs.end());
 
     // spend_type = 0 (no annex, no script path)
     sighash_msg.push_back(0x00);
@@ -115,14 +170,7 @@ TaprootSignatureResult sign_taproot_input(
     std::array<uint8_t, 32> sighash;
     tagged_hash("TapSighash", sighash_msg, sighash);
 
-    // --- 2. Produce Schnorr signature ---
-
-    secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
-    if (!ctx) {
-        result.error = "secp256k1-context-failed";
-        return result;
-    }
-
+    // --- Derive tweaked private key and sign ---
     secp256k1_keypair keypair;
     if (secp256k1_keypair_create(ctx, &keypair, privkey.data()) != 1) {
         result.error = "invalid-private-key";
@@ -130,14 +178,8 @@ TaprootSignatureResult sign_taproot_input(
         return result;
     }
 
-    // Tweak the private key with TapTweak
-    std::vector<uint8_t> internal_key_vec(internal_key.begin(), internal_key.end());
-    std::array<uint8_t, 32> tweak;
-    tagged_hash("TapTweak", internal_key_vec, tweak);
-
     if (secp256k1_keypair_xonly_tweak_add(ctx, &keypair, tweak.data()) != 1) {
-        result.error = "tweak-failed";
-        std::fill(result.signature.begin(), result.signature.end(), 0);
+        result.error = "tweak-add-failed";
         secp256k1_context_destroy(ctx);
         return result;
     }
@@ -172,21 +214,139 @@ bool attach_taproot_witness(
     return true;
 }
 
-Tx build_signed_taproot_tx(
-    const Tx& unsigned_tx,
+std::vector<uint8_t> sign_anchor_commit_tx(
+    const std::vector<uint8_t>& unsigned_tx,
     const std::array<uint8_t, 32>& internal_key,
-    const std::array<uint8_t, 32>& taproot_output_key,
-    const std::array<uint8_t, 32>& privkey,
-    uint64_t value_sats
+    const std::array<uint8_t, 32>& leaf_hash,
+    uint64_t value_sats,
+    const std::array<uint8_t, 32>& privkey
 ) {
-    Tx tx = unsigned_tx;
-
-    TaprootSignatureResult sig_result = sign_taproot_input(tx, 0, internal_key, taproot_output_key, privkey, value_sats);
-    if (sig_result.success) {
-        attach_taproot_witness(tx, 0, sig_result.signature);
+    // Return empty on structural mismatch
+    if (unsigned_tx.size() < 60) {
+        return {};
     }
 
-    return tx;
+    // version (4 bytes), marker (1), flag (1)
+    uint32_t version =
+        static_cast<uint32_t>(unsigned_tx[0]) |
+        (static_cast<uint32_t>(unsigned_tx[1]) << 8) |
+        (static_cast<uint32_t>(unsigned_tx[2]) << 16) |
+        (static_cast<uint32_t>(unsigned_tx[3]) << 24);
+
+    uint8_t marker = unsigned_tx[4];
+    uint8_t flag   = unsigned_tx[5];
+    uint8_t input_count = unsigned_tx[6];
+
+    if (version != 2 || marker != 0x00 || flag != 0x01 || input_count != 1) {
+        return {};
+    }
+
+    size_t offset = 7;
+
+    // Single input
+    if (offset + 32 + 4 + 1 + 4 > unsigned_tx.size()) {
+        return {};
+    }
+
+    std::array<uint8_t, 32> in_txid;
+    std::memcpy(in_txid.data(), &unsigned_tx[offset], 32);
+    offset += 32;
+
+    uint32_t in_vout =
+        static_cast<uint32_t>(unsigned_tx[offset]) |
+        (static_cast<uint32_t>(unsigned_tx[offset + 1]) << 8) |
+        (static_cast<uint32_t>(unsigned_tx[offset + 2]) << 16) |
+        (static_cast<uint32_t>(unsigned_tx[offset + 3]) << 24);
+    offset += 4;
+
+    uint8_t script_sig_len = unsigned_tx[offset];
+    offset += 1;
+
+    if (offset + script_sig_len + 4 > unsigned_tx.size()) {
+        return {};
+    }
+
+    offset += script_sig_len; // skip scriptSig
+
+    uint32_t in_seq =
+        static_cast<uint32_t>(unsigned_tx[offset]) |
+        (static_cast<uint32_t>(unsigned_tx[offset + 1]) << 8) |
+        (static_cast<uint32_t>(unsigned_tx[offset + 2]) << 16) |
+        (static_cast<uint32_t>(unsigned_tx[offset + 3]) << 24);
+    offset += 4;
+
+    // Single output
+    if (offset + 1 + 8 > unsigned_tx.size()) {
+        return {};
+    }
+
+    uint8_t output_count = unsigned_tx[offset];
+    offset += 1;
+
+    if (output_count != 1) {
+        return {};
+    }
+
+    uint64_t out_val = 0;
+    std::memcpy(&out_val, &unsigned_tx[offset], 8);
+    offset += 8;
+
+    if (offset + 1 > unsigned_tx.size()) {
+        return {};
+    }
+
+    uint8_t spk_len = unsigned_tx[offset];
+    offset += 1;
+
+    if (offset + spk_len > unsigned_tx.size()) {
+        return {};
+    }
+
+    std::vector<uint8_t> out_spk;
+    out_spk.insert(out_spk.end(), &unsigned_tx[offset], &unsigned_tx[offset + spk_len]);
+    offset += spk_len;
+
+    if (offset + 4 > unsigned_tx.size()) {
+        return {};
+    }
+
+    uint32_t locktime =
+        static_cast<uint32_t>(unsigned_tx[offset]) |
+        (static_cast<uint32_t>(unsigned_tx[offset + 1]) << 8) |
+        (static_cast<uint32_t>(unsigned_tx[offset + 2]) << 16) |
+        (static_cast<uint32_t>(unsigned_tx[offset + 3]) << 24);
+
+    // Reconstruct minimal Tx struct
+    Tx tx;
+    tx.version = version;
+
+    TxIn in;
+    in.prev_txid = in_txid;
+    in.prev_vout = in_vout;
+    in.sequence  = in_seq;
+    tx.vin.push_back(in);
+
+    TxOut out;
+    out.value_sats   = out_val;
+    out.script_pubkey = out_spk; // output being created
+    tx.vout.push_back(out);
+
+    tx.locktime = locktime;
+
+    // Sign using anchor-commit helper (correct TapTweak(internal_key || leaf_hash))
+    TaprootSignatureResult sig_result = sign_anchor_commit_input(
+        tx, 0, internal_key, leaf_hash, value_sats, privkey
+    );
+
+    if (!sig_result.success) {
+        return {};
+    }
+
+    if (!attach_taproot_witness(tx, 0, sig_result.signature)) {
+        return {};
+    }
+
+    return tx.to_bytes();
 }
 
 } // namespace taproot
