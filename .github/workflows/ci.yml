@@ -40,6 +40,7 @@ jobs:
           cmake --build build --config Release --parallel
       - name: Test
         run: |
+          cmake --build build --target ailee_tests
           ./build/ailee_tests
 
   heartbeat-ignite:
@@ -78,6 +79,7 @@ jobs:
           cmake --build build --config Release --parallel
       - name: Test
         run: |
+          cmake --build build --target ailee_tests
           ./build/ailee_tests
 
       - name: Ignite Heartbeat
