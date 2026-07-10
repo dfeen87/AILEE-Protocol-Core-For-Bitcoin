@@ -327,6 +327,7 @@ set(AILEE_CORE_SOURCES
     src/clock/ConsensusClock.cpp
     src/zk/ZKReplayCircuit.cpp
     src/zk/ZKWiring.cpp
+    src/l6/ZKStubInterface.cpp
     src/l2/DeterministicEngine.cpp
     src/l2/EpochScheduler.cpp
     src/l2/StateRootPipeline.cpp
@@ -784,6 +785,7 @@ if(BUILD_TESTS)
         tests/l6/test_on_chain_replay_verifier.cpp
         tests/l6/test_deterministic_epoch_anchoring.cpp
         tests/l6/test_parameter_governor.cpp
+        tests/l6/test_zk_stub_interface.cpp
         tests/taproot/TaprootScriptTests.cpp
         tests/taproot/TaprootSignerTests.cpp
         tests/test_anchor_commit_txbuilder.cpp
