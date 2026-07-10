@@ -115,7 +115,8 @@ TaprootSignatureResult sign_taproot_input(
     tagged_hash("TapSighash", sighash_msg, sighash);
 
     // --- Derive tweaked private key (TapTweak(internal_key)) and sign ---
-    secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
+    secp256k1_context* ctx =
+    secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
     if (!ctx) {
         result.error = "secp256k1-context-failed";
         return result;
@@ -168,7 +169,8 @@ TaprootSignatureResult sign_anchor_commit_input(
         return result;
     }
 
-    secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
+    secp256k1_context* ctx =
+    secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
     if (!ctx) {
         result.error = "secp256k1-context-failed";
         return result;
