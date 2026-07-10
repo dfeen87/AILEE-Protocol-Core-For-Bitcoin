@@ -310,6 +310,7 @@ set(AILEE_CORE_SOURCES
     src/l6/Halo2Backend.cpp
     src/l6/PlonkBackend.cpp
     src/l6/ZKBackendFactory.cpp
+    src/l6/RuntimeEnvironment.cpp
     src/ReflectionLayer.cpp
     src/NodeIdentity.cpp
     src/MeshCoherence.cpp
@@ -661,6 +662,7 @@ add_library(ailee_adapters STATIC
     src/l6/Halo2Backend.cpp
     src/l6/PlonkBackend.cpp
     src/l6/ZKBackendFactory.cpp
+    src/l6/RuntimeEnvironment.cpp
 )
 
 add_library(ailee_l5_compression STATIC
