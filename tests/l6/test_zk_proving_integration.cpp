@@ -1,11 +1,44 @@
 #include <gtest/gtest.h>
 #include "l6/ZKOrchestrationManager.h"
+#include "l6/IslaRuntimeOrchestrator.h"
+#include "l6/RuntimeEnvironment.h"
 #include "l6/ZKMockBackend.h"
 #include "l6/RuntimeEnvironment.h"
 #include "l6/ZKBackendFactory.h"
 #include "l6/Exceptions.h"
 
 using namespace ailee::l6;
+
+namespace {
+    OrchestrationResult run_orchestrator(const OrchestrationContext& ctx, IZKProvingBackend* b, const ZKBackendConfig& cfg, const ZKConstraintSet* c, const ZKTranscript* t, const std::string& state_root) {
+        RuntimeEnvironment env;
+        env.is_ci = true;
+        IslaRuntimeOrchestrator isla(env);
+
+        EpochIntegrationBundle bundle{};
+        bundle.anchor_input.internal_key.fill(0);
+        bundle.anchor_input.prev_txid.fill(0);
+        bundle.anchor_input.prev_vout = 0;
+        bundle.anchor_input.value_sats = 0;
+
+        bundle.epoch_id = ctx.epoch_id;
+        bundle.state_root_hash = state_root;
+        bundle.anchor_plan = ctx.anchor_plan;
+        bundle.proof_plan = ctx.proof_plan;
+        bundle.constraints = c;
+        bundle.transcript = t;
+        bundle.fee_sats = 1000;
+
+        if (b) {
+            isla.attach_backend(b, cfg);
+        } else {
+            isla.attach_backend(nullptr, cfg);
+        }
+
+        return isla.run_epoch(bundle).zk_result;
+    }
+}
+
 
 TEST(ZKProvingIntegrationTest, OrchestrationAttachesValidProof) {
     ZKBackendConfig config{ZKBackendType::MOCK, "test_circuit", "", "", ""};
@@ -27,7 +60,7 @@ TEST(ZKProvingIntegrationTest, OrchestrationAttachesValidProof) {
     }
     auto active_backend = make_backend(config);
 
-    auto result = orchestrate_epoch(ctx, active_backend.get(), config, &constraints, &transcript, state_root_hash);
+    auto result = run_orchestrator(ctx, active_backend.get(), config, &constraints, &transcript, state_root_hash);
 
     EXPECT_TRUE(result.should_anchor);
     EXPECT_TRUE(result.should_attach_proof);
@@ -63,7 +96,7 @@ TEST(ZKProvingIntegrationTest, OrchestrationLeavesEmptyWhenSkipped) {
     }
     auto active_backend = make_backend(config);
 
-    auto result = orchestrate_epoch(ctx, active_backend.get(), config, &constraints, &transcript, state_root_hash);
+    auto result = run_orchestrator(ctx, active_backend.get(), config, &constraints, &transcript, state_root_hash);
 
     EXPECT_TRUE(result.should_anchor);
     EXPECT_FALSE(result.should_attach_proof);

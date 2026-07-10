@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 #include "l6/ZKOrchestrationManager.h"
+#include "l6/IslaRuntimeOrchestrator.h"
+#include "l6/RuntimeEnvironment.h"
 #include "l6/ZKMockBackend.h"
 #include "l6/DeterministicEpochAnchoring.h"
 #include "l6/ProofScheduling.h"
@@ -8,6 +10,35 @@ using namespace ailee::l6;
 
 class FullV23PipelineTest : public ::testing::Test {
 protected:
+
+    OrchestrationResult run_orchestrator(const OrchestrationContext& ctx, IZKProvingBackend* b, const ZKBackendConfig& cfg, const ZKConstraintSet* c, const ZKTranscript* t, const std::string& state_root) {
+        RuntimeEnvironment env;
+        env.is_ci = true;
+        IslaRuntimeOrchestrator isla(env);
+
+        EpochIntegrationBundle bundle{};
+        bundle.anchor_input.internal_key.fill(0);
+        bundle.anchor_input.prev_txid.fill(0);
+        bundle.anchor_input.prev_vout = 0;
+        bundle.anchor_input.value_sats = 0;
+
+        bundle.epoch_id = ctx.epoch_id;
+        bundle.state_root_hash = state_root;
+        bundle.anchor_plan = ctx.anchor_plan;
+        bundle.proof_plan = ctx.proof_plan;
+        bundle.constraints = c;
+        bundle.transcript = t;
+        bundle.fee_sats = 1000;
+
+        if (b) {
+            isla.attach_backend(b, cfg);
+        } else {
+            isla.attach_backend(nullptr, cfg);
+        }
+
+        return isla.run_epoch(bundle).zk_result;
+    }
+
     ZKMockBackend backend;
     ZKBackendConfig config{ZKBackendType::MOCK, "mock_circuit_v23"};
     ZKConstraintSet constraints{"constraints_v23_test", 100};
@@ -43,7 +74,7 @@ protected:
 TEST_F(FullV23PipelineTest, EndToEndPipelineDeterminismAndCrossPhaseConsistency) {
     // Phase 1: Run the pipeline
     auto ctx = get_context(4); // Epoch 4 -> Anchor + Prove
-    auto result1 = orchestrate_epoch(ctx, &backend, config, &constraints, &transcript, state_root_hash);
+    auto result1 = run_orchestrator(ctx, &backend, config, &constraints, &transcript, state_root_hash);
 
     // Validate output of orchestration
     EXPECT_TRUE(result1.should_anchor);
@@ -58,7 +89,7 @@ TEST_F(FullV23PipelineTest, EndToEndPipelineDeterminismAndCrossPhaseConsistency)
     EXPECT_EQ(p1.proof_commitment_hash.length(), 64);
 
     // Phase 2: Ensure deterministic replay
-    auto result2 = orchestrate_epoch(ctx, &backend, config, &constraints, &transcript, state_root_hash);
+    auto result2 = run_orchestrator(ctx, &backend, config, &constraints, &transcript, state_root_hash);
 
     // Compare exact bytes to guarantee replay determinism
     EXPECT_EQ(result1.anchor_payload.to_bytes(), result2.anchor_payload.to_bytes());
@@ -69,13 +100,13 @@ TEST_F(FullV23PipelineTest, ProofSchedulingCycles) {
 
     // Epoch 1: Skip Anchor, Skip Prove
     auto ctx1 = get_context(1);
-    auto res1 = orchestrate_epoch(ctx1, &backend, config, &constraints, &transcript, state_root_hash);
+    auto res1 = run_orchestrator(ctx1, &backend, config, &constraints, &transcript, state_root_hash);
     EXPECT_FALSE(res1.should_anchor);
     EXPECT_FALSE(res1.should_attach_proof);
 
     // Epoch 2: Anchor, Skip Prove
     auto ctx2 = get_context(2);
-    auto res2 = orchestrate_epoch(ctx2, &backend, config, &constraints, &transcript, state_root_hash);
+    auto res2 = run_orchestrator(ctx2, &backend, config, &constraints, &transcript, state_root_hash);
     EXPECT_TRUE(res2.should_anchor);
     EXPECT_FALSE(res2.should_attach_proof);
     EXPECT_EQ(res2.anchor_payload.zk_metadata.validation_status, DeterministicZKStatus::OK);
@@ -83,13 +114,13 @@ TEST_F(FullV23PipelineTest, ProofSchedulingCycles) {
 
     // Epoch 3: Skip Anchor, Skip Prove
     auto ctx3 = get_context(3);
-    auto res3 = orchestrate_epoch(ctx3, &backend, config, &constraints, &transcript, state_root_hash);
+    auto res3 = run_orchestrator(ctx3, &backend, config, &constraints, &transcript, state_root_hash);
     EXPECT_FALSE(res3.should_anchor);
     EXPECT_FALSE(res3.should_attach_proof);
 
     // Epoch 4: Anchor, Prove
     auto ctx4 = get_context(4);
-    auto res4 = orchestrate_epoch(ctx4, &backend, config, &constraints, &transcript, state_root_hash);
+    auto res4 = run_orchestrator(ctx4, &backend, config, &constraints, &transcript, state_root_hash);
     EXPECT_TRUE(res4.should_anchor);
     EXPECT_TRUE(res4.should_attach_proof);
     EXPECT_EQ(res4.anchor_payload.zk_metadata.validation_status, DeterministicZKStatus::OK);
