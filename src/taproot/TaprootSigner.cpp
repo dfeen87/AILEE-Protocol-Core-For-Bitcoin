@@ -1,3 +1,4 @@
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "taproot/TaprootSigner.h"
 #include "taproot/TaprootUtils.h"
 
