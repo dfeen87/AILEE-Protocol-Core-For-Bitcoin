@@ -119,12 +119,12 @@ size_t ReplayBuffer::max_size() const {
     return 1000000;
 }
 
+    void ReplayBuffer::sort_history_by_sequence(std::vector<EpochIntegrationBundle>& history) {
+        std::sort(history.begin(), history.end(), [](const EpochIntegrationBundle& a, const EpochIntegrationBundle& b) {
+            if (a.sequence_id == b.sequence_id) {
+                return a.epoch_id < b.epoch_id; // Tiebreaker
+            }
+            return a.sequence_id < b.sequence_id;
+        });
+    }
 } // namespace ailee::l6
-void ReplayBuffer::sort_history_by_sequence(std::vector<EpochIntegrationBundle>& history) {
-    std::sort(history.begin(), history.end(), [](const EpochIntegrationBundle& a, const EpochIntegrationBundle& b) {
-        if (a.sequence_id == b.sequence_id) {
-            return a.epoch_id < b.epoch_id; // Tiebreaker
-        }
-        return a.sequence_id < b.sequence_id;
-    });
-}
