@@ -9,6 +9,8 @@
 #include <utility>
 #include <vector>
 #include <cstdint>
+#include <array>
+#include <iomanip>
 
 namespace testing {
 
@@ -40,6 +42,10 @@ struct TestState {
 TestState& CurrentState();
 void ReportFailure(const std::string& message, const char* file, int line);
 
+// -----------------------------
+// Custom ToString overloads
+// -----------------------------
+
 inline std::string ToString(const std::string& value) {
     return "\"" + value + "\"";
 }
@@ -56,6 +62,17 @@ inline std::string ToString(const std::vector<uint8_t>& vec) {
         if (i < vec.size() - 1) oss << ", ";
     }
     oss << std::dec << "]";
+    return oss.str();
+}
+
+// NEW: hex printer for std::array<unsigned char, N>
+template <size_t N>
+inline std::string ToString(const std::array<unsigned char, N>& arr) {
+    std::ostringstream oss;
+    oss << std::hex << std::setfill('0');
+    for (unsigned char c : arr) {
+        oss << std::setw(2) << static_cast<int>(c);
+    }
     return oss.str();
 }
 
@@ -116,6 +133,10 @@ inline void ExpectTrue(bool result,
 } // namespace detail
 } // namespace testing
 
+// -----------------------------
+// Test registration macros
+// -----------------------------
+
 #define RUN_ALL_TESTS() ::testing::RunAllTests()
 
 #define TEST(SUITE, NAME)                                                     \
@@ -127,6 +148,10 @@ inline void ExpectTrue(bool result,
     }();                                                                      \
     }                                                                         \
     static void SUITE##_##NAME##_Test()
+
+// -----------------------------
+// Assertions
+// -----------------------------
 
 #define EXPECT_TRUE(CONDITION)                                                \
     ::testing::detail::ExpectTrue(static_cast<bool>(CONDITION),               \
@@ -154,6 +179,15 @@ inline void ExpectTrue(bool result,
 
 #define EXPECT_GT(A, B)                                                       \
     ::testing::detail::ExpectBinary((A) > (B), (A), (B), ">", #A, #B,          \
+                                    __FILE__, __LINE__, false)
+
+// NEW: >= and <= support
+#define EXPECT_GE(A, B)                                                       \
+    ::testing::detail::ExpectBinary((A) >= (B), (A), (B), ">=", #A, #B,        \
+                                    __FILE__, __LINE__, false)
+
+#define EXPECT_LE(A, B)                                                       \
+    ::testing::detail::ExpectBinary((A) <= (B), (A), (B), "<=", #A, #B,        \
                                     __FILE__, __LINE__, false)
 
 #define ASSERT_EQ(A, B)                                                       \
