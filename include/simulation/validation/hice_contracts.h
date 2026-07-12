@@ -56,12 +56,3 @@ public:
         const HiceMetrics& metrics,
         const HiceThresholds& thresholds,
         double practical_margin
-    );
-
-private:
-    static bool check_practical_margin_ci(double ci_lower_bound, double practical_margin);
-};
-
-} // namespace validation
-} // namespace simulation
-} // namespace ailee

@@ -1,17 +1,540 @@
---- include/l6/JsonBindings.h
-+++ include/l6/JsonBindings.h
-@@ -8,11 +8,15 @@
- class JsonBindings {
- public:
-     static std::string to_json(const ExternalEnvelope& env);
-+    static std::string to_json(const ExternalBitcoinClockState& clock);
-+    static std::string to_json(const ExternalReplayEvent& event);
-     static std::string to_json(const ExternalClusterView& view);
-     static std::string to_json(const ExternalReplayTick& tick);
+diff --git a/include/l1_sync/mainnet_sync.hpp b/include/l1_sync/mainnet_sync.hpp
+index bce6174..f6d830b 100644
+--- a/include/l1_sync/mainnet_sync.hpp
++++ b/include/l1_sync/mainnet_sync.hpp
+@@ -8,6 +8,7 @@
+ #include <string>
+ #include "l1_sync/sync_events.hpp"
+ #include "l1_sync/bitcoin_clock.hpp"
++#include "simulation/validation/hice_contracts.h"
 
-     static ExternalEnvelope from_json_envelope(const std::string& json);
-+    static ExternalBitcoinClockState from_json_clock(const std::string& json);
-+    static ExternalReplayEvent from_json_replay_event(const std::string& json);
-     static ExternalClusterView from_json_view(const std::string& json);
-     static ExternalReplayTick from_json_tick(const std::string& json);
+ namespace ailee {
+ namespace l1_sync {
+@@ -65,6 +66,8 @@ public:
+     double get_spectral_drift() const { return spectral_drift; }
+     void simulate_sync_cycle_metrics();
+
++    ailee::simulation::validation::HiceMetrics get_hice_metrics() const;
++
+ private:
+     size_t max_buffer_size;
+     std::deque<BlockHeader> header_buffer;
+@@ -74,6 +77,15 @@ private:
+
+     double delta_auc = 0.0;
+     double spectral_drift = 0.0;
++
++    // V28 HICE Placeholder Metrics
++    double covariance_error = 0.0;
++    double delta_memory = 0.0;
++    double context_leakage = 0.0;
++    double null_matching_rate = 1.0;
++    double ci_lower_bound = 0.04;
++    double ci_point_estimate = 0.05;
++
+     std::vector<double> historical_intervals;
+
+     void update_clock();
+diff --git a/include/l6/Exceptions.h b/include/l6/Exceptions.h
+index 2816997..5843477 100644
+--- a/include/l6/Exceptions.h
++++ b/include/l6/Exceptions.h
+@@ -11,4 +11,10 @@ public:
+         : std::runtime_error(msg) {}
  };
+
++class DeterministicError : public std::runtime_error {
++public:
++    explicit DeterministicError(const std::string& msg)
++        : std::runtime_error(msg) {}
++};
++
+ } // namespace ailee::l6
+diff --git a/include/l6/IslaRuntimeOrchestrator.h b/include/l6/IslaRuntimeOrchestrator.h
+index 920f01c..a51276a 100644
+--- a/include/l6/IslaRuntimeOrchestrator.h
++++ b/include/l6/IslaRuntimeOrchestrator.h
+@@ -13,6 +13,7 @@
+ #include "l6/DeterministicEpochAnchoring.h"
+ #include "l6/ZKBackendFactory.h"
+ #include "l6/Exceptions.h"
++#include "simulation/validation/hice_contracts.h"
+
+ // Note: AnchorCommit classes are in namespace ailee::anchor
+ #include "anchor/AnchorCommitTxBuilder.h"
+@@ -57,6 +58,9 @@ struct EpochIntegrationBundle {
+     // For orchestrate_epoch ZK integration:
+     const ZKConstraintSet* constraints = nullptr;
+     const ZKTranscript* transcript = nullptr;
++
++    // HICE Validation Metrics (V28)
++    ailee::simulation::validation::HiceMetrics hice_metrics = {};
+ };
+
+ struct IslaEpochResult {
+diff --git a/include/l6/RuntimeEnvironment.h b/include/l6/RuntimeEnvironment.h
+index af06915..f0ce226 100644
+--- a/include/l6/RuntimeEnvironment.h
++++ b/include/l6/RuntimeEnvironment.h
+@@ -2,6 +2,7 @@
+
+ #include "l6/ZKProvingBackend.h"
+ #include "semantics/SemanticsTypes.h"
++#include "simulation/validation/hice_contracts.h"
+
+ namespace ailee::l6 {
+
+@@ -11,11 +12,22 @@ struct RuntimeEnvironment {
+     bool is_staging = false;
+     bool is_mainnet_sim = false;
+
++    ailee::simulation::validation::HiceThresholds hice_thresholds = ailee::simulation::validation::HiceThresholds::v27_defaults();
++    double practical_margin = 0.03;
++
+     ailee::semantics::EnvironmentType get_environment_type() const {
+         if (is_ci) return ailee::semantics::EnvironmentType::CI;
+         // Assume DEV unless explicitly something else, could check a prod flag if added later
+         return ailee::semantics::EnvironmentType::DEV;
+     }
++
++    const ailee::simulation::validation::HiceThresholds& get_hice_thresholds() const {
++        return hice_thresholds;
++    }
++
++    double get_practical_margin() const {
++        return practical_margin;
++    }
+ };
+
+ ZKBackendType select_backend_type(
+diff --git a/include/simulation/validation/hice_contracts.h b/include/simulation/validation/hice_contracts.h
+new file mode 100644
+index 0000000..f6b5b15
+--- /dev/null
++++ b/include/simulation/validation/hice_contracts.h
+@@ -0,0 +1,58 @@
++#pragma once
++
++namespace ailee {
++namespace simulation {
++namespace validation {
++
++struct HiceMetrics {
++    double covariance_error;
++    double spectral_drift;
++    double delta_memory;
++    double context_leakage;
++    double null_matching_rate;
++    double delta_auc;
++    double ci_lower_bound;
++    double ci_point_estimate;
++};
++
++struct HiceThresholds {
++    double max_covariance_error;
++    double max_spectral_drift;
++    double min_delta_memory;
++    double max_context_leakage;
++    double min_null_matching_rate;
++    double min_delta_auc;
++
++    // Default V27 tolerances
++    static HiceThresholds v27_defaults() {
++        return {
++            1e-6,   // max_covariance_error
++            1e-3,   // max_spectral_drift
++            -0.05,  // min_delta_memory (meaning memory loss shouldn't exceed -0.05)
++            0.01,   // max_context_leakage
++            0.95,   // min_null_matching_rate (within 5% tolerance)
++            0.03    // min_delta_auc
++        };
++    }
++};
++
++struct HiceResult {
++    bool hice2_ok;
++    bool hice3_ok;
++    bool hice4_ok;
++    bool hice5_ok;
++    bool hice6_ok;
++    bool hice7_ok;
++    bool practical_margin_ok;
++
++    bool all_ok() const {
++        return hice2_ok && hice3_ok && hice4_ok && hice5_ok && hice6_ok && hice7_ok && practical_margin_ok;
++    }
++};
++
++class HiceValidator {
++public:
++    static HiceResult evaluate_hice_contracts(
++        const HiceMetrics& metrics,
++        const HiceThresholds& thresholds,
++        double practical_margin
++    );
++
++private:
++    static bool check_practical_margin_ci(double ci_lower_bound, double practical_margin);
++};
++
++} // namespace validation
++} // namespace simulation
++} // namespace ailee
+diff --git a/src/l1_sync/mainnet_sync.cpp b/src/l1_sync/mainnet_sync.cpp
+index d2834ee..40c2cd9 100644
+--- a/src/l1_sync/mainnet_sync.cpp
++++ b/src/l1_sync/mainnet_sync.cpp
+@@ -200,6 +200,28 @@ void ailee::l1_sync::MainnetSyncManager::simulate_sync_cycle_metrics() {
+     } else {
+         spectral_drift = 0.0;
+     }
++
++    // TODO(V29): replace with real HICE metric computation
++    covariance_error = 0.5e-6; // Deterministic placeholder
++    delta_memory = -0.01;      // Deterministic placeholder
++    context_leakage = 0.001;   // Deterministic placeholder
++    null_matching_rate = 0.99; // Deterministic placeholder
++    ci_lower_bound = 0.04;     // Deterministic placeholder
++    ci_point_estimate = 0.05;  // Deterministic placeholder
+ }
++
++ailee::simulation::validation::HiceMetrics MainnetSyncManager::get_hice_metrics() const {
++    ailee::simulation::validation::HiceMetrics metrics;
++    metrics.covariance_error = covariance_error;
++    metrics.spectral_drift = spectral_drift;
++    metrics.delta_memory = delta_memory;
++    metrics.context_leakage = context_leakage;
++    metrics.null_matching_rate = null_matching_rate;
++    metrics.delta_auc = delta_auc;
++    metrics.ci_lower_bound = ci_lower_bound;
++    metrics.ci_point_estimate = ci_point_estimate;
++    return metrics;
++}
++
+ } // namespace l1_sync
+ } // namespace ailee
+diff --git a/src/l6/IslaRuntimeOrchestrator.cpp b/src/l6/IslaRuntimeOrchestrator.cpp
+index 720efb3..f5e3b50 100644
+--- a/src/l6/IslaRuntimeOrchestrator.cpp
++++ b/src/l6/IslaRuntimeOrchestrator.cpp
+@@ -121,6 +121,17 @@ IslaEpochResult IslaRuntimeOrchestrator::run_epoch(const EpochIntegrationBundle&
+             throw std::runtime_error("Invalid epoch bundle in V27 semantics");
+         }
+     }
++
++    // Evaluate HICE contracts based on V28 metrics
++    auto hice_result = ailee::simulation::validation::HiceValidator::evaluate_hice_contracts(
++        bundle.hice_metrics,
++        env_.get_hice_thresholds(),
++        env_.get_practical_margin()
++    );
++
++    if (!hice_result.all_ok()) {
++        throw DeterministicError("HICE contract validation failed – see result flags and metrics");
++    }
+
+     // 2. read scheduler decision
+     SchedulerDecision sched_dec = bundle.scheduler_decision;
+diff --git a/src/simulation/validation/hice_contracts.cpp b/src/simulation/validation/hice_contracts.cpp
+new file mode 100644
+index 0000000..c594c1c
+--- /dev/null
++++ b/src/simulation/validation/hice_contracts.cpp
+@@ -0,0 +1,41 @@
++#include "simulation/validation/hice_contracts.h"
++#include <cmath>
++
++namespace ailee {
++namespace simulation {
++namespace validation {
++
++bool HiceValidator::check_practical_margin_ci(double ci_lower_bound, double practical_margin) {
++    return ci_lower_bound > practical_margin;
++}
++
++HiceResult HiceValidator::evaluate_hice_contracts(
++    const HiceMetrics& metrics,
++    const HiceThresholds& thresholds,
++    double practical_margin
++) {
++    HiceResult result;
++
++    // HICE2: Covariance error < 10^-6
++    result.hice2_ok = std::abs(metrics.covariance_error) < thresholds.max_covariance_error;
++
++    // HICE3: Spectral drift < 10^-3 within eps_adj
++    result.hice3_ok = std::abs(metrics.spectral_drift) < thresholds.max_spectral_drift;
++
++    // HICE4: Delta memory < -0.05
++    // Interpreted as the change in memory should not drop below -0.05
++    result.hice4_ok = metrics.delta_memory >= thresholds.min_delta_memory;
++
++    // HICE5: Context leakage < 0.01
++    result.hice5_ok = metrics.context_leakage < thresholds.max_context_leakage;
++
++    // HICE6: Nulls matched within 5% tolerance
++    result.hice6_ok = metrics.null_matching_rate >= thresholds.min_null_matching_rate;
++
++    // Practical Margin CI Rule Lock-In (must apply across relevant simulation metrics, mainly delta_auc here)
++    result.practical_margin_ok = check_practical_margin_ci(metrics.ci_lower_bound, practical_margin);
++
++    // HICE7: Delta AUC >= 0.03 AND CI Rule passes
++    result.hice7_ok = (metrics.delta_auc >= thresholds.min_delta_auc) && result.practical_margin_ok;
++
++    return result;
++}
++
++} // namespace validation
++} // namespace simulation
++} // namespace ailee
+diff --git a/tests/l6/test_anchor_commitment_integration.cpp b/tests/l6/test_anchor_commitment_integration.cpp
+index 7ca5439..ef28c4d 100644
+--- a/tests/l6/test_anchor_commitment_integration.cpp
++++ b/tests/l6/test_anchor_commitment_integration.cpp
+@@ -25,6 +25,7 @@ namespace {
+         bundle.proof_plan = ctx.proof_plan;
+         bundle.constraints = c;
+         bundle.transcript = t;
++        bundle.hice_metrics.covariance_error = 0.5e-6; bundle.hice_metrics.spectral_drift = 0.0; bundle.hice_metrics.delta_memory = -0.01; bundle.hice_metrics.context_leakage = 0.001; bundle.hice_metrics.null_matching_rate = 0.99; bundle.hice_metrics.delta_auc = 0.05; bundle.hice_metrics.ci_lower_bound = 0.04; bundle.hice_metrics.ci_point_estimate = 0.05;
+         bundle.fee_sats = 1000;
+
+         if (b) {
+@@ -139,7 +140,7 @@ public:
+         return real_mock.generate_proof(config, constraints, transcript);
+     }
+
+-    bool verify_proof(const ZKBackendConfig& config, const ZKProofArtifact& artifact, const ZKConstraintSet& constraints, const ZKTranscript& transcript) override {
++    bool verify_proof([[maybe_unused]] const ZKBackendConfig& config, [[maybe_unused]] const ZKProofArtifact& artifact, [[maybe_unused]] const ZKConstraintSet& constraints, [[maybe_unused]] const ZKTranscript& transcript) override {
+         return false; // Force failure
+     }
+ };
+diff --git a/tests/l6/test_full_v23_pipeline.cpp b/tests/l6/test_full_v23_pipeline.cpp
+index 42ef58e..b6ff69d 100644
+--- a/tests/l6/test_full_v23_pipeline.cpp
++++ b/tests/l6/test_full_v23_pipeline.cpp
+@@ -28,6 +28,7 @@ protected:
+         bundle.proof_plan = ctx.proof_plan;
+         bundle.constraints = c;
+         bundle.transcript = t;
++        bundle.hice_metrics.covariance_error = 0.5e-6; bundle.hice_metrics.spectral_drift = 0.0; bundle.hice_metrics.delta_memory = -0.01; bundle.hice_metrics.context_leakage = 0.001; bundle.hice_metrics.null_matching_rate = 0.99; bundle.hice_metrics.delta_auc = 0.05; bundle.hice_metrics.ci_lower_bound = 0.04; bundle.hice_metrics.ci_point_estimate = 0.05;
+         bundle.fee_sats = 1000;
+
+         if (b) {
+diff --git a/tests/l6/test_isla_determinism.cpp b/tests/l6/test_isla_determinism.cpp
+index 5d5cd54..7f5e82a 100644
+--- a/tests/l6/test_isla_determinism.cpp
++++ b/tests/l6/test_isla_determinism.cpp
+@@ -83,6 +83,7 @@ TEST(IslaDeterminism, SameBundleProducesSameResult) {
+     bundle.fee_sats = 500;
+     bundle.constraints = &constraints;
+     bundle.transcript = &transcript;
++    bundle.hice_metrics.covariance_error = 0.5e-6; bundle.hice_metrics.spectral_drift = 0.0; bundle.hice_metrics.delta_memory = -0.01; bundle.hice_metrics.context_leakage = 0.001; bundle.hice_metrics.null_matching_rate = 0.99; bundle.hice_metrics.delta_auc = 0.05; bundle.hice_metrics.ci_lower_bound = 0.04; bundle.hice_metrics.ci_point_estimate = 0.05;
+
+     auto r1 = isla.run_epoch(bundle);
+     auto r2 = isla.run_epoch(bundle);
+diff --git a/tests/l6/test_zk_backend_abstraction.cpp b/tests/l6/test_zk_backend_abstraction.cpp
+index b9ffd0c..373ce43 100644
+--- a/tests/l6/test_zk_backend_abstraction.cpp
++++ b/tests/l6/test_zk_backend_abstraction.cpp
+@@ -6,10 +6,10 @@
+ using namespace ailee::l6;
+
+ TEST(ZKBackendAbstractionTest, BackendConfigDeterminism) {
+-    ZKBackendConfig config1{ZKBackendType::MOCK, "mock_circuit_v23"};
+-    ZKBackendConfig config2{ZKBackendType::MOCK, "mock_circuit_v23"};
+-    ZKBackendConfig config3{ZKBackendType::HALO2_NATIVE, "mock_circuit_v23"};
+-    ZKBackendConfig config4{ZKBackendType::MOCK, "another_circuit"};
++    ZKBackendConfig config1{ZKBackendType::MOCK, "mock_circuit_v23", "", "", ""};
++    ZKBackendConfig config2{ZKBackendType::MOCK, "mock_circuit_v23", "", "", ""};
++    ZKBackendConfig config3{ZKBackendType::HALO2_NATIVE, "mock_circuit_v23", "", "", ""};
++    ZKBackendConfig config4{ZKBackendType::MOCK, "another_circuit", "", "", ""};
+
+     EXPECT_EQ(config1.type, config2.type);
+     EXPECT_EQ(config1.circuit_id, config2.circuit_id);
+@@ -20,7 +20,7 @@ TEST(ZKBackendAbstractionTest, BackendConfigDeterminism) {
+
+ TEST(ZKBackendAbstractionTest, ArtifactStructureCorrectness) {
+     ZKMockBackend backend;
+-    ZKBackendConfig config{ZKBackendType::MOCK, "mock_circuit_v23"};
++    ZKBackendConfig config{ZKBackendType::MOCK, "mock_circuit_v23", "", "", ""};
+     ZKConstraintSet constraints{"constraint_1", 100};
+     ZKTranscript transcript{"transcript_1", 10};
+
+@@ -37,7 +37,7 @@ TEST(ZKBackendAbstractionTest, BackendInterfaceCompliance) {
+     // This test ensures that ZKMockBackend can be used purely through its IZKProvingBackend interface
+     std::unique_ptr<IZKProvingBackend> backend = std::make_unique<ZKMockBackend>();
+
+-    ZKBackendConfig config{ZKBackendType::MOCK, "mock_circuit_v23"};
++    ZKBackendConfig config{ZKBackendType::MOCK, "mock_circuit_v23", "", "", ""};
+     ZKConstraintSet constraints{"constraint_1", 100};
+     ZKTranscript transcript{"transcript_1", 10};
+
+diff --git a/tests/l6/test_zk_orchestration_integration.cpp b/tests/l6/test_zk_orchestration_integration.cpp
+index 7f28ebc..335f764 100644
+--- a/tests/l6/test_zk_orchestration_integration.cpp
++++ b/tests/l6/test_zk_orchestration_integration.cpp
+@@ -27,6 +27,7 @@ protected:
+         bundle.proof_plan = ctx.proof_plan;
+         bundle.constraints = c;
+         bundle.transcript = t;
++        bundle.hice_metrics.covariance_error = 0.5e-6; bundle.hice_metrics.spectral_drift = 0.0; bundle.hice_metrics.delta_memory = -0.01; bundle.hice_metrics.context_leakage = 0.001; bundle.hice_metrics.null_matching_rate = 0.99; bundle.hice_metrics.delta_auc = 0.05; bundle.hice_metrics.ci_lower_bound = 0.04; bundle.hice_metrics.ci_point_estimate = 0.05;
+         bundle.fee_sats = 1000;
+
+         if (b) {
+diff --git a/tests/l6/test_zk_proving_integration.cpp b/tests/l6/test_zk_proving_integration.cpp
+index c55ff63..285f472 100644
+--- a/tests/l6/test_zk_proving_integration.cpp
++++ b/tests/l6/test_zk_proving_integration.cpp
+@@ -27,6 +27,7 @@ namespace {
+         bundle.proof_plan = ctx.proof_plan;
+         bundle.constraints = c;
+         bundle.transcript = t;
++        bundle.hice_metrics.covariance_error = 0.5e-6; bundle.hice_metrics.spectral_drift = 0.0; bundle.hice_metrics.delta_memory = -0.01; bundle.hice_metrics.context_leakage = 0.001; bundle.hice_metrics.null_matching_rate = 0.99; bundle.hice_metrics.delta_auc = 0.05; bundle.hice_metrics.ci_lower_bound = 0.04; bundle.hice_metrics.ci_point_estimate = 0.05;
+         bundle.fee_sats = 1000;
+
+         if (b) {
+diff --git a/tests/simulation/test_hice_contracts.cpp b/tests/simulation/test_hice_contracts.cpp
+new file mode 100644
+index 0000000..4ef8054
+--- /dev/null
++++ b/tests/simulation/test_hice_contracts.cpp
+@@ -0,0 +1,90 @@
++#include <gtest/gtest.h>
++#include "simulation/validation/hice_contracts.h"
++
++using namespace ailee::simulation::validation;
++
++TEST(HiceContractsTest, AllPassingMetrics) {
++    HiceMetrics metrics = {
++        0.5e-6, // covariance_error (HICE2 < 1e-6)
++        0.5e-3, // spectral_drift (HICE3 < 1e-3)
++        -0.02,  // delta_memory (HICE4 >= -0.05)
++        0.005,  // context_leakage (HICE5 < 0.01)
++        0.98,   // null_matching_rate (HICE6 >= 0.95)
++        0.04,   // delta_auc (HICE7 >= 0.03)
++        0.035,  // ci_lower_bound (Practical Margin CI > 0.02)
++        0.04    // ci_point_estimate
++    };
++
++    HiceThresholds thresholds = HiceThresholds::v27_defaults();
++    double practical_margin = 0.02;
++
++    HiceResult result = HiceValidator::evaluate_hice_contracts(metrics, thresholds, practical_margin);
++
++    EXPECT_TRUE(result.hice2_ok);
++    EXPECT_TRUE(result.hice3_ok);
++    EXPECT_TRUE(result.hice4_ok);
++    EXPECT_TRUE(result.hice5_ok);
++    EXPECT_TRUE(result.hice6_ok);
++    EXPECT_TRUE(result.hice7_ok);
++    EXPECT_TRUE(result.practical_margin_ok);
++    EXPECT_TRUE(result.all_ok());
++}
++
++TEST(HiceContractsTest, FailsOnCovarianceError) {
++    HiceMetrics metrics = { 2e-6, 0.5e-3, -0.02, 0.005, 0.98, 0.04, 0.035, 0.04 };
++    HiceResult result = HiceValidator::evaluate_hice_contracts(metrics, HiceThresholds::v27_defaults(), 0.02);
++
++    EXPECT_FALSE(result.hice2_ok);
++    EXPECT_FALSE(result.all_ok());
++}
++
++TEST(HiceContractsTest, FailsOnPracticalMarginCI_LowerBoundRule) {
++    // Here, point estimate (0.04) passes Practical Margin (0.02),
++    // but lower bound (0.01) does not. This should fail to enforce conservative stance.
++    HiceMetrics metrics = { 0.5e-6, 0.5e-3, -0.02, 0.005, 0.98, 0.04, 0.01, 0.04 };
++    HiceResult result = HiceValidator::evaluate_hice_contracts(metrics, HiceThresholds::v27_defaults(), 0.02);
++
++    EXPECT_FALSE(result.practical_margin_ok);
++    EXPECT_FALSE(result.hice7_ok);
++    EXPECT_FALSE(result.all_ok());
++}
++
++TEST(HiceContractsTest, FailsOnDeltaMemory) {
++    HiceMetrics metrics = { 0.5e-6, 0.5e-3, -0.06, 0.005, 0.98, 0.04, 0.035, 0.04 };
++    HiceResult result = HiceValidator::evaluate_hice_contracts(metrics, HiceThresholds::v27_defaults(), 0.02);
++
++    EXPECT_FALSE(result.hice4_ok);
++    EXPECT_FALSE(result.all_ok());
++}
++
++TEST(HiceContractsTest, FailsOnNullMatchingRate) {
++    HiceMetrics metrics = { 0.5e-6, 0.5e-3, -0.02, 0.005, 0.94, 0.04, 0.035, 0.04 };
++    HiceResult result = HiceValidator::evaluate_hice_contracts(metrics, HiceThresholds::v27_defaults(), 0.02);
++
++    EXPECT_FALSE(result.hice6_ok);
++    EXPECT_FALSE(result.all_ok());
++}
++
++TEST(HiceContractsTest, FailsOnSpectralDrift) {
++    HiceMetrics metrics = { 0.5e-6, 2e-3, -0.02, 0.005, 0.98, 0.04, 0.035, 0.04 };
++    HiceResult result = HiceValidator::evaluate_hice_contracts(metrics, HiceThresholds::v27_defaults(), 0.02);
++
++    EXPECT_FALSE(result.hice3_ok);
++    EXPECT_FALSE(result.all_ok());
++}
++
++TEST(HiceContractsTest, FailsOnContextLeakage) {
++    HiceMetrics metrics = { 0.5e-6, 0.5e-3, -0.02, 0.02, 0.98, 0.04, 0.035, 0.04 };
++    HiceResult result = HiceValidator::evaluate_hice_contracts(metrics, HiceThresholds::v27_defaults(), 0.02);
++
++    EXPECT_FALSE(result.hice5_ok);
++    EXPECT_FALSE(result.all_ok());
++}
++
++TEST(HiceContractsTest, FailsOnDeltaAuc) {
++    HiceMetrics metrics = { 0.5e-6, 0.5e-3, -0.02, 0.005, 0.98, 0.02, 0.035, 0.04 };
++    HiceResult result = HiceValidator::evaluate_hice_contracts(metrics, HiceThresholds::v27_defaults(), 0.02);
++
++    EXPECT_FALSE(result.hice7_ok);
++    EXPECT_FALSE(result.all_ok());
++}
+diff --git a/tests/simulation/test_v27_simulation_stress.cpp b/tests/simulation/test_v27_simulation_stress.cpp
+index 7581ee1..ce02256 100644
+--- a/tests/simulation/test_v27_simulation_stress.cpp
++++ b/tests/simulation/test_v27_simulation_stress.cpp
+@@ -13,7 +13,7 @@ using namespace ailee::simulation::validation;
+
+ class DeterministicSchedulerStub : public EpochScheduler {
+ public:
+-    SchedulerDecision get_decision(uint64_t epoch_id) const override {
++    SchedulerDecision get_decision([[maybe_unused]] uint64_t epoch_id) const override {
+         return {AnchorDecision::ANCHOR, ProofDecision::ATTACH_PROOF};
+     }
+ };
+@@ -58,6 +58,7 @@ TEST(V27SimulationStress, MultiNodeDeterministicReplay) {
+         bundle.fee_sats = 500;
+         bundle.constraints = &constraints;
+         bundle.transcript = &transcript;
++        bundle.hice_metrics.covariance_error = 0.5e-6; bundle.hice_metrics.spectral_drift = 0.0; bundle.hice_metrics.delta_memory = -0.01; bundle.hice_metrics.context_leakage = 0.001; bundle.hice_metrics.null_matching_rate = 0.99; bundle.hice_metrics.delta_auc = 0.05; bundle.hice_metrics.ci_lower_bound = 0.04; bundle.hice_metrics.ci_point_estimate = 0.05;
+
+         for (int i = 0; i < NODE_COUNT; ++i) {
+             final_results[i] = nodes[i]->run_epoch(bundle);
+@@ -117,3 +118,27 @@ TEST(V27SimulationStress, HighFrequencyPassiveSyncAndHICE) {
+
+     EXPECT_TRUE(result.all_ok());
+ }
++
++TEST(V27SimulationStress, RunEpochThrowsOnHiceFailure) {
++    RuntimeEnvironment env;
++    env.is_ci = true;
++    IslaRuntimeOrchestrator isla(env);
++
++    ZKBackendConfig mock_config{ZKBackendType::MOCK, "stress_circuit", "", "", ""};
++    isla.attach_backend(mock_config);
++
++    ZKConstraintSet constraints{"mock_constraints", 100};
++    ZKTranscript transcript{"mock_transcript", 10};
++
++    EpochIntegrationBundle bundle{};
++    bundle.epoch_id = 1;
++    bundle.state_root_hash = "deadbeef1234567890abcdef1234567890abcdef1234567890abcdef12345678";
++    bundle.clock_snapshot = {static_cast<uint64_t>(5000), 1600000000, "0000000000000000000000000000000000000000000000000000000000000000", "mock"};
++    bundle.constraints = &constraints;
++    bundle.transcript = &transcript;
++
++    // Set a failing metric
++    bundle.hice_metrics.covariance_error = 2e-6; // Fails HICE2
++
++    EXPECT_THROW(isla.run_epoch(bundle), ailee::l6::DeterministicError);
++}

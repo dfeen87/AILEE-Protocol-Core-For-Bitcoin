@@ -140,7 +140,7 @@ public:
         return real_mock.generate_proof(config, constraints, transcript);
     }
 
-    bool verify_proof(const ZKBackendConfig& config, const ZKProofArtifact& artifact, const ZKConstraintSet& constraints, const ZKTranscript& transcript) override {
+    bool verify_proof([[maybe_unused]] const ZKBackendConfig& config, [[maybe_unused]] const ZKProofArtifact& artifact, [[maybe_unused]] const ZKConstraintSet& constraints, [[maybe_unused]] const ZKTranscript& transcript) override {
         return false; // Force failure
     }
 };

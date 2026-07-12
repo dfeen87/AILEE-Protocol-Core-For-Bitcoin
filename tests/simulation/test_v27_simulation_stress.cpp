@@ -13,7 +13,7 @@ using namespace ailee::simulation::validation;
 
 class DeterministicSchedulerStub : public EpochScheduler {
 public:
-    SchedulerDecision get_decision(uint64_t epoch_id) const override {
+    SchedulerDecision get_decision([[maybe_unused]] uint64_t epoch_id) const override {
         return {AnchorDecision::ANCHOR, ProofDecision::ATTACH_PROOF};
     }
 };
@@ -140,5 +140,5 @@ TEST(V27SimulationStress, RunEpochThrowsOnHiceFailure) {
     // Set a failing metric
     bundle.hice_metrics.covariance_error = 2e-6; // Fails HICE2
 
-    EXPECT_THROW(isla.run_epoch(bundle), DeterministicError);
+    EXPECT_THROW(isla.run_epoch(bundle), ailee::l6::DeterministicError);
 }
