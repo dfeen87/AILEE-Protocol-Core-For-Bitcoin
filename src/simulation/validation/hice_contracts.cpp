@@ -39,3 +39,8 @@ HiceResult HiceValidator::evaluate_hice_contracts(
     result.hice7_ok = (metrics.delta_auc >= thresholds.min_delta_auc) && result.practical_margin_ok;
 
     return result;
+}
+
+} // namespace validation
+} // namespace simulation
+} // namespace ailee

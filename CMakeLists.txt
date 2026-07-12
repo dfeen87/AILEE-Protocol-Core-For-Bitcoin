@@ -771,8 +771,8 @@ if(BUILD_TESTS)
         )
         target_link_libraries(minigtest_main PUBLIC minigtest)
 
-        add_library(GTest::gtest ALIAS minigtest)
-        add_library(GTest::gtest_main ALIAS minigtest_main)
+        add_library(gtest ALIAS minigtest)
+        add_library(gtest_main gtest GTest::gtest GTest::gtest_main ALIAS minigtest_main)
     endif()
     enable_testing()
 
@@ -840,8 +840,8 @@ if(BUILD_TESTS)
         PRIVATE
         ailee_adapters
         ailee_l5_compression
-        GTest::gtest
-        GTest::gtest_main
+        gtest
+        gtest_main gtest GTest::gtest GTest::gtest_main
     )
     add_test(NAME AnchorMetadataTests COMMAND anchor_metadata_tests)
 
@@ -849,8 +849,8 @@ if(BUILD_TESTS)
         PRIVATE
         ailee_adapters
         ailee_l5_compression
-        GTest::gtest
-        GTest::gtest_main
+        gtest
+        gtest_main gtest GTest::gtest GTest::gtest_main
     )
     
     add_test(NAME AdapterTests COMMAND ailee_tests)
@@ -871,8 +871,8 @@ if(BUILD_TESTS)
         target_link_libraries(reorg_detector_tests
             PRIVATE
             ${ROCKSDB_LINK_LIBS}
-            GTest::gtest
-            GTest::gtest_main
+            gtest
+            gtest_main gtest GTest::gtest GTest::gtest_main
         )
         
         target_compile_definitions(reorg_detector_tests PRIVATE AILEE_HAS_ROCKSDB=1)
@@ -885,8 +885,8 @@ if(BUILD_TESTS)
         target_link_libraries(policy_tests
             PRIVATE
             ailee_adapters
-            GTest::gtest
-            GTest::gtest_main
+            gtest
+            gtest_main gtest GTest::gtest GTest::gtest_main
         )
         add_test(NAME PolicyTests COMMAND policy_tests)
     endif()
