@@ -781,6 +781,8 @@ if(BUILD_TESTS)
 
         add_library(GTest::gtest ALIAS minigtest)
         add_library(gtest_main ALIAS minigtest_main)
+
+        add_library(GTest::gtest_main ALIAS minigtest_main)
     endif()
 
     enable_testing()
