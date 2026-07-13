@@ -420,6 +420,68 @@ This is a protocol‑level guarantee built on Bitcoin’s immutability.
 
 ---
 
+# **AILEE Core — V33 Protocol Upgrade (3‑in‑1 Feature Set)**
+
+AILEE Core V33 introduces a trilogy of deterministic protocol advancements that elevate the system from a high‑performance L2 into a continuous, Bitcoin‑anchored, self‑optimizing execution environment. These three features operate together as a unified architectural layer.
+
+---
+
+## **1. Recursive Zero‑Knowledge State Compression (V33 Recursion Layer)**  
+AILEE now verifies each epoch’s proof *inside* the next epoch’s circuit, forming a continuous, self‑compressing chain of mathematical validity.  
+This recursion layer introduces:
+
+- A canonical **ZKRecursionBundle** for prior‑epoch proof artifacts  
+- A dedicated **ZKRecursionManager** for continuity enforcement  
+- Deterministic mock recursion hashing for reproducible testing  
+- Full epoch‑to‑epoch linkage: state roots, epoch IDs, and public inputs  
+
+**Outcome:**  
+AILEE compresses its entire historical timeline into a single recursive proof, enabling instant node sync and drastically reducing Bitcoin L1 footprint.
+
+---
+
+## **2. Deterministic Taproot Anchoring Engine (V33 Anchor Layer)**  
+V33 introduces a concrete, deterministic C++ engine for writing the canonical L2 state root directly into Bitcoin Taproot (P2TR).  
+This anchor layer provides:
+
+- Deterministic Schnorr multi‑signature aggregation  
+- Canonical P2TR output construction  
+- Script‑tree commitments for fallback paths  
+- A formalized **AnchorCommit** object for anchor metadata  
+- Zero randomness in transaction assembly, fee selection, or key aggregation  
+
+**Outcome:**  
+AILEE becomes Bitcoin‑native in practice, producing reproducible Taproot anchors that reflect the canonical L2 state with mathematical precision.
+
+---
+
+## **3. Isla Mode Autonomous Heuristic Engine (V33 Isla Layer)**  
+Isla Mode is a deterministic feedback system that tunes orchestrator behavior based on multi‑epoch coherence, performance, and economic metrics.  
+This heuristic layer includes:
+
+- The **IslaModeEngine** for computing deterministic tuning decisions  
+- Multi‑epoch metric windows for coherence, performance, and fee conditions  
+- A canonical **IslaTuningDecision** struct (batch size, proof interval, worker allocation, anchor cadence)  
+- A categorical **AnchorCadence** enum (`NORMAL`, `TIGHT`, `RELAXED`)  
+- Integration with `IslaRuntimeOrchestrator` via `applyTuning()`  
+
+**Outcome:**  
+AILEE becomes self‑optimizing — adjusting batch size, proof timing, resource allocation, and anchor cadence through pure mathematical rules, without randomness or machine learning.
+
+---
+
+# **Unified Impact of V33**
+
+Together, these three layers transform AILEE Core into a deterministic, continuous, Bitcoin‑anchored protocol:
+
+- **Recursive history** → one proof for the entire timeline  
+- **Taproot anchoring** → canonical state roots committed directly to Bitcoin  
+- **Autonomous tuning** → stable, adaptive behavior under changing network conditions  
+
+V33 is the first release where AILEE behaves like a single, coherent organism — compressing its past, anchoring its present, and optimizing its future through pure reproducible mathematics.
+
+---
+
 ## 📄 License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
