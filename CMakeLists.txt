@@ -93,6 +93,24 @@ find_package(yaml-cpp QUIET)
 # 7. Threads (Required for running ZMQ listener in background)
 find_package(Threads REQUIRED)
 
+find_package(OpenSSL REQUIRED)
+
+if(NOT TARGET OpenSSL::SSL)
+    add_library(OpenSSL::SSL INTERFACE IMPORTED)
+    set_target_properties(OpenSSL::SSL PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${OPENSSL_INCLUDE_DIR}"
+        INTERFACE_LINK_LIBRARIES "${OPENSSL_LIBRARIES}/libssl.dylib"
+    )
+endif()
+
+if(NOT TARGET OpenSSL::Crypto)
+    add_library(OpenSSL::Crypto INTERFACE IMPORTED)
+    set_target_properties(OpenSSL::Crypto PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${OPENSSL_INCLUDE_DIR}"
+        INTERFACE_LINK_LIBRARIES "${OPENSSL_LIBRARIES}/libcrypto.dylib"
+    )
+endif()
+
 # Try pkg-config for libsecp256k1 first
 if(PKG_CONFIG_FOUND)
     pkg_check_modules(libsecp256k1 QUIET libsecp256k1)
