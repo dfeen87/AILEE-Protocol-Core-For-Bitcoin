@@ -216,16 +216,19 @@ public:
     }
 
     nlohmann::json to_json() const {
-        return nlohmann::json{
-            {"signerId", data_.signerId},
-            {"publicKey", data_.publicKey},
-            {"btcAddress", data_.btcAddress},
-            {"stake", nlohmann::json(static_cast<uint64_t>(data_.stake))},
-            {"reputationScore", nlohmann::json(static_cast<uint64_t>(data_.reputationScore))},
-            {"signatureCount", nlohmann::json(static_cast<uint64_t>(data_.signatureCount))},
-            {"missedSignatures", nlohmann::json(static_cast<uint64_t>(data_.missedSignatures))},
-            {"joinedTime", nlohmann::json(static_cast<uint64_t>(data_.joinedTime))}
-        };
+        nlohmann::json j;
+        j["signerId"] = data_.signerId;
+        j["publicKey"] = data_.publicKey;
+        j["btcAddress"] = data_.btcAddress;
+        j["stake"] = static_cast<std::uint64_t>(data_.stake);
+        j["reputationScore"] = static_cast<std::uint64_t>(data_.reputationScore);
+        j["signatureCount"] = static_cast<std::uint64_t>(data_.signatureCount);
+        j["missedSignatures"] = static_cast<std::uint64_t>(data_.missedSignatures);
+        j["active"] = data_.active;
+        j["joinedTime"] = static_cast<std::uint64_t>(data_.joinedTime);
+        return j;
+    }
+
     }
 
     void from_json(const nlohmann::json& j) {
@@ -493,34 +496,35 @@ public:
     }
 
     nlohmann::json to_json() const {
-        nlohmann::json sigs(nlohmann::json::object_t{});
-        for (const auto& [k, v] : data_.signatures) {
-            std::string sigHex;
-            sigHex.reserve(v.size() * 2);
-            for (uint8_t byte : v) {
-                char buf[3];
-                snprintf(buf, sizeof(buf), "%02x", byte);
-                sigHex += buf;
-            }
-            sigs[k] = sigHex;
+    nlohmann::json sigs(nlohmann::json::object_t{});
+    for (const auto& [k, v] : data_.signatures) {
+        std::string sigHex;
+        sigHex.reserve(v.size() * 2);
+        for (uint8_t byte : v) {
+            char buf[3];
+            snprintf(buf, sizeof(buf), "%02x", byte);
+            sigHex += buf;
         }
-
-        return nlohmann::json{
-            {"pegId", data_.pegId},
-            {"aileeSourceAddress", data_.aileeSourceAddress},
-            {"btcDestAddress", data_.btcDestAddress},
-            {"aileeBurnAmount", nlohmann::json(static_cast<uint64_t>(data_.aileeBurnAmount))},
-            {"btcReleaseAmount", nlohmann::json(static_cast<uint64_t>(data_.btcReleaseAmount))},
-            {"aileeBurnTxHeight", nlohmann::json(static_cast<uint64_t>(data_.aileeBurnTxHeight))},
-            {"aileeConfirmations", nlohmann::json(static_cast<uint64_t>(data_.aileeConfirmations))},
-            {"btcReleaseTxId", data_.btcReleaseTxId},
-            {"anchorCommitmentHash", data_.anchorCommitmentHash},
-            {"initiatedTime", nlohmann::json(static_cast<uint64_t>(data_.initiatedTime))},
-            {"completedTime", nlohmann::json(static_cast<uint64_t>(data_.completedTime))},
-            {"status", static_cast<int>(data_.status)},
-            {"signatures", sigs}
-        };
+        sigs[k] = sigHex;
     }
+
+    nlohmann::json j;
+    j["pegId"] = data_.pegId;
+    j["aileeSourceAddress"] = data_.aileeSourceAddress;
+    j["btcDestAddress"] = data_.btcDestAddress;
+    j["aileeBurnAmount"] = static_cast<std::uint64_t>(data_.aileeBurnAmount);
+    j["btcReleaseAmount"] = static_cast<std::uint64_t>(data_.btcReleaseAmount);
+    j["aileeBurnTxHeight"] = static_cast<std::uint64_t>(data_.aileeBurnTxHeight);
+    j["aileeConfirmations"] = static_cast<std::uint64_t>(data_.aileeConfirmations);
+    j["btcReleaseTxId"] = data_.btcReleaseTxId;
+    j["anchorCommitmentHash"] = data_.anchorCommitmentHash;
+    j["initiatedTime"] = static_cast<std::uint64_t>(data_.initiatedTime);
+    j["completedTime"] = static_cast<std::uint64_t>(data_.completedTime);
+    j["status"] = static_cast<int>(data_.status);
+    j["signatures"] = sigs;
+    return j;
+}
+
 
     void from_json(const nlohmann::json& j) {
         data_.pegId = j.value("pegId", "");
