@@ -41,12 +41,11 @@ bool BitcoinRPCClient::broadcastCheckpoint(const std::string& hexTx) {
     }
 
     // Construct JSON-RPC payload
-    json payload = {
-        {"jsonrpc", "1.0"},
-        {"id", "ailee_bridge"},
-        {"method", "sendrawtransaction"},
-        {"params", {hexTx}}
-    };
+    json payload;
+    payload["jsonrpc"] = "1.0";
+    payload["id"] = "ailee_bridge";
+    payload["method"] = "sendrawtransaction";
+    payload["params"] = json::array({hexTx});
 
     std::string payloadStr = payload.dump();
 
