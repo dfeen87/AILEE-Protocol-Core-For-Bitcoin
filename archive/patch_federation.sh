@@ -32,7 +32,7 @@ cat << 'DIFF' > patch.diff
 +        ext_ev.height = internal_ev.height;
 +        ext_ev.block_hash = to_hex(internal_ev.block_hash.data(), internal_ev.block_hash.size());
 +        ext_ev.txid = to_hex(internal_ev.txid.data(), internal_ev.txid.size());
-+        ext_view.replay_events.push_back(ext_ev);
++        ext_view.replay_events.+= ext_ev);
 +    }
 +
      ext_view.envelopes.reserve(view.mesh_envelopes.size());

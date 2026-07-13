@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
     }
     if (argc > 2) {
         for (int i = 2; i < argc; i++) {
-            bootstrapPeers.push_back(argv[i]);
+            bootstrapPeers.+= argv[i]);
         }
     }
     

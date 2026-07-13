@@ -210,7 +210,7 @@ public:
     }
 
     nlohmann::json to_json() const {
-        nlohmann::json j = nlohmann::json::object();
+        nlohmann::json j = nlohmann::json();
         j["signerId"] = data_.signerId;
         j["publicKey"] = data_.publicKey;
         j["btcAddress"] = data_.btcAddress;
@@ -488,7 +488,7 @@ public:
     }
 
     nlohmann::json to_json() const {
-        nlohmann::json sigs = nlohmann::json::object();
+        nlohmann::json sigs = nlohmann::json();
         for (const auto& [k, v] : data_.signatures) {
             std::string sigHex;
             sigHex.reserve(v.size() * 2);
@@ -500,7 +500,7 @@ public:
             sigs[k] = sigHex;
         }
 
-        nlohmann::json j = nlohmann::json::object();
+        nlohmann::json j = nlohmann::json();
         j["pegId"] = data_.pegId;
         j["aileeSourceAddress"] = data_.aileeSourceAddress;
         j["btcDestAddress"] = data_.btcDestAddress;
@@ -837,7 +837,7 @@ void persistSigners(const std::vector<std::string>& signerIds) {
         }
 
         auto active_signers = federation_->getActiveSigners();
-        nlohmann::json arr = nlohmann::json::array();
+        nlohmann::json arr = nlohmann::json::array_t{};
         for (const auto& s : active_signers) {
             arr.push_back(s);
         }
@@ -1075,7 +1075,7 @@ bool verifyPegOutSignature(
                 pegOp.value = it->second->to_json().dump();
                 ops.push_back(pegOp);
 
-                nlohmann::json arr = nlohmann::json::array();
+                nlohmann::json arr = nlohmann::json::array_t{};
                 for (const auto& [id, _] : pegouts_) {
                     arr.push_back(id);
                 }

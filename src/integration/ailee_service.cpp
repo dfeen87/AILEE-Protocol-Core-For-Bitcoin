@@ -65,14 +65,14 @@ std::string risk_band_to_string(ailee::RiskBand band) {
 }
 
 json risk_score_to_json(const ailee::RiskScore& score) {
-    json j = json::object();
+    json j = json();
     j["value"] = score.value;
     j["band"] = risk_band_to_string(score.band);
     return j;
 }
 
 json posture_report_to_json(const ailee::PostureReport& report) {
-    json j = json::object();
+    json j = json();
     j["risk"] = risk_score_to_json(report.risk);
     j["regime"] = report.regime;
     j["summary"] = report.summary;
@@ -81,7 +81,7 @@ json posture_report_to_json(const ailee::PostureReport& report) {
 }
 
 json advisory_to_json(const ailee::Advisory& adv) {
-    json j = json::object();
+    json j = json();
     j["posture"] = posture_report_to_json(adv.posture);
     j["recommended_action"] = adv.recommended_action;
     j["action_approved"] = adv.action_approved;

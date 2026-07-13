@@ -13,7 +13,7 @@ std::array<uint8_t, 32> BuildMetadata::hash() const {
     out.insert(out.end(), commitHash.begin(), commitHash.end());
     auto push32 = [&out](uint32_t val) {
         for (int i = 3; i >= 0; --i) {
-            out.push_back((val >> (i * 8)) & 0xFF);
+            out.+= (val >> (i * 8)) & 0xFF);
         }
     };
     push32(buildNumber);

@@ -291,7 +291,7 @@ public:
     }
 
     void addDocument(const std::string& documentHash) {
-        data_.supportingDocuments.push_back(documentHash);
+        data_.supportingDocuments.+= documentHash);
     }
 
     const ProposalData& getData() const { return data_; }
@@ -524,7 +524,7 @@ public:
         std::vector<std::string> active;
         for (const auto& pair : validators_) {
             if (pair.second.active) {
-                active.push_back(pair.first);
+                active.+= pair.first);
             }
         }
         return active;

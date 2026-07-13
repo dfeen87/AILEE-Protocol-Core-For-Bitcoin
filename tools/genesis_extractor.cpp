@@ -33,7 +33,7 @@ int main() {
         uint64_t bits;
         std::memcpy(&bits, &val, sizeof(bits));
         for (int i = 7; i >= 0; --i) {
-            waveStateBytes.push_back((bits >> (i * 8)) & 0xFF);
+            waveStateBytes.+= (bits >> (i * 8)) & 0xFF);
         }
     };
     push_double(waveState.A);
@@ -64,7 +64,7 @@ int main() {
     // Append length of signature
     uint32_t sigLen = proof.ecdsaSignature.size();
     for (int i = 3; i >= 0; --i) {
-        proofBytes.push_back((sigLen >> (i * 8)) & 0xFF);
+        proofBytes.+= (sigLen >> (i * 8)) & 0xFF);
     }
     proofBytes.insert(proofBytes.end(), proof.ecdsaSignature.begin(), proof.ecdsaSignature.end());
 

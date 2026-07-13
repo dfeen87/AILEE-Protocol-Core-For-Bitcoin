@@ -234,7 +234,7 @@ void demo_ambient_ai() {
         
         node->ingestTelemetry(sample);
         mesh.registerNode(node.get());
-        nodes.push_back(std::move(node));
+        nodes.+= std::move(node));
     }
     
     std::cout << "✓ Nodes initialized and registered" << std::endl;
@@ -301,7 +301,7 @@ void demo_ambient_ai() {
     for (const auto& node : nodes) {
         auto last = node->last();
         if (last.has_value()) {
-            networkState.push_back(*last);
+            networkState.+= *last);
         }
     }
     
@@ -374,12 +374,12 @@ void demo_integrated_scenario() {
     std::vector<TelemetrySample> samples;
     TelemetrySample byzantine;
     byzantine.compute.cpuUtilization = 9.9;  // Outlier
-    samples.push_back(byzantine);
+    samples.+= byzantine);
     
     for (int i = 0; i < 5; ++i) {
         TelemetrySample normal;
         normal.compute.cpuUtilization = 0.6 + (i * 0.02);
-        samples.push_back(normal);
+        samples.+= normal);
     }
     
     bool isByzantine = detectByzantineNode(byzantine, samples);

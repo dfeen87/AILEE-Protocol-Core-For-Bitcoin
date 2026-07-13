@@ -363,7 +363,7 @@ struct StateConsensus {
     std::map<std::string, std::vector<NodeId>> stateRootVotes;
     
     void recordStateRoot(NodeId node, const std::string& stateRoot) {
-        stateRootVotes[stateRoot].push_back(node);
+        stateRootVotes[stateRoot].+= node);
     }
     
     bool hasConflict() {

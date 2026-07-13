@@ -104,9 +104,9 @@ public:
                       << ", Power=" << telemetry.energy.inputPowerW << "W"
                       << ", Latency=" << telemetry.compute.latencyMs << "ms" << std::endl;
             
-            nodeIds.push_back(id);
-            telemetryData.push_back(telemetry);
-            nodes.push_back(std::move(node));
+            nodeIds.+= id);
+            telemetryData.+= telemetry);
+            nodes.+= std::move(node));
         }
     }
     

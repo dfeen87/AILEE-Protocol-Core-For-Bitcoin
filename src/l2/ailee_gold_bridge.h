@@ -185,7 +185,7 @@ public:
         }
         if (std::find(locs.begin(), locs.end(), locationId) == locs.end()) {
             locs.push_back(locationId);
-            nlohmann::json locs_arr = nlohmann::json::array();
+            nlohmann::json locs_arr = nlohmann::json::array_t{};
             for(const auto& str : locs) locs_arr.push_back(str);
             storage_->put("gold_inv_locs_index", locs_arr.dump());
         }
@@ -249,7 +249,7 @@ public:
     }
 
     nlohmann::json item_to_json(const InventoryItem& i) const {
-        nlohmann::json j = nlohmann::json::object();
+        nlohmann::json j = nlohmann::json();
         j["serialNumber"] = i.serialNumber;
         j["denomination"] = static_cast<int>(i.denomination);
         j["weightOz"] = i.weightOz;
@@ -271,11 +271,11 @@ public:
     }
 
     nlohmann::json loc_to_json(const LocationInventory& l) const {
-        nlohmann::json j = nlohmann::json::object();
+        nlohmann::json j = nlohmann::json();
         j["locationId"] = l.locationId;
         j["address"] = l.address;
 
-        nlohmann::json items_arr = nlohmann::json::array();
+        nlohmann::json items_arr = nlohmann::json::array_t{};
         for (const auto& item : l.items) {
             items_arr.push_back(item_to_json(item));
         }
@@ -486,7 +486,7 @@ public:
             auto it = std::find(owned.begin(), owned.end(), tokenId);
             if (it != owned.end()) {
                 owned.erase(it);
-                nlohmann::json owned_arr = nlohmann::json::array();
+                nlohmann::json owned_arr = nlohmann::json::array_t{};
                 for(const auto& str : owned) owned_arr.push_back(str);
                 ailee::storage::PersistentStorage::BatchOp ownerOp;
                 ownerOp.type = ailee::storage::PersistentStorage::BatchOpType::PUT;
@@ -526,7 +526,7 @@ public:
     }
 
     nlohmann::json token_to_json(const GoldToken& t) const {
-        nlohmann::json j = nlohmann::json::object();
+        nlohmann::json j = nlohmann::json();
         j["tokenId"] = t.tokenId;
         j["ownerAddress"] = t.ownerAddress;
         j["weightOz"] = t.weightOz;
@@ -580,7 +580,7 @@ public:
         }
         owned.push_back(token.tokenId);
 
-        nlohmann::json owned_arr = nlohmann::json::array();
+        nlohmann::json owned_arr = nlohmann::json::array_t{};
         for(const auto& str : owned) owned_arr.push_back(str);
 
         ailee::storage::PersistentStorage::BatchOp ownerOp;

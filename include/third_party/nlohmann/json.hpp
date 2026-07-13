@@ -360,7 +360,7 @@ private:
         }
 
         json parse_array() {
-            json result = json::array();
+            json result = json::array_t{};
             get(); // '['
             skip_ws();
             if (peek_if(']')) return result;

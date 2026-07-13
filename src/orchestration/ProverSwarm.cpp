@@ -107,7 +107,7 @@ bool ProverSwarm::submitJob(const std::string& job_id, const std::string& payloa
     batch.Put(jobs_cf_, job_key, job_val);
 
     // Serialize queue order
-    nlohmann::json queue_j = nlohmann::json::array();
+    nlohmann::json queue_j = nlohmann::json::array_t{};
     for (size_t i = 0; i < queue_order_.size(); ++i) {
         queue_j[i] = queue_order_[i];
     }
@@ -227,7 +227,7 @@ bool ProverSwarm::recordJobSuccess(const std::string& job_id, double latency_ms,
     if (it != queue_order_.end()) {
         queue_order_.erase(it);
 
-        nlohmann::json queue_j = nlohmann::json::array();
+        nlohmann::json queue_j = nlohmann::json::array_t{};
         for (size_t i = 0; i < queue_order_.size(); ++i) {
             queue_j[i] = queue_order_[i];
         }
@@ -400,7 +400,7 @@ std::vector<std::string> ProverSwarm::getQueueOrder() const {
 // ---------------------------------------------------------
 
 bool ProverSwarm::saveQueueOrder(std::string* err) {
-    nlohmann::json j = nlohmann::json::array();
+    nlohmann::json j = nlohmann::json::array_t{};
     for (size_t i = 0; i < queue_order_.size(); ++i) {
         j[i] = queue_order_[i];
     }

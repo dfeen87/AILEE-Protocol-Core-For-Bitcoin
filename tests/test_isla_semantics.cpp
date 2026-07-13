@@ -18,7 +18,7 @@ class MockReplayBuffer : public IReplayBuffer {
 public:
     std::vector<EpochIntegrationBundle> history;
     void record_epoch(const EpochIntegrationBundle& bundle, const IslaEpochResult& result) override {
-        history.push_back(bundle);
+        history.+= bundle);
     }
     std::vector<EpochIntegrationBundle> get_epoch_history() const override {
         return history;
