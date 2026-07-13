@@ -7,7 +7,7 @@
 using namespace ailee::l6;
 
 class ZKRecursionLayerTest : public ::testing::Test {
-protected:
+public:
     ZKMockBackend backend;
     ZKRecursionManager recursion_manager;
     ZKBackendConfig config;
@@ -26,10 +26,13 @@ TEST_F(ZKRecursionLayerTest, ThrowsOnEmptyPreviousProof) {
     ZKTranscript transcript{"t_1", 5};
     ZKRecursionBundle empty_bundle;
 
-    EXPECT_THROW(
-        backend.generate_recursive_proof(config, constraints, transcript, empty_bundle),
-        std::invalid_argument
-    );
+    bool threw = false;
+    try {
+        backend.generate_recursive_proof(config, constraints, transcript, empty_bundle);
+    } catch (const std::invalid_argument&) {
+        threw = true;
+    }
+    EXPECT_TRUE(threw);
 }
 
 TEST_F(ZKRecursionLayerTest, GeneratesAndVerifiesRecursiveProof) {
@@ -90,17 +93,27 @@ TEST_F(ZKRecursionLayerTest, RecursionManagerValidatesContinuity) {
     ZKProofArtifact dummy_prev;
     dummy_prev.proof_bytes = {0x01};
 
-    EXPECT_NO_THROW(
-        recursion_manager.build_recursion_bundle(dummy_prev, "root_a", 10, "root_a", 11)
-    );
+    bool threw1 = false;
+    try {
+        recursion_manager.build_recursion_bundle(dummy_prev, "root_a", 10, "root_a", 11);
+    } catch (...) {
+        threw1 = true;
+    }
+    EXPECT_FALSE(threw1);
 
-    EXPECT_THROW(
-        recursion_manager.build_recursion_bundle(dummy_prev, "root_a", 10, "root_a", 12),
-        std::invalid_argument
-    );
+    bool threw2 = false;
+    try {
+        recursion_manager.build_recursion_bundle(dummy_prev, "root_a", 10, "root_a", 12);
+    } catch (const std::invalid_argument&) {
+        threw2 = true;
+    }
+    EXPECT_TRUE(threw2);
 
-    EXPECT_THROW(
-        recursion_manager.build_recursion_bundle(dummy_prev, "root_a", 10, "root_b", 11),
-        std::invalid_argument
-    );
+    bool threw3 = false;
+    try {
+        recursion_manager.build_recursion_bundle(dummy_prev, "root_a", 10, "root_b", 11);
+    } catch (const std::invalid_argument&) {
+        threw3 = true;
+    }
+    EXPECT_TRUE(threw3);
 }
