@@ -185,9 +185,9 @@ public:
         }
         if (std::find(locs.begin(), locs.end(), locationId) == locs.end()) {
             locs.push_back(locationId);
-            nlohmann::json::array_t locs_arr;
-            for(const auto& str : locs) locs_arr.push_back(nlohmann::json(str));
-            storage_->put("gold_inv_locs_index", nlohmann::json(locs_arr).dump());
+            nlohmann::json locs_arr = nlohmann::json::array();
+            for(const auto& str : locs) locs_arr.push_back(str);
+            storage_->put("gold_inv_locs_index", locs_arr.dump());
         }
     }
 
@@ -249,13 +249,13 @@ public:
     }
 
     nlohmann::json item_to_json(const InventoryItem& i) const {
-        nlohmann::json j(nlohmann::json::object_t{});
+        nlohmann::json j = nlohmann::json::object();
         j["serialNumber"] = i.serialNumber;
         j["denomination"] = static_cast<int>(i.denomination);
         j["weightOz"] = i.weightOz;
         j["location"] = i.location;
         j["available"] = i.available;
-        j["lastAuditTimestamp"] = static_cast<double>(i.lastAuditTimestamp);
+        j["lastAuditTimestamp"] = static_cast<std::uint64_t>(i.lastAuditTimestamp);
         return j;
     }
 
@@ -271,17 +271,17 @@ public:
     }
 
     nlohmann::json loc_to_json(const LocationInventory& l) const {
-        nlohmann::json j(nlohmann::json::object_t{});
+        nlohmann::json j = nlohmann::json::object();
         j["locationId"] = l.locationId;
         j["address"] = l.address;
 
-        nlohmann::json::array_t items_arr;
+        nlohmann::json items_arr = nlohmann::json::array();
         for (const auto& item : l.items) {
             items_arr.push_back(item_to_json(item));
         }
-        j["items"] = nlohmann::json(items_arr);
+        j["items"] = items_arr;
         j["totalWeightOz"] = l.totalWeightOz;
-        j["lastRestockTimestamp"] = static_cast<double>(l.lastRestockTimestamp);
+        j["lastRestockTimestamp"] = static_cast<std::uint64_t>(l.lastRestockTimestamp);
         return j;
     }
 
@@ -486,12 +486,12 @@ public:
             auto it = std::find(owned.begin(), owned.end(), tokenId);
             if (it != owned.end()) {
                 owned.erase(it);
-                nlohmann::json::array_t owned_arr;
-                for(const auto& str : owned) owned_arr.push_back(nlohmann::json(str));
+                nlohmann::json owned_arr = nlohmann::json::array();
+                for(const auto& str : owned) owned_arr.push_back(str);
                 ailee::storage::PersistentStorage::BatchOp ownerOp;
                 ownerOp.type = ailee::storage::PersistentStorage::BatchOpType::PUT;
                 ownerOp.key = "gold_owner_" + oldOwner;
-                ownerOp.value = nlohmann::json(owned_arr).dump();
+                ownerOp.value = owned_arr.dump();
                 ops.push_back(ownerOp);
             }
         }
@@ -526,14 +526,14 @@ public:
     }
 
     nlohmann::json token_to_json(const GoldToken& t) const {
-        nlohmann::json j(nlohmann::json::object_t{});
+        nlohmann::json j = nlohmann::json::object();
         j["tokenId"] = t.tokenId;
         j["ownerAddress"] = t.ownerAddress;
         j["weightOz"] = t.weightOz;
         j["denomination"] = static_cast<int>(t.denomination);
         j["backedBySerial"] = t.backedBySerial;
         j["custodianLocation"] = t.custodianLocation;
-        j["issuanceTimestamp"] = static_cast<double>(t.issuanceTimestamp);
+        j["issuanceTimestamp"] = static_cast<std::uint64_t>(t.issuanceTimestamp);
         j["redeemed"] = t.redeemed;
         return j;
     }
@@ -580,13 +580,13 @@ public:
         }
         owned.push_back(token.tokenId);
 
-        nlohmann::json::array_t owned_arr;
-        for(const auto& str : owned) owned_arr.push_back(nlohmann::json(str));
+        nlohmann::json owned_arr = nlohmann::json::array();
+        for(const auto& str : owned) owned_arr.push_back(str);
 
         ailee::storage::PersistentStorage::BatchOp ownerOp;
         ownerOp.type = ailee::storage::PersistentStorage::BatchOpType::PUT;
         ownerOp.key = "gold_owner_" + ownerAddress;
-        ownerOp.value = nlohmann::json(owned_arr).dump();
+        ownerOp.value = owned_arr.dump();
         ops.push_back(ownerOp);
         return {token.tokenId, ops};
     }
