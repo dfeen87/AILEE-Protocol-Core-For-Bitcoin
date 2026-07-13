@@ -666,6 +666,8 @@ add_library(ailee_adapters STATIC
     src/l6/AnchorZKMetadata.cpp
     src/l6/ZKOrchestrationManager.cpp
     src/l6/IslaRuntimeOrchestrator.cpp
+    src/l6/isla/IslaModeEngine.cpp
+    src/l6/isla/IslaMetrics.cpp
     src/l6/ZKRecursionManager.cpp
     src/l6/MeshCoherenceEngine.cpp src/l6/auditor/TemporalAuditor.cpp src/l6/erl/TemporalEnergyCoordinator.cpp src/l6/iao/IntelligenceAssistedOrchestrator.cpp
     src/l6/ZKMetadata.cpp
@@ -773,7 +775,7 @@ if(BUILD_TESTS)
         target_link_libraries(minigtest_main PUBLIC minigtest)
 
         add_library(GTest::gtest ALIAS minigtest)
-        add_library(GTest::gtest_main ALIAS minigtest_main)
+        add_library(gtest_main ALIAS minigtest_main)
     endif()
     enable_testing()
 
@@ -874,7 +876,7 @@ if(BUILD_TESTS)
             PRIVATE
             ${ROCKSDB_LINK_LIBS}
             GTest::gtest
-            gtest_main gtest
+            GTest::gtest_main
         )
         
         target_compile_definitions(reorg_detector_tests PRIVATE AILEE_HAS_ROCKSDB=1)
