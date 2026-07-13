@@ -760,6 +760,10 @@ endif()
 
 option(BUILD_TESTS "Build unit tests" OFF)
 if(BUILD_TESTS)
+
+    # Force fallback GTest implementation for CI
+    set(GTest_FOUND FALSE)
+
     find_package(GTest QUIET)
     if(NOT GTest_FOUND)
         add_library(minigtest STATIC
@@ -777,6 +781,7 @@ if(BUILD_TESTS)
         add_library(GTest::gtest ALIAS minigtest)
         add_library(gtest_main ALIAS minigtest_main)
     endif()
+
     enable_testing()
 
     add_executable(anchor_commit_tapleaf_tests EXCLUDE_FROM_ALL
@@ -836,7 +841,7 @@ if(BUILD_TESTS)
         tests/test_anchor_commit_signing.cpp
         tests/test_anchor_commit_validator.cpp
     )
-    
+
     add_executable(anchor_metadata_tests
         tests/test_anchor_metadata.cpp
     )
@@ -856,9 +861,8 @@ if(BUILD_TESTS)
         GTest::gtest
         gtest_main gtest
     )
-    
     add_test(NAME AdapterTests COMMAND ailee_tests)
-    
+
     # ReorgDetector tests (requires RocksDB)
     if(RocksDB_FOUND)
         add_executable(reorg_detector_tests 
@@ -867,22 +871,18 @@ if(BUILD_TESTS)
             src/l1/ReorgDetector.cpp
             src/l1/SettlementIngestion.cpp
         )
-        
-        # target_include_directories(reorg_detector_tests PRIVATE
-        #     ${CMAKE_CURRENT_SOURCE_DIR}/tests/minigtest
-        # )
-        
+
         target_link_libraries(reorg_detector_tests
             PRIVATE
             ${ROCKSDB_LINK_LIBS}
             GTest::gtest
             GTest::gtest_main
         )
-        
+
         target_compile_definitions(reorg_detector_tests PRIVATE AILEE_HAS_ROCKSDB=1)
         add_test(NAME ReorgDetectorTests COMMAND reorg_detector_tests)
     endif()
-    
+
     # Optional: Add policy system tests
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/PolicyTests.cpp")
         add_executable(policy_tests tests/PolicyTests.cpp)
@@ -894,6 +894,7 @@ if(BUILD_TESTS)
         )
         add_test(NAME PolicyTests COMMAND policy_tests)
     endif()
+
 endif()
 
 # ============================================================================
