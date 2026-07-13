@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 project(AILEE_Core VERSION 5.3.0 LANGUAGES CXX)
 
+include_directories(/opt/homebrew/include)
+link_directories(/opt/homebrew/lib)
+
 # ============================================================================
 # Compiler & Standard Settings
 # ============================================================================
