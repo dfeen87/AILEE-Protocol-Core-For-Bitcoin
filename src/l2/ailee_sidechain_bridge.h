@@ -220,12 +220,12 @@ public:
             {"signerId", data_.signerId},
             {"publicKey", data_.publicKey},
             {"btcAddress", data_.btcAddress},
-            {"stake", data_.stake},
-            {"reputationScore", data_.reputationScore},
-            {"signatureCount", data_.signatureCount},
-            {"missedSignatures", data_.missedSignatures},
+            {"stake", static_cast<uint64_t>(data_.stake)},
+            {"reputationScore", static_cast<uint64_t>(data_.reputationScore)},
+            {"signatureCount", static_cast<uint64_t>(data_.signatureCount)},
+            {"missedSignatures", static_cast<uint64_t>(data_.missedSignatures)},
             {"active", data_.active},
-            {"joinedTime", data_.joinedTime}
+            {"joinedTime", static_cast<uint64_t>(data_.joinedTime)}
         };
     }
 
@@ -510,14 +510,14 @@ public:
             {"pegId", data_.pegId},
             {"aileeSourceAddress", data_.aileeSourceAddress},
             {"btcDestAddress", data_.btcDestAddress},
-            {"aileeBurnAmount", data_.aileeBurnAmount},
-            {"btcReleaseAmount", data_.btcReleaseAmount},
-            {"aileeBurnTxHeight", data_.aileeBurnTxHeight},
-            {"aileeConfirmations", data_.aileeConfirmations},
+            {"aileeBurnAmount", static_cast<uint64_t>(data_.aileeBurnAmount)},
+            {"btcReleaseAmount", static_cast<uint64_t>(data_.btcReleaseAmount)},
+            {"aileeBurnTxHeight", static_cast<uint64_t>(data_.aileeBurnTxHeight)},
+            {"aileeConfirmations", static_cast<uint64_t>(data_.aileeConfirmations)},
             {"btcReleaseTxId", data_.btcReleaseTxId},
             {"anchorCommitmentHash", data_.anchorCommitmentHash},
-            {"initiatedTime", data_.initiatedTime},
-            {"completedTime", data_.completedTime},
+            {"initiatedTime", static_cast<uint64_t>(data_.initiatedTime)},
+            {"completedTime", static_cast<uint64_t>(data_.completedTime)},
             {"status", static_cast<int>(data_.status)},
             {"signatures", sigs}
         };
