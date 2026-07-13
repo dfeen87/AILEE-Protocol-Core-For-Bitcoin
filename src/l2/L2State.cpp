@@ -405,12 +405,12 @@ nlohmann::json L2StateDiff::toJson() const {
     }
 
     return {
-        {"height", static_cast<uint64_t>(height)},
+        {"height", nlohmann::json(static_cast<uint64_t>(height))},
         {"priorStateRoot", priorStateRoot},
         {"newStateRoot", newStateRoot},
         {"diffPayload", hexChanges},
         {"proofRefs", refs},
-        {"timestampMs", static_cast<uint64_t>(timestampMs)}
+        {"timestampMs", nlohmann::json(static_cast<uint64_t>(timestampMs))}
     };
 }
 
