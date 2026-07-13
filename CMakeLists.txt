@@ -121,6 +121,28 @@ if(PKG_CONFIG_FOUND)
     endif()
 endif()
 
+# ============================================================
+# macOS OpenSSL Fix — Create Imported Targets Manually
+# ============================================================
+
+find_package(OpenSSL REQUIRED)
+
+if(NOT TARGET OpenSSL::SSL)
+    add_library(OpenSSL::SSL INTERFACE IMPORTED)
+    set_target_properties(OpenSSL::SSL PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${OPENSSL_INCLUDE_DIR}"
+        INTERFACE_LINK_LIBRARIES "${OPENSSL_LIBRARIES}/libssl.dylib"
+    )
+endif()
+
+if(NOT TARGET OpenSSL::Crypto)
+    add_library(OpenSSL::Crypto INTERFACE IMPORTED)
+    set_target_properties(OpenSSL::Crypto PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${OPENSSL_INCLUDE_DIR}"
+        INTERFACE_LINK_LIBRARIES "${OPENSSL_LIBRARIES}/libcrypto.dylib"
+    )
+endif()
+
 # Fallback to CMake find_package
 if(NOT RocksDB_FOUND)
     find_package(RocksDB QUIET)
