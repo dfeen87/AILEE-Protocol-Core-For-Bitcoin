@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 // ProverSwarm.h — Deterministic Multi-Prover Swarm (Ambient AI v2)
-// Provides deterministic scheduling, crash-resilient prover coordination, and a queue backed by RocksDB.
 
 #pragma once
 
@@ -51,7 +50,7 @@ struct ProverIdentity {
 
 struct ProverJob {
     std::string job_id;
-    std::string payload; // JSON payload
+    std::string payload;
     std::string assigned_prover;
     std::uint64_t assigned_at_ms = 0;
     bool completed = false;
@@ -64,14 +63,10 @@ struct ProverJob {
         j["payload"] = payload;
         j["assigned_prover"] = assigned_prover;
 
-        // Compatible with every supported nlohmann/json release
-        j["assigned_at_ms"] =
-            static_cast<nlohmann::json::number_unsigned_t>(assigned_at_ms);
-
+        // FINAL FIX — universally safe JSON integer construction
+        j["assigned_at_ms"] = nlohmann::json(static_cast<uint64_t>(assigned_at_ms));
         j["completed"] = completed;
-
-        j["retry_count"] =
-            static_cast<nlohmann::json::number_unsigned_t>(retry_count);
+        j["retry_count"] = nlohmann::json(static_cast<uint64_t>(retry_count));
 
         return j;
     }
@@ -126,23 +121,18 @@ public:
     bool initialize(std::string* err = nullptr);
     void close();
 
-    // Job management
     bool submitJob(const std::string& job_id, const std::string& payload_json, std::string* err = nullptr);
     std::optional<ProverJob> assignJob();
     std::optional<ProverJob> getJob(const std::string& job_id) const;
 
-    // Prover state updates
     bool recordJobSuccess(const std::string& job_id, double latency_ms, std::string* err = nullptr);
     bool recordJobFailure(const std::string& job_id, std::string* err = nullptr);
     bool hardBanProver(const std::string& pubkey, const std::string& reason, std::string* err = nullptr);
 
-    // Updates internal prover state directly
     bool registerProver(const ProverIdentity& prover, std::string* err = nullptr);
 
-    // Timeout logic
     std::vector<std::string> checkTimeouts(std::uint64_t current_time_ms);
 
-    // Getters
     std::optional<ProverIdentity> getProver(const std::string& pubkey) const;
     std::vector<ProverIdentity> getAllProvers() const;
     SwarmMetrics getMetrics() const;
@@ -158,14 +148,11 @@ private:
 
     mutable std::mutex mu_;
 
-    // In-memory job queue (job_id list)
     std::vector<std::string> queue_order_;
 
-    // Metrics
     SwarmMetrics metrics_;
     double total_latency_ms_ = 0.0;
 
-    // Persistence helpers
     bool saveQueueOrder(std::string* err = nullptr);
     bool loadQueueOrder(std::string* err = nullptr);
     bool saveJob(const ProverJob& job, std::string* err = nullptr);
