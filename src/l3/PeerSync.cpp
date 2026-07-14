@@ -2,18 +2,28 @@
 #include <cstring>
 #include <algorithm>
 
-#include "protocol/ProtocolFrame.hpp"   // <-- added
-#include <openssl/sha.h>                // <-- added
+#include "protocol/ProtocolFrame.hpp"   // signature verification
+#include "network/MainnetDiscovery.hpp" // <-- added
+#include <openssl/sha.h>
 
 namespace ailee {
 namespace l3 {
+
+// ---------------------------------------------------------
+// Global pointer to mainnet discovery (bound externally)
+// ---------------------------------------------------------
+static MainnetDiscovery* g_discovery = nullptr;
+
+// Called by system init to bind discovery
+void bind_mainnet_discovery(MainnetDiscovery* d) {
+    g_discovery = d;
+}
 
 // ---------------------------------------------------------
 // Deterministic signature verification for ProtocolFrame
 // ---------------------------------------------------------
 static bool verify_signature(const ProtocolFrame& pf)
 {
-    // Recreate the signed data exactly as sign_frame() does
     std::string data = pf.frame_id + pf.type + pf.version +
                        pf.node_id + std::to_string(pf.timestamp) +
                        pf.payload;
@@ -52,10 +62,21 @@ PeerSyncState compute_peer_sync(
         bool sig_ok = verify_signature(pf);
 
         if (!sig_ok) {
-            // Deterministic fallback for invalid frames
             state.sync_status = SyncStatus::NEEDS_RECOVERY;
-            state.coherence_delta = -999; // signal invalid frame
+            state.coherence_delta = -999;
             return state;
+        }
+
+        // ---------------------------------------------------------
+        // MAINNET DISCOVERY HOOK
+        // ---------------------------------------------------------
+        // If signature is valid, mark peer as verified.
+        if (g_discovery) {
+            if (!g_discovery->hasPeer(pf.node_id)) {
+                // Add peer with unknown address (GossipLayer will update)
+                g_discovery->addPeer(pf.node_id, "unknown");
+            }
+            g_discovery->verifyPeer(pf.node_id);
         }
     }
 
@@ -63,26 +84,22 @@ PeerSyncState compute_peer_sync(
     // Existing sync logic (unchanged)
     // ---------------------------------------------------------
 
-    // Safely copy envelopes to state
     std::memcpy(&state.local_envelope, &local_envelope, sizeof(l2::ExecutionEnvelope));
     std::memcpy(&state.remote_envelope, &remote_envelope, sizeof(GossipEnvelope));
 
     uint64_t local_epoch = state.local_envelope.context.l1_height;
     uint64_t remote_epoch = state.remote_envelope.remote_summary.epoch_height;
 
-    // Compare roots securely without memory leaks
     bool roots_match = (std::memcmp(
         state.local_envelope.context.state_root_hash,
         state.remote_envelope.remote_summary.state_root_hash,
         32
     ) == 0);
 
-    // Compute coherence delta
     uint64_t local_coherence = state.local_envelope.context.mesh_coherence_score;
     uint64_t remote_coherence = state.remote_envelope.remote_summary.coherence_score;
     state.coherence_delta = static_cast<int64_t>(local_coherence) - static_cast<int64_t>(remote_coherence);
 
-    // Determine sync status deterministically based on defined rules
     if ((remote_epoch + STALE_THRESHOLD < local_epoch) || (local_epoch + STALE_THRESHOLD < remote_epoch)) {
         state.sync_status = SyncStatus::STALE;
     } else if (local_epoch == remote_epoch && roots_match) {
