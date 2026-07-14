@@ -107,27 +107,73 @@ Assignment buildAssignment(const TaskPayload& task, const NodeMetrics& node, dou
 } // namespace
 
 // ---------------------------------------------------------
-// Activation-aware entry point with handshake
+// Simple activation commit state (kept inside orchestrator)
+// ---------------------------------------------------------
+enum class ActivationCommitState : uint8_t {
+    INACTIVE = 0,
+    HANDSHAKE_OK = 1,
+    COMMITTED = 2,
+    FAILED = 3
+};
+
+// We keep a tiny commit state + last reason inside the orchestrator.
+struct ActivationCommitContext {
+    ActivationCommitState state = ActivationCommitState::INACTIVE;
+    std::string lastReason;
+    std::string lastFrameId;
+};
+
+// ---------------------------------------------------------
+// Activation-aware entry point with handshake + commit
 // ---------------------------------------------------------
 Assignment WeightedOrchestrator::assignFromActivationFrame(
     const ProtocolFrame& pf,
     const std::vector<NodeMetrics>& candidates)
 {
+    // Local commit context (could be moved to a member if you want persistence)
+    ActivationCommitContext ctx;
+
+    // 1. Handshake
     std::string reason;
     if (!activation_handshake_ok(pf, reason)) {
+        ctx.state = ActivationCommitState::FAILED;
+        ctx.lastReason = "activation handshake failed: " + reason;
+        ctx.lastFrameId = pf.frame_id;
+
         Assignment a;
         a.assigned = false;
-        a.reason = "activation handshake failed: " + reason;
+        a.reason = ctx.lastReason;
         return a;
     }
 
-    // Minimal mapping from activation frame → TaskPayload
+    ctx.state = ActivationCommitState::HANDSHAKE_OK;
+    ctx.lastReason = "handshake ok";
+    ctx.lastFrameId = pf.frame_id;
+
+    // 2. Minimal mapping from activation frame → TaskPayload
     TaskPayload task;
     task.taskId = pf.frame_id;      // deterministic mapping
     task.requirements = {};         // TODO: decode from pf.payload when schema is defined
 
-    // Use normal weighted scheduling
-    return assignBestWorker(task, candidates, 0.5, 0.3, 0.2);
+    // 3. Schedule worker
+    auto assignment = assignBestWorker(task, candidates, 0.5, 0.3, 0.2);
+    if (!assignment.assigned) {
+        ctx.state = ActivationCommitState::FAILED;
+        ctx.lastReason = "activation commit failed: " + assignment.reason;
+
+        Assignment a;
+        a.assigned = false;
+        a.reason = ctx.lastReason;
+        return a;
+    }
+
+    // 4. Commit activation (simple state flip)
+    ctx.state = ActivationCommitState::COMMITTED;
+    ctx.lastReason = "activation committed";
+    // In a fuller system, you’d persist ctx, emit events, and propagate commit.
+
+    // 5. Return successful assignment
+    return assignment;
 }
 
 // ---------------------------------------------------------
