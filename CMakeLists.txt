@@ -346,6 +346,17 @@ set(WNN_SOURCES
     src/wnn/mesh/wave_mesh_integration.cpp
 )
 
+# Swarm Support (Prover Registration)
+set(SWARM_SOURCES
+    src/orchestration/SwarmConfigLoader.cpp
+    src/orchestration/SwarmConfig.cpp
+    src/orchestration/ProverRegistry.cpp
+    src/orchestration/SwarmHttpServer.cpp
+    src/orchestration/SwarmRuntime.cpp
+)
+
+target_sources(ailee_node PRIVATE ${SWARM_SOURCES})
+
 # AILEE CORE Integration Sources
 set(AILEE_CORE_SOURCES
     src/semantics/SemanticsTypes.cpp
