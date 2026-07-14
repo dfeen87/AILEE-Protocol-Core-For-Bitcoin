@@ -2,17 +2,26 @@
 #include <cstring>
 #include <openssl/sha.h>
 
-#include "protocol/ProtocolFrame.hpp"   // <-- added for signature verification
+#include "protocol/ProtocolFrame.hpp"   // signature verification
+#include "network/MainnetDiscovery.hpp" // <-- added for mainnet gossip propagation
 
 namespace ailee {
 namespace l3 {
+
+// ---------------------------------------------------------
+// Mainnet discovery pointer + binder
+// ---------------------------------------------------------
+static MainnetDiscovery* g_discovery = nullptr;
+
+void bind_mainnet_discovery_gossip(MainnetDiscovery* d) {
+    g_discovery = d;
+}
 
 // ---------------------------------------------------------
 // Deterministic signature verification for ProtocolFrame
 // ---------------------------------------------------------
 static bool verify_signature(const ProtocolFrame& pf)
 {
-    // Recreate the signed data exactly as sign_frame() does
     std::string data = pf.frame_id + pf.type + pf.version +
                        pf.node_id + std::to_string(pf.timestamp) +
                        pf.payload;
@@ -43,21 +52,18 @@ GossipMessage build_gossip_message(
     GossipMessage message;
     std::memset(&message, 0, sizeof(message));
 
-    // Fill GossipSummary
     std::memcpy(message.summary.node_identity_fingerprint, envelope.context.node_identity_hash, 32);
     std::memcpy(message.summary.state_root_hash, envelope.context.state_root_hash, 32);
     std::memcpy(message.summary.epoch_hash, envelope.context.epoch_hash, 32);
     message.summary.epoch_height = envelope.context.l1_height;
     message.summary.coherence_score = coherence.score;
 
-    // Healthy flag
     if (coherence.score == 4) {
         message.summary.flags |= GOSSIP_FLAG_HEALTHY;
     }
 
     message.sequence_number = current_sequence + 1;
 
-    // Compute deterministic message hash
     uint8_t buffer[sizeof(GossipSummary) + sizeof(uint64_t)];
     std::memcpy(buffer, &message.summary, sizeof(GossipSummary));
     std::memcpy(buffer + sizeof(GossipSummary), &message.sequence_number, sizeof(uint64_t));
@@ -77,11 +83,9 @@ GossipEnvelope receive_gossip_message(const GossipMessage& message) {
     GossipEnvelope envelope;
     std::memset(&envelope, 0, sizeof(envelope));
 
-    // Copy remote summary
     std::memcpy(&envelope.remote_summary, &message.summary, sizeof(GossipSummary));
     envelope.received_sequence = message.sequence_number;
 
-    // Normalized hash (state-only)
     uint8_t buffer[sizeof(GossipSummary)];
     std::memcpy(buffer, &envelope.remote_summary, sizeof(GossipSummary));
 
@@ -89,6 +93,21 @@ GossipEnvelope receive_gossip_message(const GossipMessage& message) {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     SHA256(buffer, sizeof(buffer), envelope.normalized_hash);
 #pragma GCC diagnostic pop
+
+    // ---------------------------------------------------------
+    // MAINNET GOSSIP PROPAGATION HOOK
+    // ---------------------------------------------------------
+    if (g_discovery) {
+        // Convert fingerprint bytes → hex string identity
+        std::string peerIdHex(
+            reinterpret_cast<const char*>(envelope.remote_summary.node_identity_fingerprint),
+            32
+        );
+
+        if (!g_discovery->hasPeer(peerIdHex)) {
+            g_discovery->addPeer(peerIdHex, "unknown");
+        }
+    }
 
     // ---------------------------------------------------------
     // Signature verification (if protocol frame is attached)
