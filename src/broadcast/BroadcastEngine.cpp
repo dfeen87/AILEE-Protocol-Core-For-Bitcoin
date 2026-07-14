@@ -1,11 +1,15 @@
+// BroadcastEngine.cpp
 #include "BroadcastEngine.hpp"
 #include "protocol/ProtocolFrame.hpp"
-#include "ProtocolFrame.hpp" // if separate header
 #include <openssl/sha.h>
+#include <chrono>
 
 NetworkBinding* BroadcastEngine::net = nullptr;
 MainnetDiscovery* BroadcastEngine::discovery = nullptr;
 
+// ---------------------------------------------------------
+// Deterministic frame signing (matches PeerSync + Orchestrator)
+// ---------------------------------------------------------
 static std::string sign_frame(const ProtocolFrame& pf)
 {
     std::string data = pf.frame_id + pf.type + pf.version +
@@ -23,9 +27,13 @@ static std::string sign_frame(const ProtocolFrame& pf)
         hex.push_back(digits[(hash[i] >> 4) & 0xF]);
         hex.push_back(digits[hash[i] & 0xF]);
     }
+
     return hex;
 }
 
+// ---------------------------------------------------------
+// Bindings
+// ---------------------------------------------------------
 void BroadcastEngine::bind(NetworkBinding* binding) {
     net = binding;
 }
@@ -34,6 +42,9 @@ void BroadcastEngine::bindDiscovery(MainnetDiscovery* d) {
     discovery = d;
 }
 
+// ---------------------------------------------------------
+// Emit signed frame to local network + verified mainnet peers
+// ---------------------------------------------------------
 void BroadcastEngine::emit(const std::string& type,
                            const std::string& version,
                            const Json::Value& payload)
@@ -41,7 +52,9 @@ void BroadcastEngine::emit(const std::string& type,
     if (!net) return;
 
     ProtocolFrame pf;
-    pf.frame_id  = std::to_string(std::chrono::system_clock::now().time_since_epoch().count());
+    pf.frame_id  = std::to_string(
+        std::chrono::system_clock::now().time_since_epoch().count()
+    );
     pf.type      = type;
     pf.version   = version;
     pf.node_id   = net->localNodeId();
@@ -49,7 +62,7 @@ void BroadcastEngine::emit(const std::string& type,
     pf.payload   = Json::writeString(Json::StreamWriterBuilder{}, payload);
     pf.signature = sign_frame(pf);
 
-    std::string serialized = serialize_frame(pf);
+    std::string serialized = net->serializeFrame(pf);
 
     // Local broadcast
     net->broadcast(serialized);
@@ -61,4 +74,3 @@ void BroadcastEngine::emit(const std::string& type,
         }
     }
 }
-
