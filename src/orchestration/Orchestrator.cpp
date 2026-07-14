@@ -6,19 +6,18 @@
 #include <chrono>
 #include <cmath>
 
-#include "protocol/ProtocolFrame.hpp"   // <-- added
-#include <openssl/sha.h>                // <-- added
+#include "protocol/ProtocolFrame.hpp"
+#include <openssl/sha.h>
 
 namespace ailee::sched {
 
 namespace {
 
 // ---------------------------------------------------------
-// Optional: verify inbound activation frames before scheduling
+// Deterministic signature verification for ProtocolFrame
 // ---------------------------------------------------------
-static bool verify_activation_frame(const ProtocolFrame& pf)
+static bool verify_activation_frame_signature(const ProtocolFrame& pf)
 {
-    // Recreate signed data exactly as sign_frame() does
     std::string data = pf.frame_id + pf.type + pf.version +
                        pf.node_id + std::to_string(pf.timestamp) +
                        pf.payload;
@@ -36,6 +35,33 @@ static bool verify_activation_frame(const ProtocolFrame& pf)
     }
 
     return (hex == pf.signature);
+}
+
+// ---------------------------------------------------------
+// Basic activation handshake policy
+// ---------------------------------------------------------
+// For now, we accept activation frames that:
+//  - are of type "activation"
+//  - have a non-empty node_id
+//  - have a valid signature
+// Later, this can be extended with posture, reputation, etc.
+// ---------------------------------------------------------
+static bool activation_handshake_ok(const ProtocolFrame& pf, std::string& reason)
+{
+    if (pf.type != "activation") {
+        reason = "unsupported frame type";
+        return false;
+    }
+    if (pf.node_id.empty()) {
+        reason = "missing node_id";
+        return false;
+    }
+    if (!verify_activation_frame_signature(pf)) {
+        reason = "invalid activation frame signature";
+        return false;
+    }
+    reason = "ok";
+    return true;
 }
 
 // ---------------------------------------------------------
@@ -81,24 +107,24 @@ Assignment buildAssignment(const TaskPayload& task, const NodeMetrics& node, dou
 } // namespace
 
 // ---------------------------------------------------------
-// NEW: Activation-aware scheduling entry point
+// Activation-aware entry point with handshake
 // ---------------------------------------------------------
 Assignment WeightedOrchestrator::assignFromActivationFrame(
     const ProtocolFrame& pf,
     const std::vector<NodeMetrics>& candidates)
 {
-    // Only accept valid signed frames
-    if (!verify_activation_frame(pf)) {
+    std::string reason;
+    if (!activation_handshake_ok(pf, reason)) {
         Assignment a;
         a.assigned = false;
-        a.reason = "invalid activation frame signature";
+        a.reason = "activation handshake failed: " + reason;
         return a;
     }
 
-    // Convert activation payload → TaskPayload
+    // Minimal mapping from activation frame → TaskPayload
     TaskPayload task;
-    task.taskId = pf.frame_id;  // deterministic mapping
-    task.requirements = {};     // future: decode from pf.payload
+    task.taskId = pf.frame_id;      // deterministic mapping
+    task.requirements = {};         // TODO: decode from pf.payload when schema is defined
 
     // Use normal weighted scheduling
     return assignBestWorker(task, candidates, 0.5, 0.3, 0.2);
