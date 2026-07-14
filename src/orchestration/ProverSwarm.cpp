@@ -17,22 +17,31 @@ ProverSwarm::~ProverSwarm() {
     close();
 }
 
-    bool ProverSwarm::initialize(std::string* err) {
-    // ------------------------------------------------------------
-    // TEMPORARY BYPASS: Disable RocksDB for swarm initialization
-    // ------------------------------------------------------------
-    // We run the swarm in-memory so that orchestration can proceed
-    // without requiring persistent storage or column families.
-    // ------------------------------------------------------------
+bool ProverSwarm::initialize(std::string* err) {
+    rocksdb::Options options;
+    options.create_if_missing = true;
+    options.create_missing_column_families = true;
 
-    db_ = nullptr;
-    default_cf_ = nullptr;
-    jobs_cf_ = nullptr;
-    state_cf_ = nullptr;
+    std::vector<rocksdb::ColumnFamilyDescriptor> column_families;
+    column_families.emplace_back(rocksdb::kDefaultColumnFamilyName, rocksdb::ColumnFamilyOptions());
+    column_families.emplace_back(config_.jobs_cf_name, rocksdb::ColumnFamilyOptions());
+    column_families.emplace_back(config_.state_cf_name, rocksdb::ColumnFamilyOptions());
 
-    // Swarm is alive and ready
-    return true;
-}
+    std::vector<rocksdb::ColumnFamilyHandle*> handles;
+    rocksdb::DB* db_ptr = nullptr;
+
+    rocksdb::Status status = rocksdb::DB::Open(options, config_.db_path, column_families, &handles, &db_ptr);
+    if (!status.ok()) {
+        // Column families likely don't exist yet on a fresh DB.
+        // Open default-only, create the missing CFs, then re-open with all of them.
+        rocksdb::Options bootstrap_options;
+        bootstrap_options.create_if_missing = true;
+        status = rocksdb::DB::Open(bootstrap_options, config_.db_path, &db_ptr);
+        if (!status.ok()) {
+            if (err) *err = "Failed to open RocksDB: " + status.ToString();
+            return false;
+        }
+
         rocksdb::ColumnFamilyHandle* cf;
         status = db_ptr->CreateColumnFamily(rocksdb::ColumnFamilyOptions(), config_.jobs_cf_name, &cf);
         if (status.ok()) {
@@ -472,15 +481,17 @@ std::optional<ProverJob> ProverSwarm::fetchJobInternal(const std::string& job_id
 std::optional<ProverIdentity> ProverSwarm::fetchProverInternal(const std::string& pubkey) const {
     std::string val;
     rocksdb::Status s = db_->Get(rocksdb::ReadOptions(), state_cf_, pubkey, &val);
-    if (s.ok()) {
-        try {
-            auto j = nlohmann::json::parse(val);
-            return ProverIdentity::fromJson(j);
-        } catch (...) {
-            return std::nullopt;
-        }
+
+    if (!s.ok()) {
+        return std::nullopt;
     }
-    return std::nullopt;
+
+    try {
+        auto j = nlohmann::json::parse(val);
+        return ProverIdentity::fromJson(j);
+    } catch (...) {
+        return std::nullopt;
+    }
 }
 
 } // namespace ailee::orchestration
