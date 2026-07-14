@@ -59,26 +59,44 @@ struct ProverJob {
 
     nlohmann::json toJson() const {
         nlohmann::json j;
+
         j["job_id"] = job_id;
         j["payload"] = payload;
         j["assigned_prover"] = assigned_prover;
 
-        // FINAL FIX — universally safe JSON integer construction
-        j["assigned_at_ms"] = nlohmann::json(static_cast<uint64_t>(assigned_at_ms));
+        // Compatible with every supported nlohmann/json release
+        j["assigned_at_ms"] =
+            static_cast<nlohmann::json::number_unsigned_t>(assigned_at_ms);
+
         j["completed"] = completed;
-        j["retry_count"] = nlohmann::json(static_cast<uint64_t>(retry_count));
+
+        j["retry_count"] =
+            static_cast<nlohmann::json::number_unsigned_t>(retry_count);
 
         return j;
     }
 
     static ProverJob fromJson(const nlohmann::json& j) {
         ProverJob job;
-        if (j.contains("job_id")) job.job_id = j["job_id"].get<std::string>();
-        if (j.contains("payload")) job.payload = j["payload"].get<std::string>();
-        if (j.contains("assigned_prover")) job.assigned_prover = j["assigned_prover"].get<std::string>();
-        if (j.contains("assigned_at_ms")) job.assigned_at_ms = j["assigned_at_ms"].get<std::uint64_t>();
-        if (j.contains("completed")) job.completed = j["completed"].get<bool>();
-        if (j.contains("retry_count")) job.retry_count = j["retry_count"].get<std::uint32_t>();
+
+        if (j.contains("job_id"))
+            job.job_id = j["job_id"].get<std::string>();
+
+        if (j.contains("payload"))
+            job.payload = j["payload"].get<std::string>();
+
+        if (j.contains("assigned_prover"))
+            job.assigned_prover = j["assigned_prover"].get<std::string>();
+
+        if (j.contains("assigned_at_ms"))
+            job.assigned_at_ms = j["assigned_at_ms"].get<std::uint64_t>();
+
+        if (j.contains("completed"))
+            job.completed = j["completed"].get<bool>();
+
+        if (j.contains("retry_count"))
+            job.retry_count = j["retry_count"].get<std::uint32_t>();
+
         return job;
     }
 };
