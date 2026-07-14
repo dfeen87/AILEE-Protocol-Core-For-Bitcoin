@@ -31,6 +31,11 @@ jobs:
             libsnappy-dev \
             libsecp256k1-dev
 
+      - name: Install Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source $HOME/.cargo/env
+
       - name: Configure
         run: |
           cmake -S . -B build -DBUILD_TESTS=ON
@@ -38,6 +43,7 @@ jobs:
       - name: Build
         run: |
           cmake --build build --config Release --parallel
+
       - name: Test
         run: |
           cmake --build build --target ailee_tests
@@ -82,6 +88,7 @@ jobs:
       - name: Build (Heartbeat Mode)
         run: |
           cmake --build build --config Release --parallel
+
       - name: Test
         run: |
           cmake --build build --target ailee_tests
@@ -89,8 +96,6 @@ jobs:
 
       - name: Ignite Heartbeat
         run: |
-          # Run the deterministic heartbeat-enabled runtime
-          # Use a deterministic WNN tick driver to force phase rollover
           timeout 45s ./build/ailee_node --heartbeat --simulate-wnn --ticks 500 \
             | tee heartbeat_log.txt
 
