@@ -2,9 +2,39 @@
 #include <cstring>
 #include <openssl/sha.h>
 
+#include "protocol/ProtocolFrame.hpp"   // <-- added for signature verification
+
 namespace ailee {
 namespace l3 {
 
+// ---------------------------------------------------------
+// Deterministic signature verification for ProtocolFrame
+// ---------------------------------------------------------
+static bool verify_signature(const ProtocolFrame& pf)
+{
+    // Recreate the signed data exactly as sign_frame() does
+    std::string data = pf.frame_id + pf.type + pf.version +
+                       pf.node_id + std::to_string(pf.timestamp) +
+                       pf.payload;
+
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256(reinterpret_cast<const unsigned char*>(data.data()),
+           data.size(), hash);
+
+    std::string hex;
+    hex.reserve(SHA256_DIGEST_LENGTH * 2);
+    static const char* digits = "0123456789abcdef";
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
+        hex.push_back(digits[(hash[i] >> 4) & 0xF]);
+        hex.push_back(digits[hash[i] & 0xF]);
+    }
+
+    return (hex == pf.signature);
+}
+
+// ---------------------------------------------------------
+// Build outbound gossip message
+// ---------------------------------------------------------
 GossipMessage build_gossip_message(
     const l2::ExecutionEnvelope& envelope,
     const mesh::MeshCoherenceResult& coherence,
@@ -20,7 +50,7 @@ GossipMessage build_gossip_message(
     message.summary.epoch_height = envelope.context.l1_height;
     message.summary.coherence_score = coherence.score;
 
-    // Set healthy flag if coherence score is fully coherent (4)
+    // Healthy flag
     if (coherence.score == 4) {
         message.summary.flags |= GOSSIP_FLAG_HEALTHY;
     }
@@ -28,7 +58,6 @@ GossipMessage build_gossip_message(
     message.sequence_number = current_sequence + 1;
 
     // Compute deterministic message hash
-    // We hash the summary and the sequence number
     uint8_t buffer[sizeof(GossipSummary) + sizeof(uint64_t)];
     std::memcpy(buffer, &message.summary, sizeof(GossipSummary));
     std::memcpy(buffer + sizeof(GossipSummary), &message.sequence_number, sizeof(uint64_t));
@@ -41,16 +70,18 @@ GossipMessage build_gossip_message(
     return message;
 }
 
+// ---------------------------------------------------------
+// Receive inbound gossip message
+// ---------------------------------------------------------
 GossipEnvelope receive_gossip_message(const GossipMessage& message) {
     GossipEnvelope envelope;
     std::memset(&envelope, 0, sizeof(envelope));
 
+    // Copy remote summary
     std::memcpy(&envelope.remote_summary, &message.summary, sizeof(GossipSummary));
     envelope.received_sequence = message.sequence_number;
 
-    // Normalization logic: compute a normalized hash purely from the remote summary
-    // Since we ignore the sequence number for the normalized hash (which represents the state),
-    // it helps identify nodes broadcasting the same state multiple times.
+    // Normalized hash (state-only)
     uint8_t buffer[sizeof(GossipSummary)];
     std::memcpy(buffer, &envelope.remote_summary, sizeof(GossipSummary));
 
@@ -58,6 +89,21 @@ GossipEnvelope receive_gossip_message(const GossipMessage& message) {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     SHA256(buffer, sizeof(buffer), envelope.normalized_hash);
 #pragma GCC diagnostic pop
+
+    // ---------------------------------------------------------
+    // Signature verification (if protocol frame is attached)
+    // ---------------------------------------------------------
+    if (envelope.has_protocol_frame) {
+        const ProtocolFrame& pf = envelope.protocol_frame;
+
+        bool sig_ok = verify_signature(pf);
+
+        if (!sig_ok) {
+            envelope.flags |= GOSSIP_FLAG_INVALID_SIGNATURE;
+        } else {
+            envelope.flags |= GOSSIP_FLAG_VALID_SIGNATURE;
+        }
+    }
 
     return envelope;
 }
