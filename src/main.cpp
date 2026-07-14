@@ -18,6 +18,9 @@
 #include <fstream>
 #include <filesystem>
 
+#include "BroadcastEngine.hpp"
+#include "JsonLoader.hpp"
+
 // Core Protocol Headers
 #include "build_metadata.hpp"
 #include "build/BuildInfo.hpp"
@@ -56,6 +59,16 @@
 // Web Server for HTTP API
 #include "AILEEWebServer.h"
 #include "l4/ClusterSim.h"
+
+// ---------------------------------------------------------
+// Activation Broadcast
+// ---------------------------------------------------------
+void trigger_activation() {
+    Json::Value payload;
+    payload["timestamp"] = (Json::UInt64) std::time(nullptr);
+    payload["node_id"] = "local-node";
+    BroadcastEngine::emit("activation", "v33.2.1", payload);
+}
 
 // ---------------------------------------------------------
 // Enhanced Structured Logging with Levels and File Output
@@ -1092,6 +1105,8 @@ int main(int argc, char* argv[]) {
     std::cout << "AILEE commit hash: " << ailee::build::BuildInfo::getCommitHash() << "\n";
     std::cout << "AILEE build number: " << ailee::build::BuildInfo::getBuildNumber() << "\n";
     std::cout << "AILEE protocol version: " << ailee::build::BuildInfo::getProtocolVersion() << "\n";
+
+    trigger_activation();
 
     // Load and validate configuration
     Config cfg = loadConfigFromEnv();

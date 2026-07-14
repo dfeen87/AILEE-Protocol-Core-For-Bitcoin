@@ -1,0 +1,15 @@
+{
+  "version": "33.2.1",
+  "network": "mainnet",
+  "timestamp": "2026-07-14T07:42:00Z",
+  "node_id": "local-node",
+  "activation": {
+    "type": "protocol_version_activation",
+    "payload": {
+      "swarm_state": "ready",
+      "orchestrator_state": "ready",
+      "zk_pipeline": "mock"
+    }
+  }
+}
+

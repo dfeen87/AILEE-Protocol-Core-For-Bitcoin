@@ -494,6 +494,8 @@ target_link_libraries(ailee_node
         $<IF:$<BOOL:${AILEE_USE_RUST_PROVER}>,ailee_rust_prover,ailee_rust_ffi_fallback>
 )
 
+target_include_directories(ailee_node PRIVATE src/broadcast src/json)
+
 # ============================================================================
 # Rust Prover Integration
 # ============================================================================
