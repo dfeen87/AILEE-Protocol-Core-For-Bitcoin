@@ -417,6 +417,43 @@ double WeightedOrchestrator::scoreNode(const NodeMetrics& node,
     return trustW * trustScore + speedW * latencyScore + powerW * capacityScore;
 }
 
+// ---------------------------------------------------------
+// Mainnet Activation Projection Hook
+// ---------------------------------------------------------
+// After activation is committed locally, we project the activation
+// to all verified mainnet peers using BroadcastEngine.
+// This integrates activation into the mainnet propagation pipeline.
+// ---------------------------------------------------------
+Assignment WeightedOrchestrator::projectActivationToMainnet(
+    const ProtocolFrame& pf,
+    const std::vector<NodeMetrics>& candidates,
+    MainnetDiscovery* discovery) const
+{
+    // Step 1: Perform handshake + commit using existing logic
+    auto assignment = assignFromActivationFrame(pf, candidates);
+    if (!assignment.assigned) {
+        // If activation fails locally, do NOT project it
+        return assignment;
+    }
+
+    // Step 2: Only project if discovery subsystem is available
+    if (!discovery) {
+        return assignment;
+    }
+
+    // Step 3: Build minimal projection payload
+    Json::Value payload;
+    payload["frame_id"] = pf.frame_id;
+    payload["node_id"]  = pf.node_id;
+    payload["type"]     = pf.type;
+    payload["version"]  = pf.version;
+
+    // Step 4: Emit projection to all verified mainnet peers
+    BroadcastEngine::emit("activation_projection", pf.version, payload);
+
+    return assignment;
+}
+
 std::vector<NodeMetrics> WeightedOrchestrator::filterCandidates(
     const std::vector<NodeMetrics>& candidates,
     const TaskPayload& task) const {
