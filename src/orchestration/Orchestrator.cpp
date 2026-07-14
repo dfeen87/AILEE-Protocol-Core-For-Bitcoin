@@ -465,7 +465,7 @@ double WeightedOrchestrator::scoreNode(const NodeMetrics& node,
 Assignment WeightedOrchestrator::projectActivationToMainnet(
     const ProtocolFrame& pf,
     const std::vector<NodeMetrics>& candidates,
-    MainnetDiscovery* discovery) const
+    MainnetDiscovery* discovery)
 {
     // Step 1: Perform handshake + commit using existing logic
     auto assignment = assignFromActivationFrame(pf, candidates);

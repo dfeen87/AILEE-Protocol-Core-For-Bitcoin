@@ -18,28 +18,10 @@ void bind_mainnet_discovery_gossip(MainnetDiscovery* d) {
 }
 
 // ---------------------------------------------------------
-// Deterministic signature verification for ProtocolFrame
+// NOTE: Signature verification for ProtocolFrame is no longer handled at L3.
+// GossipEnvelope does not carry ProtocolFrame. This logic has been retired
+// and will be reintroduced at a higher orchestration layer if needed.
 // ---------------------------------------------------------
-static bool verify_signature(const ProtocolFrame& pf)
-{
-    std::string data = pf.frame_id + pf.type + pf.version +
-                       pf.node_id + std::to_string(pf.timestamp) +
-                       pf.payload;
-
-    unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256(reinterpret_cast<const unsigned char*>(data.data()),
-           data.size(), hash);
-
-    std::string hex;
-    hex.reserve(SHA256_DIGEST_LENGTH * 2);
-    static const char* digits = "0123456789abcdef";
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
-        hex.push_back(digits[(hash[i] >> 4) & 0xF]);
-        hex.push_back(digits[hash[i] & 0xF]);
-    }
-
-    return (hex == pf.signature);
-}
 
 // ---------------------------------------------------------
 // Build outbound gossip message
@@ -91,10 +73,13 @@ GossipEnvelope receive_gossip_message(const GossipMessage& message)
     // Preserve sequence number
     envelope.received_sequence = message.sequence_number;
 
-    // Normalize hash (for now, just copy message_hash)
-    std::memcpy(envelope.normalized_hash,
-                message.message_hash,
-                sizeof(envelope.normalized_hash));
+    // Normalize hash (hash of just the summary, ignores sequence number)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+    SHA256(reinterpret_cast<const unsigned char*>(&envelope.remote_summary),
+           sizeof(GossipSummary),
+           envelope.normalized_hash);
+#pragma GCC diagnostic pop
 
     // Initialize flags
     envelope.flags = 0;

@@ -4,7 +4,7 @@
 #include <json/json.h>
 
 #include "network/MainnetDiscovery.hpp"
-#include "network/NetworkBinding.hpp"
+#include "l3/NetworkBinding.h"
 
 class BroadcastEngine {
 public:
@@ -12,11 +12,11 @@ public:
                      const std::string& version,
                      const Json::Value& payload);
 
-    static void bind(NetworkBinding* binding);
+    static void bind(ailee::l3::NetworkBinding* binding);
     static void bindDiscovery(MainnetDiscovery* discovery);
 
 private:
-    static NetworkBinding* net;
+    static ailee::l3::NetworkBinding* net;
     static MainnetDiscovery* discovery;
 };
 

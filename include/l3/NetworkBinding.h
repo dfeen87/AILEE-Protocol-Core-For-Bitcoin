@@ -12,18 +12,15 @@ struct NetworkBlockSnapshot;
 struct NetworkMempoolSnapshot;
 struct NetworkPeerSnapshot;
 
-// Forward declarations for bind_network_* result types
-namespace reflection {
-    struct ReflectionSnapshot;
-}
+} // namespace l3
+} // namespace ailee
 
-namespace l1 {
-    struct SettlementIngestion;
-}
+#include "ReflectionLayer.h"
+#include "SettlementIngestion.h"
+#include "MeshCoherence.h"
 
-namespace mesh {
-    struct MeshCoherenceResult;
-}
+namespace ailee {
+namespace l3 {
 
 // ---------------------------------------------------------
 // RemotePeerRoute

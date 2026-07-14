@@ -11,6 +11,9 @@
 namespace ailee {
 namespace l2 {
 
+// NOTE: This header is intentionally disabled.
+// Canonical ExecutionEnvelope is defined in include/l2/ExecutionContext.h.
+#if 0
 struct ExecutionEnvelope {
     // Minimal placeholder fields
     std::string envelopeId;
@@ -19,6 +22,7 @@ struct ExecutionEnvelope {
     // Minimal placeholder method
     bool validate() const { return true; }
 };
+#endif
 
 } // namespace l2
 } // namespace ailee
