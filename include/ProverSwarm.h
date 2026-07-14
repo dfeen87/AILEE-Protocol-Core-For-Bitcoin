@@ -63,10 +63,11 @@ struct ProverJob {
         j["payload"] = payload;
         j["assigned_prover"] = assigned_prover;
 
-        // FINAL FIX — universally safe JSON integer construction
-        j["assigned_at_ms"] = nlohmann::json(static_cast<uint64_t>(assigned_at_ms));
+        // Direct assignment avoids ambiguous overload resolution that occurs
+        // when wrapping the value in a functional-style nlohmann::json(...) cast.
+        j["assigned_at_ms"] = assigned_at_ms;
         j["completed"] = completed;
-        j["retry_count"] = nlohmann::json(static_cast<uint64_t>(retry_count));
+        j["retry_count"] = retry_count;
 
         return j;
     }
