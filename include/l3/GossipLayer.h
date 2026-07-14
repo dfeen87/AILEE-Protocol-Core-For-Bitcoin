@@ -8,15 +8,14 @@ namespace ailee {
 namespace l3 {
 
 // ---------------------------------------------------------
-// Gossip flags (signature + health)
+// Gossip flags (health + signature)
 // ---------------------------------------------------------
-constexpr uint32_t GOSSIP_FLAG_HEALTHY          = 1 << 0;
-constexpr uint32_t GOSSIP_FLAG_STALE            = 1 << 1;
-constexpr uint32_t GOSSIP_FLAG_NEEDS_RECOVERY   = 1 << 2;
+constexpr uint32_t GOSSIP_FLAG_HEALTHY            = 1 << 0;
+constexpr uint32_t GOSSIP_FLAG_STALE              = 1 << 1;
+constexpr uint32_t GOSSIP_FLAG_NEEDS_RECOVERY     = 1 << 2;
 
-// NEW — signature validation flags
-constexpr uint32_t GOSSIP_FLAG_INVALID_SIGNATURE = 1 << 3;   // NEW
-constexpr uint32_t GOSSIP_FLAG_VALID_SIGNATURE   = 1 << 4;   // NEW
+constexpr uint32_t GOSSIP_FLAG_INVALID_SIGNATURE  = 1 << 3;   // NEW
+constexpr uint32_t GOSSIP_FLAG_VALID_SIGNATURE    = 1 << 4;   // NEW
 
 // ---------------------------------------------------------
 // GossipSummary (unchanged)
@@ -52,8 +51,7 @@ struct alignas(64) GossipEnvelope {
     uint8_t normalized_hash[32];
     uint8_t padding[24];
 
-    // NEW — signature validation flags
-    uint32_t flags = 0;             // NEW
+    uint32_t flags = 0;             // NEW — required by GossipLayer.cpp
 };
 static_assert(sizeof(GossipEnvelope) == 192, "GossipEnvelope must be 192 bytes");
 
