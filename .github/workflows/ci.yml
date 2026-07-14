@@ -70,6 +70,11 @@ jobs:
             libsnappy-dev \
             libsecp256k1-dev
 
+      - name: Install Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source $HOME/.cargo/env
+
       - name: Configure (Heartbeat Mode)
         run: |
           cmake -S . -B build -DENABLE_HEARTBEAT=ON -DBUILD_TESTS=ON
