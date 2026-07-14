@@ -474,6 +474,25 @@ set(SWARM_SOURCES
     src/orchestration/SwarmRuntime.cpp
 )
 
+# ---------------------------------------------------------
+# Protocol Layer Sources
+# ---------------------------------------------------------
+set(PROTOCOL_SOURCES
+    src/protocol/AmbientProtocol.cpp
+    src/protocol/ConsensusRules.cpp
+    src/protocol/StateTransition.cpp
+    ${PROTOCOL_SOURCES}
+    src/protocol/ProtocolFrame.cpp       # <-- ADD HERE
+)
+
+set(PROTOCOL_HEADERS
+    src/protocol/AmbientProtocol.hpp
+    src/protocol/ConsensusRules.hpp
+    src/protocol/StateTransition.hpp
+    ${PROTOCOL_HEADERS}
+    src/protocol/ProtocolFrame.hpp       # <-- ADD HERE
+)
+
 # ============================================================================
 # Build Targets
 # ============================================================================
