@@ -304,6 +304,9 @@ public:
           shutdownCalled_(false)
     {
         log(LogLevel::INFO, "AILEE Engine initializing with node ID: " + cfg_.nodeId);
+
+        // Initialize persistent storage (backs Gold Bridge, and available to other subsystems)
+        initStorage();
         
         // Initialize orchestration engine if enabled
         if (cfg_.enableOrchestration) {
@@ -466,7 +469,7 @@ public:
         log(LogLevel::INFO, "Testing Bitcoin-to-Gold Bridge protocol");
 
         try {
-            ailee::GoldBridge bridge;
+            ailee::GoldBridge bridge(storage_.get());
             std::string user = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa";
             uint64_t btcAmount = 500000000; // 5 BTC
 
@@ -738,6 +741,7 @@ private:
     std::thread tick_thread_;
     std::atomic<bool> tick_running_{false};
     ailee_netflow::HybridNetFlow netFlow_;
+    std::unique_ptr<ailee::storage::PersistentStorage> storage_;
     std::unique_ptr<ailee::sched::Engine> orchestrationEngine_;
     std::unique_ptr<ailee::AILEEWebServer> webServer_;
     std::unique_ptr<ailee::l2::BlockProducer> blockProducer_;
@@ -749,6 +753,24 @@ private:
     
     ailee::BreakerState breakerState_;
     uint64_t breakerTestBlockHeight_ = 1;
+
+    void initStorage() {
+        try {
+            std::filesystem::create_directories("data");
+
+            ailee::storage::PersistentStorage::Config storageConfig;
+            storageConfig.dbPath = "data/ailee_gold_bridge_db";
+            storageConfig.createIfMissing = true;
+
+            storage_ = std::make_unique<ailee::storage::PersistentStorage>(storageConfig);
+
+            log(LogLevel::INFO, "PersistentStorage initialized at " + storageConfig.dbPath);
+        } catch (const std::exception& e) {
+            log(LogLevel::ERROR, "Failed to initialize PersistentStorage: " + std::string(e.what()) +
+                " (Gold Bridge and other storage-backed features will be unavailable)");
+            storage_.reset();
+        }
+    }
 
     void initZMQListener() {
         try {
