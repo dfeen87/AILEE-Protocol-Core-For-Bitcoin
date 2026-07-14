@@ -401,6 +401,7 @@ set(INFRASTRUCTURE_SOURCES
     src/network/P2PNetwork.cpp
     src/network/LogicalClock.cpp
     src/network/ReputationRateLimiter.cpp
+    src/network/MainnetDiscovery.cpp
     src/orchestration/DistributedTaskProtocol.cpp
     src/metrics/PrometheusExporter.cpp
     src/build/BuildInfo.cpp
@@ -639,6 +640,8 @@ add_executable(ailee_l2_verify
     src/l3/NetworkDriver.cpp
     src/l1/AnchorCommitment.cpp
     src/l2/L2State.cpp
+    src/network/MainnetDiscovery.cpp
+    src/protocol/ProtocolFrame.cpp
 )
 
 target_link_libraries(ailee_l2_verify

@@ -47,11 +47,12 @@ static_assert(sizeof(GossipMessage) == 192, "GossipMessage must be 192 bytes");
 // ---------------------------------------------------------
 struct alignas(64) GossipEnvelope {
     GossipSummary remote_summary;   // 128 bytes
-    uint64_t received_sequence;
-    uint8_t normalized_hash[32];
-    uint8_t padding[24];
+    uint64_t received_sequence;     // 8 bytes
+    uint8_t normalized_hash[32];    // 32 bytes
 
-    uint32_t flags = 0;             // NEW — required by GossipLayer.cpp
+    // 24 bytes remaining for 192 bytes total
+    uint32_t flags;                 // 4 bytes
+    uint8_t padding[20];            // 20 bytes padding
 };
 static_assert(sizeof(GossipEnvelope) == 192, "GossipEnvelope must be 192 bytes");
 

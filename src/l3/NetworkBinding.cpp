@@ -1,8 +1,8 @@
 #include "l3/NetworkBinding.h"
 #include "l3/NetworkDriver.h"        // for Network*Snapshot definitions
 #include "SettlementIngestion.h"     // for l1::SettlementIngestion
-#include "mesh/MeshCoherence.h"      // for mesh::MeshCoherenceResult
-#include "reflection/Reflection.h"   // for reflection::ReflectionSnapshot
+#include "MeshCoherence.h"           // for mesh::MeshCoherenceResult
+#include "ReflectionLayer.h"         // for reflection::ReflectionSnapshot
 
 #include <cstring>
 #include <algorithm>
@@ -41,6 +41,19 @@ void NetworkBinding::broadcastTo(const std::string& address,
     // In a real system, this would be a QUIC/libp2p/TCP send.
     // For now, this is a stub that preserves architecture.
     (void)address;
+    (void)data;
+}
+
+std::string NetworkBinding::localNodeId() const {
+    return local_id_;
+}
+
+std::string NetworkBinding::serializeFrame(const ProtocolFrame& pf) const {
+    return serialize_frame(pf);
+}
+
+void NetworkBinding::broadcast(const std::string& data) {
+    // Stub
     (void)data;
 }
 

@@ -20,6 +20,7 @@
 #include <condition_variable>
 #include <future>
 #include "ProverSwarm.h"
+#include "protocol/ProtocolFrame.hpp"
 
 namespace ailee::sched {
 
@@ -563,6 +564,13 @@ public:
 
     std::vector<Assignment> assignParallel(const std::vector<TaskPayload>& tasks,
                                            const std::vector<NodeMetrics>& candidates) const;
+
+    Assignment assignFromActivationFrame(const ProtocolFrame& pf,
+                                         const std::vector<NodeMetrics>& candidates);
+
+    Assignment projectActivationToMainnet(const ProtocolFrame& pf,
+                                          const std::vector<NodeMetrics>& candidates,
+                                          class MainnetDiscovery* discovery);
     std::vector<std::pair<std::string, double>> rankCandidates(
         const TaskPayload& task,
         const std::vector<NodeMetrics>& candidates) const;

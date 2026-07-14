@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include "l2/ExecutionContext.h"      // use canonical ExecutionEnvelope
 #include "l3/GossipLayer.h"
 #include "network/MainnetDiscovery.hpp"

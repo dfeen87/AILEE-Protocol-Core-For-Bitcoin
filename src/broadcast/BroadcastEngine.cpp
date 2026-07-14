@@ -4,37 +4,14 @@
 #include <openssl/sha.h>
 #include <chrono>
 
-NetworkBinding* BroadcastEngine::net = nullptr;
+ailee::l3::NetworkBinding* BroadcastEngine::net = nullptr;
 MainnetDiscovery* BroadcastEngine::discovery = nullptr;
 
-// ---------------------------------------------------------
-// Deterministic frame signing (matches PeerSync + Orchestrator)
-// ---------------------------------------------------------
-static std::string sign_frame(const ProtocolFrame& pf)
-{
-    std::string data = pf.frame_id + pf.type + pf.version +
-                       pf.node_id + std::to_string(pf.timestamp) +
-                       pf.payload;
-
-    unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256(reinterpret_cast<const unsigned char*>(data.data()),
-           data.size(), hash);
-
-    std::string hex;
-    hex.reserve(SHA256_DIGEST_LENGTH * 2);
-    static const char* digits = "0123456789abcdef";
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
-        hex.push_back(digits[(hash[i] >> 4) & 0xF]);
-        hex.push_back(digits[hash[i] & 0xF]);
-    }
-
-    return hex;
-}
 
 // ---------------------------------------------------------
 // Bindings
 // ---------------------------------------------------------
-void BroadcastEngine::bind(NetworkBinding* binding) {
+void BroadcastEngine::bind(ailee::l3::NetworkBinding* binding) {
     net = binding;
 }
 
