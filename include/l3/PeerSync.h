@@ -1,7 +1,7 @@
 #pragma once
 
 #include "l2/ExecutionEnvelope.h"
-#include "l3/GossipEnvelope.h"
+#include "l3/GossipLayer.h"
 #include "network/MainnetDiscovery.hpp"   // <-- added
 
 namespace ailee {
