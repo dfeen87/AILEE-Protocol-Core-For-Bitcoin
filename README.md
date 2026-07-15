@@ -1013,7 +1013,7 @@ Welcome to email me at Dfeen87@Outlook.com
 
 ## AILEE Runtime Protocol Research Project
 
-The AILEE Runtime Protocol Research Project is a scientific infrastructure organization dedicated to advancing deterministic execution, operator‑level reproducibility, and audit‑anchored computational science. Its core artifact — the AILEE Runtime Protocol (ARP) — provides a mathematically constrained execution substrate designed to eliminate nondeterminism across distributed, scientific, and computational workflows.
+The AILEE Runtime Protocol Research Project is a scientific infrastructure organization dedicated to advancing deterministic execution, operator‑level reproducibility, and audit‑anchored computational science. Its core artifact — the AILEE Runtime Protocol (ARP) — provides a mathematically constrained execution substrate designed to eliminate nondeterminism across distributed, scientific, and computational workflows. AILEE‑Runtime Protocol is a system that uses Bitcoin Main Net for orchestration delivering deterministic off‑chain computation, verifiable state transitions, federated learning coordination, and Bitcoin‑anchored recovery guarantees, all operating under explicit and auditable trust assumptions, to help sync architectures with Governance.
 
 The AILEE Runtime Protocol Research Project is built on a deterministic runtime architecture defined by three core pillars:
 
