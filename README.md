@@ -15,13 +15,77 @@
 
 Current Version number: 33.4
 
+## 📑 Table of Contents
+- [🎯 Overview](#-overview)
+- [⚠️ Protocol Status & Safety Notice](#-protocol-status-safety-notice)
+- [Building the AILEE-Runtime-Protocol (Full Terminal Guide + External Module Requirements)](#building-the-ailee-runtime-protocol-full-terminal-guide--external-module-requirements)
+  - [Step 1 — Clone the repository](#step-1-clone-the-repository)
+  - [Step 2 — Create a build directory](#step-2-create-a-build-directory)
+  - [Step 3 — Configure the project](#step-3-configure-the-project)
+  - [Step 4 — Build the runtime](#step-4-build-the-runtime)
+  - [Step 5 — Run the runtime](#step-5-run-the-runtime)
+- [Executable Name & System Entrypoint](#executable-name-system-entrypoint)
+  - [`./protocol-node`](#protocol-node)
+- [Understanding Placeholder Modules](#understanding-placeholder-modules)
+- [Required External Modules (You Must Build These)](#required-external-modules-you-must-build-these)
+  - [Required External Files / Modules](#required-external-files-modules)
+- [Designing Your Broadcast Subsystem](#designing-your-broadcast-subsystem)
+- [Designing Your WebServer Subsystem](#designing-your-webserver-subsystem)
+- [Unified Clock Synchronization Through Bitcoin](#unified-clock-synchronization-through-bitcoin)
+- [Order‑of‑Operations in the Runtime](#orderofoperations-in-the-runtime)
+- [Why External Modules Are Not Included](#why-external-modules-are-not-included)
+- [Summary](#summary)
+- [Capabilities for Cloners and Integrators](#capabilities-for-cloners-and-integrators)
+- [Files Required for Real‑Time External Communication](#files-required-for-realtime-external-communication)
+- [Deterministic Release & Wave Native Network Integration](#deterministic-release-wave-native-network-integration)
+  - [Wave Native Network (WNN) Integration](#wave-native-network-wnn-integration)
+  - [V12 Reproducibility Package](#v12-reproducibility-package)
+  - [Canonical Artifacts & Epoch Roots](#canonical-artifacts-epoch-roots)
+  - [V12 Verification Script (`verifyv12.sh`)](#v12-verification-script-verifyv12sh)
+  - [Why This Matters](#why-this-matters)
+- [✨ Some other Key Features](#-some-other-key-features)
+  - [🛡️ Reorg Detection](#-reorg-detection)
+  - [🧠 Ambient AI Orchestration](#-ambient-ai-orchestration)
+  - [⛓️ Bitcoin Layer-2 Infrastructure](#-bitcoin-layer-2-infrastructure)
+  - [🌐 Web & API Integration](#-web-api-integration)
+- [🧪 Testing & Validation](#-testing-validation)
+- [🏗️ Architecture](#-architecture)
+  - [The Three-Pillar Architecture](#the-three-pillar-architecture)
+  - [Formalized Temporal Pipeline (V32 Protocol Specification)](#formalized-temporal-pipeline-v32-protocol-specification)
+  - [Orchestration Pipeline Overview](#orchestration-pipeline-overview)
+  - [Design Principles & Protocol Guarantees](#design-principles-protocol-guarantees)
+- [🔐 Security Model](#-security-model)
+  - [✅ Explicit Federated Model](#-explicit-federated-model)
+- [⚠️ What This Is NOT](#-what-this-is-not)
+- [🛠️ Technology Stack](#-technology-stack)
+  - [Core Infrastructure (C++)](#core-infrastructure-c)
+  - [REST API (Python)](#rest-api-python)
+- [🌍 Community & Support](#-community-support)
+  - [Get Help](#get-help)
+  - [Citation](#citation)
+- [Acknowledgments](#acknowledgments)
+- [AILEE Core Heartbeat System (Protocol Runtime)](#ailee-core-heartbeat-system-protocol-runtime)
+  - [Deterministic Execution & Bitcoin-Anchored Recovery](#deterministic-execution-bitcoin-anchored-recovery)
+- [Deterministic Guarantees Introduced in V13 (Heartbeat Release)](#deterministic-guarantees-introduced-in-v13-heartbeat-release)
+  - [1. Deterministic Wave‑Phase Boundaries (Eliminating Local Timing Drift)](#1-deterministic-wavephase-boundaries-eliminating-local-timing-drift)
+  - [2. Canonical Deterministic Execution Replays](#2-canonical-deterministic-execution-replays)
+  - [3. Bitcoin‑Anchored Recovery & Deterministic Rebuild Pathways](#3-bitcoinanchored-recovery-deterministic-rebuild-pathways)
+- [1. Recursive Zero‑Knowledge State Compression (V33 Recursion Layer)](#1-recursive-zeroknowledge-state-compression-v33-recursion-layer)
+- [2. Deterministic Taproot Anchoring Engine (V33 Anchor Layer)](#2-deterministic-taproot-anchoring-engine-v33-anchor-layer)
+- [3. Isla Mode Autonomous Heuristic Engine (V33 Isla Layer)](#3-isla-mode-autonomous-heuristic-engine-v33-isla-layer)
+- [📄 License](#-license)
+- [🙏 Closing Reflection](#-closing-reflection)
+
 ---
+
 
 ## 🎯 Overview
 
 **AILEE. Sometimes referred to as AILEE Core** is a Bitcoin Layer‑2 orchestration and verification framework that provides deterministic off‑chain computation, state‑integrity validation, and federated learning coordination. It extends Bitcoin’s capabilities through a recovery‑first design and **ambient intelligence** that remains strictly advisory, ensuring temporal insight without altering Bitcoin’s consensus rules.
 
 > AILEE‑Core operates as a governed execution environment: the **Governor** establishes deterministic heartbeat, the **Auditor** enforces temporal coherence, the **Energy Resilience Layer** stabilizes runtime behavior, and **IAO** provides forward‑looking orchestration while preserving strict determinism.
+
+> *With the core components established, it is essential to understand the current maturity and safe deployment boundaries of the AILEE protocol.* 🛡️
 
 ## ⚠️ Protocol Status & Safety Notice
 
@@ -60,6 +124,10 @@ However, before mainnet fund custody or production‑grade deployment, several h
 The AILEE‑Runtime‑Protocol V12 is a **protocol‑grade deterministic release**, but **not yet a mainnet‑ready financial system**.
 
 > “AILEE‑Runtime‑Protocol is not a prototype anymore — but it is not a custodial mainnet system.”
+
+---
+
+> *Having established the protocol's guarantees and safety guidelines, the next step is getting the system running in your own environment.* 🛠️
 
 ---
 
@@ -130,6 +198,10 @@ This launches the deterministic execution engine.
 
 ---
 
+> *Once compiled, the protocol's system bootloader takes over. How you invoke this executable defines the role of your node.* 🚀
+
+---
+
 ## **Executable Name & System Entrypoint**
 
 The AILEE‑Runtime‑Protocol ships with a single system entrypoint — the executable that launches the entire deterministic protocol environment. While many runtimes use a generic name like `./runtime`, this protocol is **multi‑module**, **deterministic**, and **system‑level**, meaning the executable represents more than a simple runtime loop.
@@ -164,6 +236,10 @@ Regardless of the chosen name, the executable represents the **full protocol boo
 
 ---
 
+> *While the core deterministic engine is fully functional, AILEE is designed for enterprise integration. Certain components are intentionally left open for customization.* 🧩
+
+---
+
 ## **Understanding Placeholder Modules**
 
 The repository intentionally includes **placeholder references** for:
@@ -195,6 +271,10 @@ But **your organization must implement the external communication layer**.
 
 ---
 
+> *To bridge the gap between the deterministic L2 substrate and the outside world, you will need to implement specific external handlers tailored to your architecture.* 🏗️
+
+---
+
 ## **Required External Modules (You Must Build These)**
 
 Below is the list of modules **not provided** by the repo, because they must be customized by each entity.
@@ -221,6 +301,10 @@ The runtime provides the **deterministic substrate**, not the external communica
 
 ---
 
+> *One of the most critical external modules is the broadcast subsystem, responsible for anchoring state directly to the Bitcoin network.* 📡
+
+---
+
 ## **Designing Your Broadcast Subsystem**
 
 Your broadcast subsystem must:
@@ -244,6 +328,10 @@ The repo provides **placeholder references**, but **you must implement the logic
 
 ---
 
+> *Alongside Bitcoin network integration, your node will likely need to expose APIs to users and internal services.* 🌐
+
+---
+
 ## **Designing Your WebServer Subsystem**
 
 Your webserver must:
@@ -261,6 +349,10 @@ This ensures:
 - corporate systems can use their own HTTP stack  
 - independent developers can use lightweight servers  
 - institutions can use hardened infrastructure  
+
+---
+
+> *To maintain strict determinism across all these interacting subsystems, AILEE utilizes Bitcoin itself as a universal timing anchor.* ⏱️
 
 ---
 
@@ -285,6 +377,10 @@ Your external modules must integrate with this subsystem.
 
 ---
 
+> *With time synchronized and external modules attached, the protocol boot sequence follows a highly structured flow to ensure absolute reproducibility.* 🔄
+
+---
+
 ## **Order‑of‑Operations in the Runtime**
 
 The deterministic runtime follows a strict sequence:
@@ -304,6 +400,10 @@ This order ensures reproducibility across:
 - architectures  
 - environments  
 - distributed systems  
+
+---
+
+> *You might wonder why these critical modules aren't shipped out-of-the-box. The answer lies in the protocol's multi-use, flexible design philosophy.* 💡
 
 ---
 
@@ -331,6 +431,10 @@ This is intentional.
 
 ---
 
+> *To distill the architecture: AILEE provides the deterministic core, while you provide the interfaces.* 📝
+
+---
+
 ## **Summary**
 
 The **AILEE‑Runtime‑Protocol** provides:
@@ -350,6 +454,10 @@ You must provide:
 - unified clock clients
 
 When both your files and this repos MIT Licensed files, cloners can communicate freely with hardware and internet technologies, your entities will be able to do a variety of things.
+
+---
+
+> *By combining the AILEE deterministic core with your custom external modules, a vast array of powerful use cases becomes possible.* 🚀
 
 ---
 
@@ -426,6 +534,10 @@ This ensures the protocol can be adopted across industries without forcing a sin
 
 ---
 
+> *For quick reference, here is the exact checklist of interface files you will need to construct for a production deployment.* 📋
+
+---
+
 ## **Files Required for Real‑Time External Communication**
 
 Cloners must implement the following files to enable real‑time communication, mainnet interaction, and unified clock synchronization:
@@ -442,6 +554,10 @@ Cloners must implement the following files to enable real‑time communication, 
 
 These files are intentionally **not** included in the repository.  
 They must be designed by the entity adopting the protocol.
+
+---
+
+> *Underpinning all of these capabilities is our most significant advancement: true bit-for-bit determinism and Wave Native synchronization.* 🌊
 
 ---
 
@@ -493,6 +609,10 @@ V12 and WNN together forge an unbreakable chain of deterministic execution. In d
 
 ---
 
+> *Beyond reproducibility and temporal stability, the AILEE Core ecosystem offers several advanced built-in functionalities out of the box.* ✨
+
+---
+
 ## ✨ Some other Key Features
 
 ### 🛡️ Reorg Detection
@@ -517,6 +637,10 @@ V12 and WNN together forge an unbreakable chain of deterministic execution. In d
 - **REST API**: FastAPI-based production server with OpenAPI docs.
 - **Web Dashboard**: Real-time monitoring interface.
 - **Health Checks**: Built-in monitoring and observability.
+
+---
+
+> *A deterministic system is only as strong as its tests. We place immense emphasis on rigorous verification.* 🧪
 
 ---
 
@@ -563,7 +687,19 @@ Before any real‑world deployment—especially in environments involving financ
 
 ---
 
+
+
+> *To conceptualize how all these moving parts fit together, let's look at the high-level system architecture and temporal pipeline.* 🏗️
+
+---
+
 ## 🏗️ Architecture
+
+AILEE is designed as a deterministic Layer-2 protocol that enhances Bitcoin's capabilities without altering its base layer consensus.
+
+### Formalized Temporal Pipeline (V32 Protocol Specification)
+
+The strict deterministic operations of AILEE-Core run on a highly formalized sequential pipeline, enforcing how time, execution, and state coherence are handled across the network.
 
 <div align="center">
 
@@ -610,27 +746,36 @@ Before any real‑world deployment—especially in environments involving financ
 
 </div>
 
-### Temporal Architecture Components
+#### Temporal Architecture Components
 
-- **V28 Governor:** Provides deterministic parameter adjustment and protocol governance, computing absolute bounds from fixed baselines to prevent drift over multi-epoch cycles.
-- **V29 Auditor:** Ensures multi-epoch temporal coherence through strict, reproducible metric validations. It mathematically scores state transitions over rolling windows to enforce stability.
-- **V30 Energy Resilience Layer (ERL):** Manages Byzantine node resilience and resource allocation deterministically, penalizing unstable actors while ensuring protocol progression under adverse conditions.
-- **V31 Intelligence‑Assisted Orchestration (IAO):** Drives the high-level scheduling and execution of epochs, seamlessly integrating state transitions with deterministic ZK proofs and anchored commitments.
+As formalized in the V32 Protocol standard, the execution flow is strictly segmented:
+
+- **V28 Governor (Ingress & Boundaries):** Establishes the absolute bounds of the protocol from fixed baselines. It provides deterministic parameter adjustment and protocol governance, preventing multi-epoch drift. Heartbeats are triggered purely by mathematical wave-phase rollovers.
+- **V29 Auditor (Verification & Coherence):** Ensures multi-epoch temporal coherence through strict, reproducible metric validations. It mathematically scores state transitions over rolling windows to enforce stability.
+- **V30 Energy Resilience Layer [ERL] (Stabilization):** Manages Byzantine node resilience and resource allocation deterministically. It penalizes unstable actors while ensuring protocol progression under adverse conditions.
+- **V31 Intelligence‑Assisted Orchestration [IAO] (Projection & Execution):** Drives the high-level scheduling and execution of epochs. It integrates state transitions with deterministic ZK proofs and anchored commitments.
 
 ### Orchestration Pipeline Overview
 
 The complete temporal architecture of AILEE‑Core functions as a cohesive pipeline (Governor → Auditor → ERL → IAO):
-1. **Governor:** Sets deterministic thresholds and bounds for the protocol.
+1. **Governor:** Sets deterministic thresholds and bounds for the protocol based strictly on wave-phase boundary triggers.
 2. **Auditor:** Scrutinizes ongoing epochs against these bounds for temporal coherence and stability.
 3. **ERL:** Evaluates node participation and enforces energy-efficient, resilient execution constraints based on Auditor feedback.
 4. **IAO:** Orchestrates the final epoch execution, ensuring the transition yields a canonical state root ready for anchoring.
 
-### Design Principles
+Within this sequence operates **Isla Mode** — a deterministic heuristic engine bridging the ERL and IAO. Isla Mode provides forward-looking, advisory temporal insight to optimize proof schedules, acting as a pure mathematical function of historical states without relying on non-reproducible external variables.
 
-- **Determinism:** Bit-for-bit reproducible execution across all architectures, stripping away local timing and scheduler ambiguity.
+### Design Principles & Protocol Guarantees
+
+- **Determinism:** Bit-for-bit reproducible execution across all architectures, stripping away local timing and scheduler ambiguity. Identical initial states and inputs yield identical outputs.
 - **Temporal Coherence:** Anchoring network actions to globally synchronized, phase-coherent boundaries rather than local wall-clock timers.
 - **Auditable Trust Assumptions:** Explicit, verifiable dependencies mapped to deterministic zero-knowledge proofs and cryptographic commitments.
-- **Forward‑Looking Orchestration:** Autonomous, deterministic parameter tuning that adapts to changing network states without losing historical lineage.
+- **Forward‑Looking Orchestration:** Autonomous, deterministic parameter tuning (Isla Mode) that adapts to changing network states without losing historical lineage.
+- **Canonical Roots:** Every completed epoch produces a universally agreed-upon SHA-256 hash representing the complete L2 state.
+- **Developer Tooling Suite:** V32 introduces strict verification tools (`build_verifier.py`, `epoch_inspector.py`, `state_root_comparator.py`) ensuring build hashes, receipt hashes, and replay paths are perfectly reproducible.
+
+
+> *Of course, none of this infrastructure matters without a rigorous, federated security model protecting state transitions and L1 anchoring.* 🔐
 
 ---
 
@@ -655,12 +800,20 @@ The AILEE‑Runtime‑Protocol is secure to clone and implement because its core
 
 ---
 
+> *To avoid misconceptions, it is equally important to define what AILEE-Core explicitly does not attempt to be.* 🚫
+
+---
+
 ## ⚠️ What This Is NOT
 
 AILEE-Core is **NOT**:
 - ❌ A replacement for Bitcoin
 - ❌ A consensus-changing protocol
 - ❌ A trustless rollup (it is a federated sidechain)
+
+---
+
+> *Powering this entire ecosystem is a robust, high-performance technology stack centered around modern C++ and Python.* 🛠️
 
 ---
 
@@ -679,6 +832,10 @@ AILEE-Core is **NOT**:
 ### REST API (Python)
 - **Framework**: FastAPI (async, production-ready)
 - **Server**: Uvicorn (ASGI server)
+
+---
+
+> *Building this future is a collaborative effort. We welcome your contributions, feedback, and academic engagement.* 🤝
 
 ---
 
