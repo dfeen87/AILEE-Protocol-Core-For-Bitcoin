@@ -674,40 +674,43 @@ private:
             }
         });
 
-        // 5. Mainnet broadcast endpoint
-        server_->Post("/api/broadcast/mainnet", [this](const httplib::Request& req, httplib::Response& res) {
-            json response;
+        /// 5. Mainnet broadcast endpoint
+server_->Post("/api/broadcast/mainnet",
+    [this](const httplib::Request& /*req*/, httplib::Response& res) {
+        json response;
 
-            try {
-                if (!block_producer_) {
-                    res.status = 503;
-                    response = {
-                        {"error", "Service Unavailable"},
-                        {"message", "BlockProducer not initialized"}
-                    };
-                    res.set_content(response.dump(), "application/json");
-                    return;
-                }
-
-                std::cout << "[WebServer] Mainnet broadcast requested" << std::endl;
-                block_producer_->broadcastLatestBlockToMainnet();
-
+        try {
+            if (!block_producer_) {
+                res.status = 503;
                 response = {
-                    {"status", "ok"},
-                    {"message", "Mainnet broadcast triggered"}
-                };
-                res.status = 200;
-                res.set_content(response.dump(), "application/json");
-
-            } catch (const std::exception& e) {
-                res.status = 500;
-                response = {
-                    {"error", "Internal Server Error"},
-                    {"message", e.what()}
+                    {"error", "Service Unavailable"},
+                    {"message", "BlockProducer not initialized"}
                 };
                 res.set_content(response.dump(), "application/json");
+                return;
             }
-        });
+
+            std::cout << "[WebServer] Mainnet broadcast requested" << std::endl;
+            block_producer_->broadcastLatestBlockToMainnet();
+
+            response = {
+                {"status", "ok"},
+                {"message", "Mainnet broadcast triggered"}
+            };
+            res.status = 200;
+            res.set_content(response.dump(), "application/json");
+
+        } catch (const std::exception& e) {
+            res.status = 500;
+            response = {
+                {"error", "Internal Server Error"},
+                {"message", e.what()}
+            };
+            res.set_content(response.dump(), "application/json");
+        }
+    }
+);
+
 
         // 6. 404 handler (must stay LAST)
         server_->set_error_handler([](const httplib::Request&, httplib::Response& res) {
