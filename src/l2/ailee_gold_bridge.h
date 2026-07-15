@@ -26,7 +26,7 @@
 
 #include <nlohmann/json.hpp>
 #include "../storage/PersistentStorage.h"
-#include "../l1/BitcoinRPCClient.h"
+#include "../rpc/BitcoinRPCClient.h"
 
 
 namespace ailee {

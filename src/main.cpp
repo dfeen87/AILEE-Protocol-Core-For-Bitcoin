@@ -40,7 +40,7 @@
 
 // Bitcoin Integration
 #include "BitcoinZMQListener.h"
-#include "BitcoinRPCClient.h"
+#include "rpc/BitcoinRPCClient.h"
 #include "Global_Seven.h"
 #include "ReorgDetector.h"
 

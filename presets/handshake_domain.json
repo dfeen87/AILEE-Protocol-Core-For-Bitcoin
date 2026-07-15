@@ -1,0 +1,14 @@
+{
+  "handshake_version": "1.0",
+  "domain_id": "ailee-core-testnet",
+  "expected_peer_responses": {
+    "node_version": "24.0",
+    "network": "testnet"
+  },
+  "invariants": {
+    "require_tls": false,
+    "require_authentication": true,
+    "allow_null_metadata": true,
+    "allow_null_critical": false
+  }
+}
