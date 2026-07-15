@@ -269,7 +269,11 @@ set(AILEE_HEADERS
     src/l2/ailee_gold_bridge.h
     src/recovery/ailee_recovery_protocol.h
     src/l1/BitcoinZMQListener.h
-    src/l1/BitcoinRPCClient.h
+    src/rpc/BitcoinRPCClient.h
+    src/governor/GovernorEngine.h
+    src/governor/PolicyRules.h
+    src/governor/TransferValidator.h
+    src/rpc/RpcSandboxSimulator.h
     src/telemetry/ailee_energy_telemetry.h
     src/security/ailee_circuit_breaker.h
     src/l2/ailee_sidechain_bridge.h
@@ -429,6 +433,10 @@ set(AILEE_L2_SOURCES
 # Main Executable Sources
 set(CORE_SOURCES
     src/main.cpp
+    src/rpc/RpcSandboxSimulator.cpp
+    src/governor/GovernorEngine.cpp
+    src/governor/PolicyRules.cpp
+    src/governor/TransferValidator.cpp
     src/orchestration/Orchestrator.cpp
     src/orchestration/ProverSwarm.cpp
     src/security/ailee_circuit_breaker.cpp
