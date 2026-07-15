@@ -1,0 +1,22 @@
+{
+  "simulation_mode_enabled": true,
+  "mock_responses": {
+    "getblockcount": {
+      "result": 850000,
+      "latency_ms": 50,
+      "simulate_404": false
+    },
+    "getrawtransaction": {
+      "mock_txid": "mock_txid_a1b2c3d4e5f6",
+      "mock_hash": "mock_hash_c7d8e9f0a1b2",
+      "confirmations": 6,
+      "time_received": 1712345678,
+      "latency_ms": 100,
+      "simulate_null_txid": false
+    },
+    "sendrawtransaction": {
+      "latency_ms": 200,
+      "simulate_failure": false
+    }
+  }
+}

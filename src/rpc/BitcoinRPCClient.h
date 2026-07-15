@@ -26,15 +26,27 @@
 #include <chrono>
 #include <curl/curl.h>
 #include <nlohmann/json.hpp> // Requires libcurl
+#include "RpcSandboxSimulator.h"
 
 namespace ailee {
+
+// Enum to define explicit deterministic error states
+enum class RpcErrorState {
+    NONE,
+    ENDPOINT_NOT_FOUND,
+    INVALID_JSON_RESPONSE,
+    CRITICAL_NULL_FIELD,
+    TIMEOUT
+};
 
 class BitcoinRPCClient {
 public:
     BitcoinRPCClient(const std::string& rpcUser,
                      const std::string& rpcPassword,
-                     const std::string& rpcUrl = "http://127.0.0.1:8332")
-        : rpcUser_(rpcUser), rpcPassword_(rpcPassword), rpcUrl_(rpcUrl) {
+                     const std::string& rpcUrl = "http://127.0.0.1:8332",
+                     bool simulationMode = false)
+        : rpcUser_(rpcUser), rpcPassword_(rpcPassword), rpcUrl_(rpcUrl),
+          simulationMode_(simulationMode), lastError_(RpcErrorState::NONE) {
         
         // Initialize CURL globally (should be done once per app, but safe here with flags)
         curl_global_init(CURL_GLOBAL_ALL);
@@ -44,16 +56,31 @@ public:
         curl_global_cleanup();
     }
 
+    // Retrieves the last deterministic error state
+    RpcErrorState getLastError() const {
+        return lastError_;
+    }
+
+    // Access to sandbox simulator if in simulation mode
+    RpcSandboxSimulator& getSimulator() {
+        return simulator_;
+    }
+
     /**
      * Broadcast a Raw Transaction (sendrawtransaction)
      * Used by the Bridge to settle Gold conversions or Recovery flows.
      */
     bool broadcastCheckpoint(const std::string& hexTx) {
+        if (lastError_ != RpcErrorState::NONE) {
+            std::cerr << "[RPC] Client in deterministic error state. Broadcast blocked." << std::endl;
+            return false;
+        }
+
         // Construct JSON-RPC payload
         std::string payload = buildJsonPayload("sendrawtransaction", "\"" + hexTx + "\"");
         
         std::string response;
-        if (executeRPC(payload, response)) {
+        if (executeRPC("sendrawtransaction", payload, response)) {
             std::cout << "[RPC] TX Broadcast Success. Response: " << response << std::endl;
             return true;
         }
@@ -67,16 +94,23 @@ public:
      * Used to verify synchronization and calculating VDF maturity.
      */
     long getBlockCount() {
+        if (lastError_ != RpcErrorState::NONE) return -1;
+
         std::string payload = buildJsonPayload("getblockcount", "");
         std::string response;
         
-        if (executeRPC(payload, response)) {
+        if (executeRPC("getblockcount", payload, response)) {
             try {
                 auto j = nlohmann::json::parse(response);
                 if (j.contains("result") && !j["result"].is_null()) {
                     return j["result"].get<long>();
+                } else if (j.contains("result") && j["result"].is_null()) {
+                    lastError_ = RpcErrorState::CRITICAL_NULL_FIELD;
+                    std::cerr << "[RPC] Deterministic Failure: Critical null field in block count result." << std::endl;
+                    return -1;
                 }
             } catch (...) {
+                lastError_ = RpcErrorState::INVALID_JSON_RESPONSE;
                 std::cerr << "[RPC] Failed to parse block count." << std::endl;
             }
         }
@@ -84,21 +118,42 @@ public:
     }
 
     long getTxConfirmations(const std::string& txId) {
+        if (lastError_ != RpcErrorState::NONE) return -1;
+
         std::string params = "\"" + txId + "\", true";
         std::string payload = buildJsonPayload("getrawtransaction", params);
         std::string response;
 
-        if (executeRPC(payload, response)) {
+        if (executeRPC("getrawtransaction", payload, response)) {
             try {
                 auto j = nlohmann::json::parse(response);
                 if (j.contains("result") && !j["result"].is_null()) {
-                    if (j["result"].contains("confirmations")) {
+
+                    // Reject critical nulls (e.g. txid, blockhash if expected)
+                    if (j["result"].contains("txid") && j["result"]["txid"].is_null()) {
+                        lastError_ = RpcErrorState::CRITICAL_NULL_FIELD;
+                        std::cerr << "[RPC] Deterministic Failure: Null txid field." << std::endl;
+                        return -1;
+                    }
+
+                    // Coerce optional fields
+                    long timeReceived = 0;
+                    if (j["result"].contains("time_received")) {
+                        if (j["result"]["time_received"].is_null()) {
+                            timeReceived = 0; // Coercion
+                        } else {
+                            timeReceived = j["result"]["time_received"].get<long>();
+                        }
+                    }
+
+                    if (j["result"].contains("confirmations") && !j["result"]["confirmations"].is_null()) {
                         return j["result"]["confirmations"].get<long>();
                     } else {
-                        return 0;
+                        return 0; // Or handle as null gracefully depending on protocol
                     }
                 }
             } catch (...) {
+                lastError_ = RpcErrorState::INVALID_JSON_RESPONSE;
                 std::cerr << "[RPC] Failed to parse getrawtransaction response for " << txId << std::endl;
             }
         }
@@ -109,6 +164,9 @@ private:
     std::string rpcUser_;
     std::string rpcPassword_;
     std::string rpcUrl_;
+    bool simulationMode_;
+    RpcErrorState lastError_;
+    RpcSandboxSimulator simulator_;
     std::mutex clientMutex_; // Ensures thread safety for CURL calls
 
     // Maximum retries before giving up
@@ -130,9 +188,19 @@ private:
     }
 
     // Core execution logic with Retries and Locking
-    bool executeRPC(const std::string& postData, std::string& responseBuffer) {
+    bool executeRPC(const std::string& method, const std::string& postData, std::string& responseBuffer) {
         std::lock_guard<std::mutex> lock(clientMutex_); // Lock this thread
         
+        if (simulationMode_) {
+            long http_code = simulator_.execute(method, postData, responseBuffer);
+            if (http_code == 404) {
+                lastError_ = RpcErrorState::ENDPOINT_NOT_FOUND;
+                std::cerr << "[RPC] Sandbox Simulated 404: Endpoint not found." << std::endl;
+                return false;
+            }
+            return http_code == 200;
+        }
+
         int attempts = 0;
         bool success = false;
 
@@ -159,6 +227,13 @@ private:
 
             if (res == CURLE_OK && http_code == 200) {
                 success = true;
+            } else if (http_code == 404) {
+                // Deterministic 404 Handling: Zero retries
+                lastError_ = RpcErrorState::ENDPOINT_NOT_FOUND;
+                std::cerr << "[RPC] Deterministic Failure: HTTP 404 Endpoint Not Found. Aborting retries." << std::endl;
+                curl_slist_free_all(headers);
+                curl_easy_cleanup(curl);
+                return false;
             } else {
                 attempts++;
                 std::cerr << "[RPC] Request failed (Attempt " << attempts << "/" << MAX_RETRIES 

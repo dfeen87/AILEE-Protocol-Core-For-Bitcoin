@@ -1,0 +1,16 @@
+{
+  "rpc_url": "http://127.0.0.1:8332",
+  "rpc_user": "rpc_user_placeholder",
+  "rpc_password": "rpc_password_placeholder",
+  "timeout_seconds": 10,
+  "max_retries": 3,
+  "fallback_endpoints": [
+    "http://127.0.0.1:8332/rpc",
+    "http://127.0.0.1:8332/api"
+  ],
+  "deterministic_rules": {
+    "reject_on_404": true,
+    "reject_null_txid": true,
+    "coerce_null_time": 0
+  }
+}
