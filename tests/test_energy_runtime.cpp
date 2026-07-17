@@ -4,6 +4,10 @@
 #include <gtest/gtest.h>
 #include <cmath>
 
+#ifndef EXPECT_FLOAT_EQ
+#define EXPECT_FLOAT_EQ(A, B) EXPECT_NEAR(A, B, 1e-5f)
+#endif
+
 using namespace ailee::energy;
 
 TEST(EnergyRuntimeTest, StructDefaults) {
