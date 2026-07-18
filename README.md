@@ -188,7 +188,8 @@ This produces the core executable for the deterministic runtime.
 Tip: Make sure your in the build folder, then proceed to prompt.
 
 ```
-./runtime
+./ailee_node
+
 ```
 
 This launches the deterministic execution engine.  
